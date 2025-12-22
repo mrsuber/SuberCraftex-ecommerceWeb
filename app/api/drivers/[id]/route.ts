@@ -1,0 +1,97 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/auth/api-auth';
+import { db } from '@/lib/db';
+
+// GET - Get single driver
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireApiAuth();
+
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const driver = await db.driver.findUnique({
+      where: { id },
+      include: {
+        user: true,
+        shippingTracking: {
+          include: {
+            order: true,
+          },
+        },
+      },
+    });
+
+    if (!driver) {
+      return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(driver);
+  } catch (error) {
+    console.error('Error fetching driver:', error);
+    return NextResponse.json({ error: 'Failed to fetch driver' }, { status: 500 });
+  }
+}
+
+// PATCH - Update driver
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireApiAuth();
+
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+
+    const driver = await db.driver.update({
+      where: { id },
+      data: body,
+    });
+
+    console.log(`✅ Driver updated: ${driver.fullName} (${driver.id})`);
+
+    return NextResponse.json(driver);
+  } catch (error) {
+    console.error('Error updating driver:', error);
+    return NextResponse.json({ error: 'Failed to update driver' }, { status: 500 });
+  }
+}
+
+// DELETE - Soft delete driver (set isActive = false)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireApiAuth();
+
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const driver = await db.driver.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    console.log(`✅ Driver deactivated: ${driver.fullName} (${driver.id})`);
+
+    return NextResponse.json({ message: 'Driver deactivated successfully' });
+  } catch (error) {
+    console.error('Error deleting driver:', error);
+    return NextResponse.json({ error: 'Failed to delete driver' }, { status: 500 });
+  }
+}

@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 100% 0 0; /* white */
+    --foreground: 14.2% 0.006 285.9; /* dark gray */
+
+    --card: 100% 0 0;
+    --card-foreground: 14.2% 0.006 285.9;
+
+    --popover: 100% 0 0;
+    --popover-foreground: 14.2% 0.006 285.9;
+
+    --primary: 72.7% 0.078 71.7; /* #D4AF76 Champagne Gold */
+    --primary-foreground: 100% 0 0;
+
+    --secondary: 66.1% 0.048 71.2; /* #9d8860 */
+    --secondary-foreground: 100% 0 0;
+
+    --muted: 97.8% 0.003 285.9;
+    --muted-foreground: 62.1% 0.008 285.9;
+
+    --accent: 97.8% 0.003 285.9;
+    --accent-foreground: 14.2% 0.006 285.9;
+
+    --destructive: 64.1% 0.204 24.5; /* red */
+    --destructive-foreground: 100% 0 0;
+
+    --border: 90.4% 0.004 285.9;
+    --input: 90.4% 0.004 285.9;
+    --ring: 72.7% 0.078 71.7;
+
+    --chart-1: 72.7% 0.078 71.7;
+    --chart-2: 66.1% 0.048 71.2;
+    --chart-3: 67.6% 0.157 152.4;
+    --chart-4: 82.2% 0.109 99.4;
+    --chart-5: 66.1% 0.196 354.4;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark Mode with Gold Accents */
+    --background: 11.5% 0.02 252; /* #0b1220 */
+    --foreground: 90% 0.008 264; /* #e5e7eb */
+
+    --card: 14% 0.025 252; /* #0f172a */
+    --card-foreground: 90% 0.008 264;
+
+    --popover: 14% 0.025 252;
+    --popover-foreground: 90% 0.008 264;
+
+    --primary: 72.7% 0.078 71.7; /* #D4AF76 Champagne Gold */
+    --primary-foreground: 14% 0.025 252;
+
+    --secondary: 66.1% 0.048 71.2; /* #9d8860 Darker Gold */
+    --secondary-foreground: 14% 0.025 252;
+
+    --muted: 21% 0.027 252; /* #1e293b */
+    --muted-foreground: 65% 0.026 252; /* #94a3b8 */
+
+    --accent: 72.7% 0.078 71.7; /* Gold accent */
+    --accent-foreground: 14% 0.025 252;
+
+    --destructive: 58.2% 0.227 25.3; /* #ef4444 */
+    --destructive-foreground: 100% 0 0;
+
+    --border: 72.7% 0.078 71.7 / 0.15; /* Gold border with transparency */
+    --input: 65% 0.026 252 / 0.2;
+    --ring: 72.7% 0.078 71.7; /* Gold ring */
+
+    --chart-1: 72.7% 0.078 71.7; /* Gold */
+    --chart-2: 66.1% 0.048 71.2; /* Darker Gold */
+    --chart-3: 82.2% 0.109 99.4; /* Light Gold */
+    --chart-4: 59.8% 0.09 99.1; /* Warm tone */
+    --chart-5: 50.4% 0.074 82.7; /* Bronze */
+  }
+}
+
+@layer base {
+  * {
+    border-color: oklch(var(--border));
+  }
+  body {
+    background-color: oklch(var(--background));
+    color: oklch(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Override container to ensure padding on all screen sizes */
+  .container {
+    width: 100%;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      padding-left: 2rem !important;
+      padding-right: 2rem !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 3rem !important;
+      padding-right: 3rem !important;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px !important;
+    }
+  }
+}
+
+@layer utilities {
+  .animate-fadeInUp {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.5s ease-out;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-slideInLeft {
+    animation: slideInLeft 0.6s ease-out;
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slideInRight {
+    animation: slideInRight 0.6s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .glass {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .gold-gradient {
+    background: linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--secondary)) 100%);
+  }
+
+  .gold-text {
+    background: linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--secondary)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gold-border {
+    border-color: oklch(var(--primary) / 0.3);
+  }
+
+  .gold-glow {
+    box-shadow: 0 0 20px oklch(var(--primary) / 0.3);
+  }
+
+  .dark .gold-glow {
+    box-shadow: 0 0 30px oklch(var(--primary) / 0.4);
+  }
+}
