@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { SignaturePad } from "@/components/orders/SignaturePad";
 import { toast } from "sonner";
-import { Package, Camera } from "lucide-react";
+import { Package } from "lucide-react";
 
 interface Product {
   id: string;

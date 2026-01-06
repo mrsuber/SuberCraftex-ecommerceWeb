@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 
 const roleSchema = z.object({
-  role: z.enum(['customer', 'admin', 'driver']),
+  role: z.enum(['customer', 'admin', 'driver', 'cashier']),
 });
 
 // PATCH - Update user role
@@ -33,16 +33,43 @@ export async function PATCH(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Update user role
-    const updatedUser = await db.user.update({
-      where: { id },
-      data: { role },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        fullName: true,
-      },
+    // Update user role and create associated profiles if needed
+    const updatedUser = await db.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id },
+        data: { role },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          fullName: true,
+          phone: true,
+        },
+      });
+
+      // Create Cashier profile if role is changed to cashier and profile doesn't exist
+      if (role === 'cashier') {
+        const existingCashier = await tx.cashier.findUnique({
+          where: { userId: id },
+        });
+
+        if (!existingCashier) {
+          await tx.cashier.create({
+            data: {
+              userId: id,
+              fullName: user.fullName || 'Cashier',
+              email: user.email,
+              phone: user.phone || 'Not provided',
+            },
+          });
+          console.log(`✅ Created Cashier profile for user ${user.email}`);
+        }
+      }
+
+      // Note: Driver profile is NOT auto-created because it requires vehicle details
+      // Admin must manually create driver profile from the drivers page
+
+      return user;
     });
 
     console.log(`✅ Updated user ${existingUser.email} role to ${role}`);

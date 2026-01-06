@@ -19,6 +19,7 @@ enum UserRole {
   customer
   admin
   driver
+  cashier
 }
 
 model User {
@@ -41,10 +42,13 @@ model User {
   reviews             Review[]
   addresses           Address[]
   driver              Driver?
+  cashier             Cashier?
   inventoryLogs       InventoryLog[]
   emailVerifications  EmailVerification[]
   purchaseOrders      PurchaseOrder[]
   goodsReceipts       GoodsReceipt[]
+  serviceBookings     ServiceBooking[]
+  cartItemServices    CartItemService[]
 
   @@map("users")
 }
@@ -184,12 +188,14 @@ enum PaymentStatus {
 enum PaymentMethod {
   card
   cash
+  mobile_payment
 }
 
 enum ShippingMethod {
   standard
   express
   overnight
+  in_store
 }
 
 model Order {
@@ -206,8 +212,8 @@ model Order {
   taxAmount            Decimal        @default(0) @map("tax_amount") @db.Decimal(10, 2)
   discountAmount       Decimal        @default(0) @map("discount_amount") @db.Decimal(10, 2)
   totalAmount          Decimal        @map("total_amount") @db.Decimal(10, 2)
-  shippingAddress      Json           @map("shipping_address")
-  billingAddress       Json           @map("billing_address")
+  shippingAddress      Json?          @map("shipping_address")
+  billingAddress       Json?          @map("billing_address")
   stripePaymentIntentId String?       @map("stripe_payment_intent_id")
   stripeChargeId       String?        @map("stripe_charge_id")
   trackingNumber       String?        @map("tracking_number")
@@ -216,6 +222,16 @@ model Order {
   customerNotes        String?        @map("customer_notes")
   adminNotes           String?        @map("admin_notes")
   couponCode           String?        @map("coupon_code")
+
+  // POS specific fields
+  isPosOrder           Boolean        @default(false) @map("is_pos_order")
+  cashierId            String?        @map("cashier_id")
+  posSessionId         String?        @map("pos_session_id")
+  customerName         String?        @map("customer_name")
+  customerPhone        String?        @map("customer_phone")
+  amountTendered       Decimal?       @map("amount_tendered") @db.Decimal(10, 2)
+  changeGiven          Decimal?       @map("change_given") @db.Decimal(10, 2)
+
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   paidAt               DateTime?      @map("paid_at")
@@ -225,10 +241,14 @@ model Order {
 
   // Relations
   user            User?             @relation(fields: [userId], references: [id])
+  cashier         Cashier?          @relation(fields: [cashierId], references: [id])
+  posSession      POSSession?       @relation(fields: [posSessionId], references: [id])
   orderItems      OrderItem[]
   reviews         Review[]
   shippingTracking ShippingTracking?
   inventoryLogs   InventoryLog[]
+  serviceBooking  ServiceBooking?
+  orderItemServices OrderItemService[]
 
   @@index([userId])
   @@index([guestEmail])
@@ -237,6 +257,9 @@ model Order {
   @@index([paymentStatus])
   @@index([createdAt])
   @@index([stripePaymentIntentId])
+  @@index([cashierId])
+  @@index([posSessionId])
+  @@index([isPosOrder])
   @@map("orders")
 }
 
@@ -421,6 +444,68 @@ model Driver {
   @@index([isActive])
   @@index([isAvailable])
   @@map("drivers")
+}
+
+model Cashier {
+  id               String   @id @default(uuid())
+  userId           String   @unique @map("user_id")
+  fullName         String   @map("full_name")
+  phone            String
+  email            String
+  photoUrl         String?  @map("photo_url")
+  employeeId       String?  @unique @map("employee_id")
+  isActive         Boolean  @default(true) @map("is_active")
+  totalSales       Decimal  @default(0) @map("total_sales") @db.Decimal(10, 2)
+  totalOrders      Int      @default(0) @map("total_orders")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      Order[]
+  posSessions POSSession[]
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([employeeId])
+  @@map("cashiers")
+}
+
+enum POSSessionStatus {
+  open
+  closed
+  suspended
+}
+
+model POSSession {
+  id               String           @id @default(uuid())
+  sessionNumber    String           @unique @map("session_number")
+  cashierId        String           @map("cashier_id")
+  status           POSSessionStatus @default(open)
+  openingBalance   Decimal          @default(0) @map("opening_balance") @db.Decimal(10, 2)
+  closingBalance   Decimal?         @map("closing_balance") @db.Decimal(10, 2)
+  expectedCash     Decimal          @default(0) @map("expected_cash") @db.Decimal(10, 2)
+  actualCash       Decimal?         @map("actual_cash") @db.Decimal(10, 2)
+  cashDifference   Decimal?         @map("cash_difference") @db.Decimal(10, 2)
+  totalSales       Decimal          @default(0) @map("total_sales") @db.Decimal(10, 2)
+  totalOrders      Int              @default(0) @map("total_orders")
+  totalCash        Decimal          @default(0) @map("total_cash") @db.Decimal(10, 2)
+  totalCard        Decimal          @default(0) @map("total_card") @db.Decimal(10, 2)
+  totalMobile      Decimal          @default(0) @map("total_mobile") @db.Decimal(10, 2)
+  notes            String?
+  openedAt         DateTime         @default(now()) @map("opened_at")
+  closedAt         DateTime?        @map("closed_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  cashier Cashier @relation(fields: [cashierId], references: [id])
+  orders  Order[]
+
+  @@index([cashierId])
+  @@index([status])
+  @@index([openedAt])
+  @@map("pos_sessions")
 }
 
 enum TrackingStatus {
@@ -645,4 +730,537 @@ model PaymentConfirmation {
   @@index([purchaseOrderId])
   @@index([isConfirmed])
   @@map("payment_confirmations")
+}
+
+// ============================================================================
+// SERVICES & BOOKING SYSTEM
+// ============================================================================
+
+enum ServiceDuration {
+  half_hour    // 30 minutes
+  one_hour     // 1 hour
+  two_hours    // 2 hours
+  half_day     // 4 hours
+  full_day     // 8 hours
+  custom       // Custom duration
+}
+
+enum ServiceType {
+  onsite              // On-site service (installation/repair at customer location)
+  custom_production   // Create product from scratch
+  collect_repair      // Collect & repair/renew (workshop service)
+}
+
+enum CollectionMethod {
+  customer_brings     // Customer brings item to shop
+  admin_collects      // Admin collects from customer location
+}
+
+enum BookingStatus {
+  pending           // Initial booking, payment pending
+  quote_pending     // Waiting for admin to create quote
+  quote_sent        // Quote sent to customer
+  quote_approved    // Customer approved quote
+  quote_rejected    // Customer rejected quote
+  awaiting_payment  // Waiting for down payment
+  payment_partial   // Partial payment received
+  confirmed         // Payment received, booking confirmed
+  in_progress       // Service is being performed
+  awaiting_collection // Work complete, awaiting customer collection
+  completed         // Service completed
+  cancelled         // Cancelled by customer or admin
+  no_show           // Customer didn't show up
+  rescheduled       // Booking was rescheduled
+}
+
+enum QuoteStatus {
+  draft      // Quote being created
+  sent       // Quote sent to customer
+  approved   // Customer approved
+  rejected   // Customer rejected
+  expired    // Quote expired
+}
+
+enum MaterialRequestStatus {
+  pending    // Request pending admin review
+  approved   // Admin approved request
+  acquired   // Material acquired
+  cancelled  // Request cancelled
+}
+
+enum PaymentType {
+  down_payment     // Down payment (deposit)
+  partial_payment  // Partial payment
+  final_payment    // Final payment
+  refund           // Refund
+}
+
+enum ProgressStatus {
+  pending             // Work not started
+  material_ordered    // Materials ordered
+  material_received   // Materials received
+  in_production       // Work in progress
+  quality_check       // Quality check in progress
+  ready_for_collection // Ready for customer collection
+  completed           // Work completed
+}
+
+model ServiceCategory {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?   @map("image_url")
+  icon        String?   // Icon name for UI
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  services  Service[]
+  materials Material[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("service_categories")
+}
+
+model Service {
+  id                       String           @id @default(uuid())
+  name                     String
+  slug                     String           @unique
+  sku                      String           @unique
+  description              String?
+  shortDescription         String?          @map("short_description")
+  price                    Decimal          @db.Decimal(10, 2)
+  compareAtPrice           Decimal?         @map("compare_at_price") @db.Decimal(10, 2)
+  categoryId               String           @map("category_id")
+  images                   String[]         @default([])
+  featuredImage            String?          @map("featured_image")
+  duration                 ServiceDuration  @default(one_hour)
+  customDuration           Int?             @map("custom_duration") // in minutes if custom
+  bufferTime               Int              @default(0) @map("buffer_time") // Minutes between bookings
+  maxBookingsPerDay        Int?             @map("max_bookings_per_day")
+
+  // Service Type Flags (NEW)
+  supportsOnsite           Boolean          @default(true) @map("supports_onsite")
+  supportsCustomProduction Boolean          @default(false) @map("supports_custom_production")
+  supportsCollectRepair    Boolean          @default(false) @map("supports_collect_repair")
+
+  isActive                 Boolean          @default(true) @map("is_active")
+  isFeatured               Boolean          @default(false) @map("is_featured")
+  tags                     String[]         @default([])
+  seoTitle                 String?          @map("seo_title")
+  seoDescription           String?          @map("seo_description")
+  metadata                 Json?            // Custom fields, requirements, etc.
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  category         ServiceCategory    @relation(fields: [categoryId], references: [id])
+  bookings         ServiceBooking[]
+  availability     ServiceAvailability[]
+  blockouts        ServiceBlockout[]
+  cartItems        CartItemService[]
+  orderItems       OrderItemService[]
+  materials        ServiceMaterial[]    // NEW: Link to materials
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([sku])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@map("services")
+}
+
+// Weekly availability schedule
+model ServiceAvailability {
+  id          String   @id @default(uuid())
+  serviceId   String   @map("service_id")
+  dayOfWeek   Int      @map("day_of_week") // 0 = Sunday, 1 = Monday, etc.
+  startTime   String   @map("start_time")   // "09:00"
+  endTime     String   @map("end_time")     // "17:00"
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+  @@index([dayOfWeek])
+  @@map("service_availability")
+}
+
+// Specific date/time blockouts (holidays, maintenance, etc.)
+model ServiceBlockout {
+  id          String    @id @default(uuid())
+  serviceId   String?   @map("service_id") // null = applies to all services
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime  @map("end_date")
+  reason      String?
+  isRecurring Boolean   @default(false) @map("is_recurring")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+  @@index([startDate, endDate])
+  @@map("service_blockouts")
+}
+
+model ServiceBooking {
+  id                 String            @id @default(uuid())
+  bookingNumber      String            @unique @map("booking_number")
+  serviceId          String            @map("service_id")
+  userId             String?           @map("user_id")
+  orderId            String?           @unique @map("order_id") // Links to Order after payment
+  status             BookingStatus     @default(pending)
+
+  // Service Type & Collection (NEW)
+  serviceType        ServiceType       @map("service_type")
+  collectionMethod   CollectionMethod? @map("collection_method")
+
+  // Scheduling (optional for custom production and collect/repair)
+  scheduledDate      DateTime?         @map("scheduled_date")
+  scheduledTime      String?           @map("scheduled_time") // "14:00"
+  endTime            String?           @map("end_time")       // "16:00"
+  duration           Int               // Duration in minutes
+
+  // Customer Information
+  customerName       String            @map("customer_name")
+  customerEmail      String            @map("customer_email")
+  customerPhone      String?           @map("customer_phone")
+  customerNotes      String?           @map("customer_notes")
+
+  // Enhanced Requirements (NEW)
+  requirementPhotos  String[]          @default([]) @map("requirement_photos")
+  desiredOutcome     String?           @map("desired_outcome")
+
+  // Pricing
+  price              Decimal           @db.Decimal(10, 2)
+  finalPrice         Decimal?          @map("final_price") @db.Decimal(10, 2) // Locked price after quote approval
+
+  // Admin
+  adminNotes         String?           @map("admin_notes")
+  cancellationReason String?           @map("cancellation_reason")
+  rescheduledFrom    String?           @map("rescheduled_from") // Previous booking ID
+
+  // Timestamps
+  completedAt        DateTime?         @map("completed_at")
+  cancelledAt        DateTime?         @map("cancelled_at")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  service          Service              @relation(fields: [serviceId], references: [id])
+  user             User?                @relation(fields: [userId], references: [id])
+  order            Order?               @relation(fields: [orderId], references: [id])
+
+  // NEW Relations
+  quote            Quote?
+  materials        BookingMaterial[]
+  materialRequests MaterialRequest[]
+  progressUpdates  BookingProgress[]
+  timeline         BookingTimeline[]
+  payments         BookingPayment[]
+
+  @@index([serviceId])
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([serviceType])
+  @@index([scheduledDate])
+  @@index([bookingNumber])
+  @@map("service_bookings")
+}
+
+// ============================================================================
+// MATERIAL MANAGEMENT
+// ============================================================================
+
+model Material {
+  id                 String            @id @default(uuid())
+  sku                String            @unique
+  name               String
+  description        String?
+  price              Decimal           @db.Decimal(10, 2)
+  stockQuantity      Int               @default(0) @map("stock_quantity")
+  unit               String            @default("piece") // piece, meter, kg, liter, etc.
+  imageUrl           String?           @map("image_url")
+  specifications     Json?             // Material specifications (color, dimensions, etc.)
+  notes              String?           // Additional notes about the material
+  serviceCategoryId  String?           @map("service_category_id")
+  isActive           Boolean           @default(true) @map("is_active")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  category    ServiceCategory?  @relation(fields: [serviceCategoryId], references: [id])
+  services    ServiceMaterial[]
+  bookings    BookingMaterial[]
+
+  @@index([serviceCategoryId])
+  @@index([sku])
+  @@index([isActive])
+  @@map("materials")
+}
+
+// Join table: Service <-> Material (many-to-many)
+model ServiceMaterial {
+  id              String   @id @default(uuid())
+  serviceId       String   @map("service_id")
+  materialId      String   @map("material_id")
+  isRequired      Boolean  @default(false) @map("is_required")
+  defaultQuantity Int      @default(1) @map("default_quantity")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, materialId])
+  @@index([serviceId])
+  @@index([materialId])
+  @@map("service_materials")
+}
+
+// Materials selected for a booking
+model BookingMaterial {
+  id              String   @id @default(uuid())
+  bookingId       String   @map("booking_id")
+  materialId      String   @map("material_id")
+  quantity        Int
+  priceAtBooking  Decimal  @map("price_at_booking") @db.Decimal(10, 2) // Lock price
+  isAcquired      Boolean  @default(false) @map("is_acquired")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  booking  ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  material Material       @relation(fields: [materialId], references: [id])
+
+  @@index([bookingId])
+  @@index([materialId])
+  @@map("booking_materials")
+}
+
+// Customer requests for unavailable materials
+model MaterialRequest {
+  id              String                 @id @default(uuid())
+  bookingId       String                 @map("booking_id")
+  description     String
+  referenceUrl    String?                @map("reference_url")
+  referencePhotos String[]               @default([]) @map("reference_photos")
+  status          MaterialRequestStatus  @default(pending)
+  adminNotes      String?                @map("admin_notes")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  // Relations
+  booking ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("material_requests")
+}
+
+// ============================================================================
+// QUOTE SYSTEM
+// ============================================================================
+
+model Quote {
+  id                 String       @id @default(uuid())
+  bookingId          String       @unique @map("booking_id")
+  materialCost       Decimal      @db.Decimal(10, 2) @map("material_cost")
+  laborCost          Decimal      @db.Decimal(10, 2) @map("labor_cost")
+  laborHours         Decimal      @db.Decimal(5, 2) @map("labor_hours")
+  totalCost          Decimal      @db.Decimal(10, 2) @map("total_cost")
+  downPaymentAmount  Decimal      @db.Decimal(10, 2) @map("down_payment_amount")
+  notes              String?
+  status             QuoteStatus  @default(draft)
+  validUntil         DateTime?    @map("valid_until")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  booking ServiceBooking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  history QuoteHistory[]
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("quotes")
+}
+
+model QuoteHistory {
+  id         String   @id @default(uuid())
+  quoteId    String   @map("quote_id")
+  action     String   // e.g., "created", "sent", "approved", "rejected"
+  notes      String?
+  createdBy  String   @map("created_by") // User ID or "customer"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+  @@index([createdAt])
+  @@map("quote_history")
+}
+
+// ============================================================================
+// PROGRESS TRACKING
+// ============================================================================
+
+model BookingProgress {
+  id          String         @id @default(uuid())
+  bookingId   String         @map("booking_id")
+  status      ProgressStatus
+  description String
+  photos      String[]       @default([])
+  createdBy   String         @map("created_by") // Admin user ID
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  booking ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([createdAt])
+  @@map("booking_progress")
+}
+
+model BookingTimeline {
+  id           String    @id @default(uuid())
+  bookingId    String    @map("booking_id")
+  milestone    String
+  expectedDate DateTime? @map("expected_date")
+  actualDate   DateTime? @map("actual_date")
+  notes        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  booking ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("booking_timeline")
+}
+
+// ============================================================================
+// PAYMENT TRACKING
+// ============================================================================
+
+model BookingPayment {
+  id               String      @id @default(uuid())
+  bookingId        String      @map("booking_id")
+  amount           Decimal     @db.Decimal(10, 2)
+  paymentType      PaymentType @map("payment_type")
+  paymentMethod    String      // stripe, cash, bank_transfer
+  status           String      @default("pending") // pending, completed, failed, refunded
+  stripePaymentId  String?     @map("stripe_payment_id")
+  notes            String?
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  booking ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([paymentType])
+  @@index([status])
+  @@map("booking_payments")
+}
+
+// ============================================================================
+// CART & ORDER ITEMS FOR SERVICES
+// ============================================================================
+
+// Extend CartItem for services (separate table to maintain type safety)
+model CartItemService {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  serviceId      String   @map("service_id")
+  scheduledDate  DateTime @map("scheduled_date")
+  scheduledTime  String   @map("scheduled_time")
+  customerNotes  String?  @map("customer_notes")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceId, scheduledDate, scheduledTime])
+  @@index([userId])
+  @@index([serviceId])
+  @@map("cart_item_services")
+}
+
+// Extend OrderItem for services
+model OrderItemService {
+  id             String   @id @default(uuid())
+  orderId        String   @map("order_id")
+  serviceId      String   @map("service_id")
+  bookingId      String?  @map("booking_id") // Links to ServiceBooking
+  serviceName    String   @map("service_name")
+  serviceSku     String   @map("service_sku")
+  serviceImage   String?  @map("service_image")
+  scheduledDate  DateTime @map("scheduled_date")
+  scheduledTime  String   @map("scheduled_time")
+  duration       Int      // Duration in minutes
+  price          Decimal  @db.Decimal(10, 2)
+  customerNotes  String?  @map("customer_notes")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id])
+
+  @@index([orderId])
+  @@index([serviceId])
+  @@index([bookingId])
+  @@map("order_item_services")
+}
+
+// ============================================================================
+// HERO BANNER MANAGEMENT
+// ============================================================================
+
+enum BannerType {
+  advertisement
+  new_product
+  new_service
+  promotion
+  announcement
+  upcoming
+}
+
+model HeroBanner {
+  id              String      @id @default(uuid())
+  title           String
+  subtitle        String?
+  description     String?
+  type            BannerType  @default(announcement)
+  imageUrl        String      @map("image_url")
+  mobileImageUrl  String?     @map("mobile_image_url") // Optional mobile-specific image
+  ctaText         String?     @map("cta_text") // Call-to-action button text
+  ctaLink         String?     @map("cta_link") // Call-to-action link
+  ctaStyle        String?     @default("primary") @map("cta_style") // Button style: primary, secondary, outline
+  backgroundColor String?     @default("#000000") @map("background_color")
+  textColor       String?     @default("#ffffff") @map("text_color")
+  order           Int         @default(0) // Display order (lower = first)
+  isActive        Boolean     @default(true) @map("is_active")
+  startDate       DateTime?   @map("start_date") // Optional scheduled start
+  endDate         DateTime?   @map("end_date") // Optional scheduled end
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([order])
+  @@index([type])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("hero_banners")
 }

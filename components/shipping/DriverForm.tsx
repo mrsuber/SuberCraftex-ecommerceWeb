@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,7 @@ interface DriverFormProps {
 }
 
 export function DriverForm({ userId }: DriverFormProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -49,7 +51,7 @@ export function DriverForm({ userId }: DriverFormProps) {
       }
 
       setOpen(false);
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       console.error(error);
       alert("Failed to create driver");

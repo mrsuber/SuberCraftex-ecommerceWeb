@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Circle, Clock, Package, Truck } from "lucide-react";
+import { CheckCircle, Circle, Package, Truck } from "lucide-react";
 
 interface TrackingTimelineProps {
   status: string;
@@ -30,7 +30,6 @@ export function TrackingTimeline({
         const Icon = step.icon;
         const isCompleted = index < currentStepIndex;
         const isCurrent = index === currentStepIndex;
-        const isUpcoming = index > currentStepIndex;
 
         return (
           <div key={step.key} className="flex gap-4">

@@ -235,6 +235,207 @@ async function main() {
     console.log('✅ Created/Updated product:', product.name)
   }
 
+  // Create service categories
+  const serviceCategories = [
+    {
+      name: 'Woodworking',
+      slug: 'woodworking',
+      description: 'Custom furniture, repairs, and wood finishing services',
+      imageUrl: 'https://images.unsplash.com/photo-1617325247661-675ab4b64ae2?w=800',
+      icon: 'Hammer',
+      sortOrder: 1,
+    },
+    {
+      name: 'Dress Making',
+      slug: 'dress-making',
+      description: 'Custom garments, alterations, and tailoring services',
+      imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800',
+      icon: 'Scissors',
+      sortOrder: 2,
+    },
+    {
+      name: 'Shoe Making',
+      slug: 'shoe-making',
+      description: 'Custom shoes, repairs, and polishing services',
+      imageUrl: 'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800',
+      icon: 'ShoppingBag',
+      sortOrder: 3,
+    },
+    {
+      name: 'Blinds & Bedsheets',
+      slug: 'blinds-bedsheets',
+      description: 'Custom blinds, bedsheets, and home textile services',
+      imageUrl: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800',
+      icon: 'Home',
+      sortOrder: 4,
+    },
+  ]
+
+  for (const serviceCat of serviceCategories) {
+    await prisma.serviceCategory.upsert({
+      where: { slug: serviceCat.slug },
+      update: {},
+      create: serviceCat,
+    })
+    console.log('✅ Created service category:', serviceCat.name)
+  }
+
+  // Get service category IDs
+  const woodworkingCategory = await prisma.serviceCategory.findUnique({ where: { slug: 'woodworking' } })
+  const dressMakingCategory = await prisma.serviceCategory.findUnique({ where: { slug: 'dress-making' } })
+  const shoeMakingCategory = await prisma.serviceCategory.findUnique({ where: { slug: 'shoe-making' } })
+  const blindsCategory = await prisma.serviceCategory.findUnique({ where: { slug: 'blinds-bedsheets' } })
+
+  // Create sample services
+  const services = [
+    {
+      name: 'Custom Dining Table',
+      slug: 'custom-dining-table',
+      sku: 'SRV-WW-001',
+      description: 'Handcrafted custom dining table made from premium hardwood. Choose your size, finish, and design.',
+      shortDescription: 'Custom hardwood dining table',
+      price: 1200.00,
+      categoryId: woodworkingCategory?.id || '',
+      images: [
+        'https://images.unsplash.com/photo-1617325247661-675ab4b64ae2?w=800',
+        'https://images.unsplash.com/photo-1595515106969-1ce29566ff1c?w=800',
+      ],
+      featuredImage: 'https://images.unsplash.com/photo-1617325247661-675ab4b64ae2?w=800',
+      duration: 'full_day',
+      isFeatured: true,
+      isActive: true,
+      tags: ['furniture', 'custom', 'wood'],
+    },
+    {
+      name: 'Furniture Repair & Restoration',
+      slug: 'furniture-repair',
+      sku: 'SRV-WW-002',
+      description: 'Professional furniture repair and restoration services. We fix broken joints, refinish surfaces, and restore antique pieces.',
+      shortDescription: 'Furniture repair and refinishing',
+      price: 150.00,
+      categoryId: woodworkingCategory?.id || '',
+      images: ['https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800'],
+      featuredImage: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800',
+      duration: 'two_hours',
+      isFeatured: true,
+      isActive: true,
+      tags: ['repair', 'restoration'],
+    },
+    {
+      name: 'Custom Wedding Dress',
+      slug: 'custom-wedding-dress',
+      sku: 'SRV-DM-001',
+      description: 'Bespoke wedding dress designed and tailored to perfection. Includes consultations, fittings, and final alterations.',
+      shortDescription: 'Custom wedding dress with fittings',
+      price: 2500.00,
+      compareAtPrice: 3500.00,
+      categoryId: dressMakingCategory?.id || '',
+      images: [
+        'https://images.unsplash.com/photo-1519657337289-077653f724ed?w=800',
+        'https://images.unsplash.com/photo-1594552072238-52fd5833f356?w=800',
+      ],
+      featuredImage: 'https://images.unsplash.com/photo-1519657337289-077653f724ed?w=800',
+      duration: 'custom',
+      customDuration: 480, // 8 hours total consultation time
+      isFeatured: true,
+      isActive: true,
+      tags: ['wedding', 'custom', 'formal'],
+    },
+    {
+      name: 'Clothing Alterations',
+      slug: 'clothing-alterations',
+      sku: 'SRV-DM-002',
+      description: 'Professional clothing alterations including hemming, taking in/letting out, and repairs.',
+      shortDescription: 'Professional garment alterations',
+      price: 45.00,
+      categoryId: dressMakingCategory?.id || '',
+      images: ['https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800'],
+      featuredImage: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800',
+      duration: 'one_hour',
+      isActive: true,
+      tags: ['alterations', 'repairs'],
+    },
+    {
+      name: 'Custom Leather Shoes',
+      slug: 'custom-leather-shoes',
+      sku: 'SRV-SM-001',
+      description: 'Handmade leather shoes crafted to your exact measurements and style preferences.',
+      shortDescription: 'Handcrafted custom leather shoes',
+      price: 450.00,
+      categoryId: shoeMakingCategory?.id || '',
+      images: [
+        'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800',
+        'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=800',
+      ],
+      featuredImage: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800',
+      duration: 'half_day',
+      isFeatured: true,
+      isActive: true,
+      tags: ['custom', 'leather', 'shoes'],
+    },
+    {
+      name: 'Shoe Repair & Polishing',
+      slug: 'shoe-repair',
+      sku: 'SRV-SM-002',
+      description: 'Complete shoe repair services including sole replacement, stitching, and professional polishing.',
+      shortDescription: 'Shoe repair and polishing service',
+      price: 35.00,
+      categoryId: shoeMakingCategory?.id || '',
+      images: ['https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800'],
+      featuredImage: 'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800',
+      duration: 'half_hour',
+      isActive: true,
+      tags: ['repair', 'polishing'],
+    },
+    {
+      name: 'Custom Window Blinds',
+      slug: 'custom-window-blinds',
+      sku: 'SRV-BB-001',
+      description: 'Made-to-measure window blinds in various styles: roller, venetian, vertical, and roman. Professional installation included.',
+      shortDescription: 'Custom blinds with installation',
+      price: 350.00,
+      categoryId: blindsCategory?.id || '',
+      images: [
+        'https://images.unsplash.com/photo-1585412727339-54e4bae3bbf9?w=800',
+        'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800',
+      ],
+      featuredImage: 'https://images.unsplash.com/photo-1585412727339-54e4bae3bbf9?w=800',
+      duration: 'two_hours',
+      isFeatured: true,
+      isActive: true,
+      tags: ['blinds', 'custom', 'installation'],
+    },
+    {
+      name: 'Custom Bedsheet Set',
+      slug: 'custom-bedsheet-set',
+      sku: 'SRV-BB-002',
+      description: 'Luxury custom bedsheet sets made from premium fabrics. Choose your size, color, and fabric type.',
+      shortDescription: 'Custom luxury bedsheet set',
+      price: 180.00,
+      categoryId: blindsCategory?.id || '',
+      images: [
+        'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800',
+        'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800',
+      ],
+      featuredImage: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800',
+      duration: 'one_hour',
+      isActive: true,
+      tags: ['bedding', 'custom', 'luxury'],
+    },
+  ]
+
+  for (const service of services) {
+    await prisma.service.upsert({
+      where: { sku: service.sku },
+      update: {
+        images: service.images,
+        featuredImage: service.featuredImage,
+      },
+      create: service,
+    })
+    console.log('✅ Created/Updated service:', service.name)
+  }
+
   console.log('✅ Database seeded successfully!')
   console.log('\n📋 Admin Credentials:')
   console.log('   Email: admin@subercraftex.com')

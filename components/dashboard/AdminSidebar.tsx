@@ -14,6 +14,11 @@ import {
   FileText,
   FolderTree,
   Star,
+  Wrench,
+  Calendar,
+  Tags,
+  Image,
+  Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +37,31 @@ const adminNavigation = [
     name: "Categories",
     href: "/dashboard/categories",
     icon: FolderTree,
+  },
+  {
+    name: "Services",
+    href: "/dashboard/services",
+    icon: Wrench,
+  },
+  {
+    name: "Service Categories",
+    href: "/dashboard/service-categories",
+    icon: Tags,
+  },
+  {
+    name: "Materials",
+    href: "/dashboard/materials",
+    icon: Boxes,
+  },
+  {
+    name: "Bookings",
+    href: "/dashboard/bookings",
+    icon: Calendar,
+  },
+  {
+    name: "Hero Banners",
+    href: "/dashboard/hero-banners",
+    icon: Image,
   },
   {
     name: "Orders",

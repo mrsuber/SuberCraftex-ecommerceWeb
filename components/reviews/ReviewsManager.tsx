@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +65,7 @@ export function ReviewsManager({ pendingReviews, approvedReviews }: ReviewsManag
 
       toast.success("Review approved!");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to approve review");
     } finally {
       setLoading(false);
@@ -85,7 +85,7 @@ export function ReviewsManager({ pendingReviews, approvedReviews }: ReviewsManag
 
       toast.success("Review deleted");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete review");
     } finally {
       setLoading(false);
@@ -112,7 +112,7 @@ export function ReviewsManager({ pendingReviews, approvedReviews }: ReviewsManag
       setResponding(null);
       setResponseText("");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to post response");
     } finally {
       setLoading(false);

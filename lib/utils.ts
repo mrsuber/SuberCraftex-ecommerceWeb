@@ -42,6 +42,7 @@ export function slugify(str: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -55,6 +56,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Serialize Prisma Product to frontend Product type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function serializeProduct(product: any) {
   return {
     id: product.id,

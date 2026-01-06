@@ -170,7 +170,7 @@ export function Footer() {
         <Separator className="my-8" />
 
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground" suppressHydrationWarning>
             © {new Date().getFullYear()} SuberCraftex. All rights reserved.
           </p>
           <div className="flex space-x-4 text-sm text-muted-foreground">

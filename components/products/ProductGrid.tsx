@@ -166,7 +166,7 @@ export function ProductGrid() {
       <div className="text-center py-12">
         <p className="text-destructive mb-4">{error}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => router.refresh()}
           className="text-primary hover:underline"
         >
           Try again

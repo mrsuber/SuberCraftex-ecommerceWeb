@@ -52,6 +52,8 @@ export function ProductInfo({
   };
 
   const handleShare = async () => {
+    if (typeof window === 'undefined') return;
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -63,7 +65,7 @@ export function ProductInfo({
         console.log("Error sharing:", error);
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(window.location.href);
       toast.success("Link copied to clipboard");
     }
   };

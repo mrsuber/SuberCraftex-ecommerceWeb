@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,14 @@ interface PurchaseOrderFormProps {
 
 export function PurchaseOrderForm({ suppliers, products }: PurchaseOrderFormProps) {
   const router = useRouter();
+  const itemIdCounter = useRef(0);
+
+  // Generate a stable ID for line items
+  const generateLineItemId = () => {
+    itemIdCounter.current += 1;
+    return `line-item-${itemIdCounter.current}`;
+  };
+
   const [isLoading, setIsLoading] = useState(false);
   const [supplierId, setSupplierId] = useState("");
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
@@ -55,7 +63,7 @@ export function PurchaseOrderForm({ suppliers, products }: PurchaseOrderFormProp
   const [shippingCost, setShippingCost] = useState(0);
   const [notes, setNotes] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: Math.random().toString(), productId: "", quantity: 1, unitPrice: 0, isCustom: false },
+    { id: generateLineItemId(), productId: "", quantity: 1, unitPrice: 0, isCustom: false },
   ]);
 
   // Update payment terms when supplier changes
@@ -79,7 +87,7 @@ export function PurchaseOrderForm({ suppliers, products }: PurchaseOrderFormProp
   const addLineItem = (isCustom = false) => {
     setLineItems([
       ...lineItems,
-      { id: Math.random().toString(), productId: "", quantity: 1, unitPrice: 0, isCustom, productName: isCustom ? "" : undefined },
+      { id: generateLineItemId(), productId: "", quantity: 1, unitPrice: 0, isCustom, productName: isCustom ? "" : undefined },
     ]);
   };
 
@@ -144,7 +152,7 @@ export function PurchaseOrderForm({ suppliers, products }: PurchaseOrderFormProp
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 name: item.productName,
-                sku: `CUSTOM-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+                sku: `CUSTOM-${crypto.randomUUID().substring(0, 8).toUpperCase()}`,
                 price: item.unitPrice,
                 costPerItem: item.unitPrice,
                 categoryId: null,

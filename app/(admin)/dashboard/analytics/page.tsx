@@ -29,7 +29,6 @@ async function getAnalyticsData() {
     currentPeriodOrders,
     previousPeriodOrders,
     ordersByStatus,
-    completedOrders,
     totalCustomers,
     newCustomers,
     topProductsData,
@@ -66,19 +65,6 @@ async function getAnalyticsData() {
         createdAt: { gte: thirtyDaysAgo },
       },
       _count: true,
-    }),
-
-    // Completed orders for fulfillment time (last 30 days)
-    db.order.findMany({
-      where: {
-        orderStatus: 'delivered',
-        createdAt: { gte: thirtyDaysAgo },
-        deliveredAt: { not: null },
-      },
-      select: {
-        createdAt: true,
-        deliveredAt: true,
-      },
     }),
 
     // Total customers
@@ -165,14 +151,6 @@ async function getAnalyticsData() {
 
   // Calculate AOV
   const aov = currentOrderCount > 0 ? currentRevenue / currentOrderCount : 0;
-
-  // Calculate average fulfillment time (in days)
-  const avgFulfillmentTime = completedOrders.length > 0
-    ? completedOrders.reduce((sum, order) => {
-        const days = (order.deliveredAt!.getTime() - order.createdAt.getTime()) / (1000 * 60 * 60 * 24);
-        return sum + days;
-      }, 0) / completedOrders.length
-    : 0;
 
   // Calculate completion rate
   const totalOrders = ordersByStatus.reduce((sum, s) => sum + s._count, 0);

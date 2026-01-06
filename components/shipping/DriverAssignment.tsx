@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +36,7 @@ export function DriverAssignment({
   orderNumber,
   availableDrivers,
 }: DriverAssignmentProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState("");
@@ -58,7 +60,7 @@ export function DriverAssignment({
       }
 
       setOpen(false);
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       console.error(error);
       alert("Failed to assign driver");

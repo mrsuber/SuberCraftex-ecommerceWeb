@@ -48,7 +48,7 @@ export default function LoginPage() {
                     body: JSON.stringify({ email: formData.email }),
                   });
                   toast.success("Verification email sent!");
-                } catch (error) {
+                } catch {
                   toast.error("Failed to resend email");
                 }
               },
