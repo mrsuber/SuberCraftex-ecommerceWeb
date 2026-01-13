@@ -61,7 +61,16 @@ export default function LoginPage() {
       }
 
       toast.success("Welcome back!");
-      router.push("/account");
+
+      // Redirect based on user role
+      if (data.user.role === 'admin' || data.user.role === 'cashier' || data.user.role === 'driver' || data.user.role === 'tailor') {
+        router.push("/dashboard");
+      } else if (data.user.role === 'investor') {
+        router.push("/investor/dashboard");
+      } else {
+        router.push("/account");
+      }
+
       router.refresh();
     } catch (error) {
       console.error("Login error:", error);

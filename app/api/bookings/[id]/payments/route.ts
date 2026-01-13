@@ -11,6 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json(
@@ -21,7 +22,7 @@ export async function GET(
 
     // Get booking to check authorization
     const booking = await db.serviceBooking.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         userId: true,
@@ -45,7 +46,7 @@ export async function GET(
 
     // Get all payments
     const payments = await db.bookingPayment.findMany({
-      where: { bookingId: params.id },
+      where: { bookingId: id },
       orderBy: {
         createdAt: 'desc'
       }
@@ -76,6 +77,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json(
@@ -97,7 +99,7 @@ export async function POST(
 
     // Get booking to check authorization and quote
     const booking = await db.serviceBooking.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         quote: true,
       }
@@ -133,7 +135,7 @@ export async function POST(
     // In a real implementation, this would create a Stripe PaymentIntent
     const payment = await db.bookingPayment.create({
       data: {
-        bookingId: params.id,
+        bookingId: id,
         amount,
         paymentType,
         paymentMethod,

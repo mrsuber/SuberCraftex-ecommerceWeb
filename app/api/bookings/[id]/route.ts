@@ -151,8 +151,8 @@ export async function GET(
       )
     }
 
-    // Only allow user to see their own bookings (or admin)
-    if (!auth.user || (auth.user.id !== booking.userId && auth.user.role !== 'admin')) {
+    // Only allow user to see their own bookings (or admin/tailor)
+    if (!auth.user || (auth.user.id !== booking.userId && auth.user.role !== 'admin' && auth.user.role !== 'tailor')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -213,7 +213,7 @@ export async function PATCH(
       // Validate new date is not in the past
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      if (newDate < today) {
+      if (newDate && newDate < today) {
         return NextResponse.json(
           { error: 'Cannot reschedule to a past date' },
           { status: 400 }
@@ -271,13 +271,15 @@ export async function PATCH(
       })
 
       // Send reschedule email (non-blocking)
-      sendRescheduleEmail(
-        updatedBooking,
-        existingBooking.scheduledDate,
-        existingBooking.scheduledTime
-      ).catch((error) => {
-        console.error('Failed to send reschedule email:', error)
-      })
+      if (existingBooking.scheduledDate && existingBooking.scheduledTime) {
+        sendRescheduleEmail(
+          updatedBooking,
+          existingBooking.scheduledDate,
+          existingBooking.scheduledTime
+        ).catch((error) => {
+          console.error('Failed to send reschedule email:', error)
+        })
+      }
 
       return NextResponse.json(updatedBooking)
     }

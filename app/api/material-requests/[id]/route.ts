@@ -11,6 +11,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Check admin authentication
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {
@@ -35,12 +36,12 @@ export async function PATCH(
 
     // Check if material request exists
     const existing = await db.materialRequest.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         booking: {
           select: {
             id: true,
-            booking_number: true,
+            bookingNumber: true,
           }
         }
       }
@@ -55,7 +56,7 @@ export async function PATCH(
 
     // Update material request
     const materialRequest = await db.materialRequest.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         ...(status && { status }),
         ...(admin_notes !== undefined && { admin_notes }),
@@ -63,7 +64,7 @@ export async function PATCH(
     })
 
     console.log(
-      `📦 Material request ${params.id} updated - Status: ${materialRequest.status} - Booking: ${existing.booking.booking_number}`
+      `📦 Material request ${id} updated - Status: ${materialRequest.status} - Booking: ${existing.booking.bookingNumber}`
     )
 
     // TODO: Send email notification to customer about status change
@@ -90,6 +91,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Check admin authentication
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {
@@ -101,7 +103,7 @@ export async function DELETE(
 
     // Check if material request exists
     const existing = await db.materialRequest.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!existing) {
@@ -113,10 +115,10 @@ export async function DELETE(
 
     // Delete material request
     await db.materialRequest.delete({
-      where: { id: params.id }
+      where: { id: id }
     })
 
-    console.log(`🗑️ Material request ${params.id} deleted`)
+    console.log(`🗑️ Material request ${id} deleted`)
 
     return NextResponse.json({
       success: true,

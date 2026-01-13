@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Receipt, Eye } from 'lucide-react'
+import { Receipt } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { formatCurrency } from '@/lib/currency'
 
 interface Order {
   id: string
@@ -111,7 +112,7 @@ export default function POSOrderList({ sessionId, refreshTrigger }: POSOrderList
                   <span className="text-gray-600">
                     {item.quantity}x {item.productName}
                   </span>
-                  <span className="font-medium">${item.total.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(item.total)}</span>
                 </div>
               ))}
             </div>
@@ -119,7 +120,7 @@ export default function POSOrderList({ sessionId, refreshTrigger }: POSOrderList
             <div className="pt-3 border-t">
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
-                <span>${selectedOrder.totalAmount.toFixed(2)}</span>
+                <span>{formatCurrency(selectedOrder.totalAmount)}</span>
               </div>
             </div>
 
@@ -168,7 +169,7 @@ export default function POSOrderList({ sessionId, refreshTrigger }: POSOrderList
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-gray-900">${order.totalAmount.toFixed(2)}</div>
+                  <div className="font-bold text-gray-900">{formatCurrency(order.totalAmount)}</div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -176,9 +177,10 @@ export default function POSOrderList({ sessionId, refreshTrigger }: POSOrderList
                       e.stopPropagation()
                       handleViewReceipt(order.id)
                     }}
-                    className="h-6 px-2 mt-1"
+                    className="h-7 px-2 mt-1 hover:bg-blue-50"
+                    title="Print Receipt"
                   >
-                    <Eye className="w-3 h-3" />
+                    <Receipt className="w-4 h-4 text-blue-600" />
                   </Button>
                 </div>
               </div>

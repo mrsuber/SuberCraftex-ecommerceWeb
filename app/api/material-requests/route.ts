@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
         booking: {
           select: {
             id: true,
-            booking_number: true,
+            bookingNumber: true,
             user: {
               select: {
                 id: true,
-                name: true,
+                fullName: true,
                 email: true,
               }
             },
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [
         { status: 'asc' }, // pending first
-        { created_at: 'desc' }
+        { createdAt: 'desc' }
       ]
     })
 

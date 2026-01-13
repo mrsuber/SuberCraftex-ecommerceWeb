@@ -179,7 +179,6 @@ export async function DELETE(
     }
 
     const { id } = await params
-
     // Check if service has any bookings
     const bookingsCount = await db.serviceBooking.count({
       where: {

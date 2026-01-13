@@ -18,7 +18,6 @@ export async function DELETE(
     }
 
     const { id } = await params
-
     // Check if cart item exists and belongs to user
     const cartItem = await db.cartItemService.findUnique({
       where: { id },

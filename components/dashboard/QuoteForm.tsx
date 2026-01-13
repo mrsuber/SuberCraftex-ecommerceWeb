@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import { Calculator, DollarSign, Clock, FileText, Send } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface QuoteFormProps {
   bookingId: string
@@ -141,7 +142,7 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
                     {m.material.name} × {m.quantity} {m.material.unit}
                   </span>
                   <span className="font-medium">
-                    ${(Number(m.material.price) * m.quantity).toFixed(2)}
+                    {formatCurrency(Number(m.material.price) * m.quantity)}
                   </span>
                 </div>
               ))}
@@ -150,7 +151,7 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
           )}
 
           <div>
-            <Label htmlFor="materialCost">Total Material Cost ($)</Label>
+            <Label htmlFor="materialCost">Total Material Cost (FCFA)</Label>
             <Input
               id="materialCost"
               type="number"
@@ -192,7 +193,7 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
             </div>
 
             <div>
-              <Label htmlFor="laborRate">Hourly Rate ($)</Label>
+              <Label htmlFor="laborRate">Hourly Rate (FCFA)</Label>
               <Input
                 id="laborRate"
                 type="number"
@@ -209,7 +210,7 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
           <Separator />
 
           <div>
-            <Label htmlFor="laborCost">Total Labor Cost ($)</Label>
+            <Label htmlFor="laborCost">Total Labor Cost (FCFA)</Label>
             <Input
               id="laborCost"
               type="number"
@@ -221,7 +222,7 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
             />
             <p className="text-sm text-muted-foreground mt-1">
               {formData.laborHours && formData.laborRate
-                ? `${formData.laborHours} hours × $${formData.laborRate}/hr = $${formData.laborCost}`
+                ? `${formData.laborHours} hours × ${formatCurrency(parseFloat(formData.laborRate))}/hr = ${formatCurrency(parseFloat(formData.laborCost))}`
                 : 'Enter hours and rate to calculate automatically'}
             </p>
           </div>
@@ -240,16 +241,16 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Material Cost:</span>
-              <span className="font-medium">${formData.materialCost}</span>
+              <span className="font-medium">{formatCurrency(parseFloat(formData.materialCost))}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Labor Cost:</span>
-              <span className="font-medium">${formData.laborCost}</span>
+              <span className="font-medium">{formatCurrency(parseFloat(formData.laborCost))}</span>
             </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total Cost:</span>
-              <span className="text-primary">${totalCost}</span>
+              <span className="text-primary">{formatCurrency(parseFloat(totalCost))}</span>
             </div>
           </div>
 
@@ -268,7 +269,7 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
               required
             />
             <p className="text-sm text-muted-foreground mt-1">
-              Down Payment: ${downPaymentAmount} ({formData.downPaymentPercentage}%)
+              Down Payment: {formatCurrency(parseFloat(downPaymentAmount))} ({formData.downPaymentPercentage}%)
             </p>
           </div>
         </CardContent>
@@ -322,14 +323,13 @@ export function QuoteForm({ bookingId, bookingNumber, materials = [] }: QuoteFor
             <strong>Booking:</strong> {bookingNumber}
           </p>
           <p>
-            <strong>Total Quote:</strong> ${totalCost}
+            <strong>Total Quote:</strong> {formatCurrency(parseFloat(totalCost))}
           </p>
           <p>
-            <strong>Down Payment Required:</strong> ${downPaymentAmount}
+            <strong>Down Payment Required:</strong> {formatCurrency(parseFloat(downPaymentAmount))}
           </p>
           <p>
-            <strong>Remaining Balance:</strong> $
-            {(parseFloat(totalCost) - parseFloat(downPaymentAmount)).toFixed(2)}
+            <strong>Remaining Balance:</strong> {formatCurrency(parseFloat(totalCost) - parseFloat(downPaymentAmount))}
           </p>
           {formData.notes && (
             <div className="mt-2 pt-2 border-t">

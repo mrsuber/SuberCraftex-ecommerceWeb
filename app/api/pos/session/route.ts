@@ -9,17 +9,31 @@ import { getCurrentUser } from '@/lib/session'
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'cashier') {
+    if (!user || (user.role !== 'cashier' && user.role !== 'admin')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Cashier access required.' },
+        { error: 'Unauthorized. Cashier or admin access required.' },
         { status: 401 }
       )
     }
 
-    // Check if cashier profile exists
-    const cashier = await db.cashier.findUnique({
+    // Check if cashier profile exists, create if needed (for admins)
+    let cashier = await db.cashier.findUnique({
       where: { userId: user.id }
     })
+
+    if (!cashier && user.role === 'admin') {
+      // Auto-create cashier profile for admin
+      cashier = await db.cashier.create({
+        data: {
+          userId: user.id,
+          fullName: user.fullName || 'Admin User',
+          phone: user.phone || '+0000000000',
+          email: user.email,
+          employeeId: `ADMIN-${user.id.substring(0, 8).toUpperCase()}`,
+          isActive: true
+        }
+      })
+    }
 
     if (!cashier || !cashier.isActive) {
       return NextResponse.json(
@@ -98,16 +112,30 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'cashier') {
+    if (!user || (user.role !== 'cashier' && user.role !== 'admin')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Cashier access required.' },
+        { error: 'Unauthorized. Cashier or admin access required.' },
         { status: 401 }
       )
     }
 
-    const cashier = await db.cashier.findUnique({
+    let cashier = await db.cashier.findUnique({
       where: { userId: user.id }
     })
+
+    if (!cashier && user.role === 'admin') {
+      // Auto-create cashier profile for admin
+      cashier = await db.cashier.create({
+        data: {
+          userId: user.id,
+          fullName: user.fullName || 'Admin User',
+          phone: user.phone || '+0000000000',
+          email: user.email,
+          employeeId: `ADMIN-${user.id.substring(0, 8).toUpperCase()}`,
+          isActive: true
+        }
+      })
+    }
 
     if (!cashier) {
       return NextResponse.json(

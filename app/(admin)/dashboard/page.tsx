@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,6 +77,12 @@ export default async function DashboardPage() {
     redirect('/dashboard/orders');
   }
 
+  // Redirect tailors to their dedicated dashboard
+  if (user?.role === 'tailor') {
+    redirect('/dashboard/tailor');
+  }
+
+  // Admin dashboard continues below
   const stats = await getStats();
 
   const statCards = [

@@ -71,3 +71,17 @@ export async function requireAdmin() {
 
   return user
 }
+
+/**
+ * Require admin or tailor role - throws redirect if neither
+ * @returns Admin or Tailor user object
+ */
+export async function requireAdminOrTailor() {
+  const user = await requireAuth()
+
+  if (user.role !== 'admin' && user.role !== 'tailor') {
+    redirect('/account')
+  }
+
+  return user
+}

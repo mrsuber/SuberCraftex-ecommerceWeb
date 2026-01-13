@@ -11,6 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json(
@@ -21,10 +22,10 @@ export async function GET(
 
     // Get booking to check authorization
     const booking = await db.serviceBooking.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
-        user_id: true,
+        userId: true,
       }
     })
 
@@ -35,8 +36,8 @@ export async function GET(
       )
     }
 
-    // Check authorization (admin or booking owner)
-    if (user.role !== 'admin' && booking.user_id !== user.id) {
+    // Check authorization (admin, tailor, or booking owner)
+    if (user.role !== 'admin' && user.role !== 'tailor' && booking.userId !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -45,9 +46,9 @@ export async function GET(
 
     // Get all progress updates
     const progressUpdates = await db.bookingProgress.findMany({
-      where: { booking_id: params.id },
+      where: { bookingId: id },
       orderBy: {
-        created_at: 'desc'
+        createdAt: 'desc'
       }
     })
 
@@ -63,18 +64,19 @@ export async function GET(
 
 /**
  * POST /api/bookings/[id]/progress
- * Add progress update (admin only)
+ * Add progress update (admin or tailor only)
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check admin authentication
+    const { id } = await params
+    // Check authentication - allow admin and tailor
     const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'tailor')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
+        { error: 'Unauthorized. Admin or Tailor access required.' },
         { status: 401 }
       )
     }
@@ -110,13 +112,13 @@ export async function POST(
 
     // Check if booking exists
     const booking = await db.serviceBooking.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
             id: true,
             email: true,
-            name: true,
+            fullName: true,
           }
         },
         service: {
@@ -138,19 +140,19 @@ export async function POST(
     // Create progress update
     const progressUpdate = await db.bookingProgress.create({
       data: {
-        booking_id: params.id,
+        bookingId: id,
         status,
         description,
         photos,
-        created_by: user.id
+        createdBy: user.id
       }
     })
 
-    console.log(`📊 Progress update added for booking ${booking.booking_number} - Status: ${status}`)
+    console.log(`📊 Progress update added for booking ${booking.bookingNumber} - Status: ${status}`)
 
     // TODO: Send email notification to customer
     // await sendProgressUpdateEmail(booking.user.email, {
-    //   bookingNumber: booking.booking_number,
+    //   bookingNumber: booking.bookingNumber,
     //   serviceName: booking.service.name,
     //   status: progressUpdate.status,
     //   description: progressUpdate.description,

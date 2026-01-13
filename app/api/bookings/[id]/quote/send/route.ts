@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 
 /**
  * POST /api/bookings/[id]/quote/send
- * Send quote to customer (admin only)
+ * Send quote to customer (admin or tailor only)
  */
 export async function POST(
   request: NextRequest,
@@ -13,11 +13,11 @@ export async function POST(
   try {
     const { id } = await params
 
-    // Check admin authentication
+    // Check authentication - allow admin and tailor
     const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'tailor')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
+        { error: 'Unauthorized. Admin or Tailor access required.' },
         { status: 401 }
       )
     }
@@ -89,7 +89,7 @@ export async function POST(
         data: {
           quoteId: booking.quote!.id,
           action: 'sent',
-          notes: 'Quote sent to customer',
+          notes: `Quote sent to customer by ${user.role}`,
           createdBy: user.id,
         }
       })

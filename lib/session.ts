@@ -1,4 +1,4 @@
 /**
  * Re-export session utilities for consistent imports
  */
-export { getSession as getCurrentUser, requireAuth, requireAdmin } from './auth/session'
+export { getSession as getCurrentUser, requireAuth, requireAdmin, requireAdminOrTailor } from './auth/session'

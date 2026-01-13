@@ -41,9 +41,9 @@ export function ServiceTypeSelector({
 }: ServiceTypeSelectorProps) {
   const availableTypes: ServiceType[] = []
 
-  if (service.supportsOnsite) availableTypes.push('onsite')
-  if (service.supportsCustomProduction) availableTypes.push('custom_production')
-  if (service.supportsCollectRepair) availableTypes.push('collect_repair')
+  if (service.supports_onsite) availableTypes.push('onsite')
+  if (service.supports_custom_production) availableTypes.push('custom_production')
+  if (service.supports_collect_repair) availableTypes.push('collect_repair')
 
   // If only one type is available, auto-select it
   if (availableTypes.length === 1 && !selectedType) {

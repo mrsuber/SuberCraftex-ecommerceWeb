@@ -4,8 +4,9 @@ import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Calendar, Clock, User, Mail, Phone, Tag, FileText } from 'lucide-react'
+import { Calendar, Clock, User, Mail, Phone, Tag, FileText, Ruler } from 'lucide-react'
 import { format } from 'date-fns'
+import { formatCurrency } from '@/lib/currency'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -83,6 +84,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
           fullName: true,
         },
       },
+      measurement: true,
       quote: {
         include: {
           history: {
@@ -206,7 +208,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
             <div>
               <div className="text-sm text-muted-foreground">Price</div>
               <div className="text-2xl font-bold">
-                ${Number(booking.price).toFixed(2)}
+                {formatCurrency(Number(booking.price))}
               </div>
             </div>
           </CardContent>
@@ -447,11 +449,11 @@ export default async function BookingPage({ params }: BookingPageProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-muted-foreground">Material Cost</div>
-                <div className="font-semibold">${Number(booking.quote.materialCost).toFixed(2)}</div>
+                <div className="font-semibold">{formatCurrency(Number(booking.quote.materialCost))}</div>
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Labor Cost</div>
-                <div className="font-semibold">${Number(booking.quote.laborCost).toFixed(2)}</div>
+                <div className="font-semibold">{formatCurrency(Number(booking.quote.laborCost))}</div>
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Labor Hours</div>
@@ -460,7 +462,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
               <div>
                 <div className="text-sm text-muted-foreground">Total Cost</div>
                 <div className="text-xl font-bold text-primary">
-                  ${Number(booking.quote.totalCost).toFixed(2)}
+                  {formatCurrency(Number(booking.quote.totalCost))}
                 </div>
               </div>
             </div>
@@ -469,7 +471,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
 
             <div>
               <div className="text-sm text-muted-foreground mb-1">Down Payment</div>
-              <div className="font-semibold">${Number(booking.quote.downPaymentAmount).toFixed(2)}</div>
+              <div className="font-semibold">{formatCurrency(Number(booking.quote.downPaymentAmount))}</div>
             </div>
 
             {booking.quote.notes && (
@@ -534,12 +536,12 @@ export default async function BookingPage({ params }: BookingPageProps) {
                   <div>
                     <p className="font-medium">{bm.material.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {bm.quantity} × ${Number(bm.priceAtBooking).toFixed(2)} / {bm.material.unit}
+                      {bm.quantity} × {formatCurrency(Number(bm.priceAtBooking))} / {bm.material.unit}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">
-                      ${(Number(bm.priceAtBooking) * bm.quantity).toFixed(2)}
+                      {formatCurrency(Number(bm.priceAtBooking) * bm.quantity)}
                     </p>
                     {bm.isAcquired && (
                       <Badge variant="default" className="mt-1">
@@ -616,6 +618,58 @@ export default async function BookingPage({ params }: BookingPageProps) {
         </Card>
       )}
 
+      {/* Measurement Section */}
+      {((booking.serviceType === 'custom_production' || booking.serviceType === 'collect_repair') &&
+        (booking.status === 'quote_approved' || booking.status === 'in_progress' || booking.status === 'quote_pending' || booking.status === 'pending' || booking.measurement)) && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Ruler className="h-5 w-5" />
+                Measurements
+              </CardTitle>
+              <Button asChild variant={booking.measurement ? 'outline' : 'default'}>
+                <Link href={`/dashboard/bookings/${id}/measurement`}>
+                  <Ruler className="h-4 w-4 mr-2" />
+                  {booking.measurement ? 'View/Update Measurements' : 'Record Measurements'}
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {booking.measurement ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div>
+                    <p className="font-medium text-green-900">Measurements Recorded</p>
+                    <p className="text-sm text-green-700">
+                      Taken on {format(new Date(booking.measurement.takenAt), 'MMM d, yyyy h:mm a')}
+                    </p>
+                  </div>
+                  <Badge variant="default" className="bg-green-600">
+                    ✓ Complete
+                  </Badge>
+                </div>
+                {booking.measurement.notes && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Notes</div>
+                    <div className="text-sm whitespace-pre-wrap">{booking.measurement.notes}</div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Ruler className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">No measurements recorded yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Click the button above to record customer measurements
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
       <div className="flex justify-end gap-4">
         <Button variant="outline" asChild>
@@ -624,6 +678,15 @@ export default async function BookingPage({ params }: BookingPageProps) {
         {!booking.quote && (booking.status === 'quote_pending' || booking.status === 'pending') && (
           <Button asChild>
             <Link href={`/dashboard/bookings/${id}/quote/create`}>Create Quote</Link>
+          </Button>
+        )}
+        {((booking.serviceType === 'custom_production' || booking.serviceType === 'collect_repair') &&
+          (booking.status === 'quote_approved' || booking.status === 'in_progress' || booking.status === 'quote_pending' || booking.status === 'pending') && !booking.measurement) && (
+          <Button asChild variant="default">
+            <Link href={`/dashboard/bookings/${id}/measurement`}>
+              <Ruler className="h-4 w-4 mr-2" />
+              Record Measurements
+            </Link>
           </Button>
         )}
         {(booking.status === 'in_progress' || booking.status === 'payment_partial') && (

@@ -9,9 +9,9 @@ import { getCurrentUser } from '@/lib/session'
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'cashier') {
+    if (!user || (user.role !== 'cashier' && user.role !== 'admin')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Cashier access required.' },
+        { error: 'Unauthorized. Cashier or admin access required.' },
         { status: 401 }
       )
     }

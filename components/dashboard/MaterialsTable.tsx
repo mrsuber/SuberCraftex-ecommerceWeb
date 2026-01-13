@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { formatCurrency } from '@/lib/currency'
 import {
   Table,
   TableBody,
@@ -226,7 +227,7 @@ export function MaterialsTable({ materials, categories }: MaterialsTableProps) {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-semibold">${material.price.toFixed(2)}</div>
+                      <div className="font-semibold">{formatCurrency(material.price)}</div>
                       <div className="text-xs text-muted-foreground">per {material.unit}</div>
                     </div>
                   </TableCell>
@@ -271,11 +272,10 @@ export function MaterialsTable({ materials, categories }: MaterialsTableProps) {
       {/* Delete confirmation dialog */}
       <ConfirmationDialog
         open={!!deleteId}
-        onClose={() => setDeleteId(null)}
+        onOpenChange={(open) => !open && setDeleteId(null)}
         onConfirm={handleDelete}
         title="Delete Material"
         description="Are you sure you want to delete this material? This action cannot be undone and will remove all associations with services."
-        isLoading={isDeleting}
       />
     </div>
   )

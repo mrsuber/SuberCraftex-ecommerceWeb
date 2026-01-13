@@ -5,22 +5,24 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, Plus, Package } from 'lucide-react'
 import Image from 'next/image'
+import { formatCurrency } from '@/lib/currency'
 
 interface Product {
   id: string
   name: string
   sku: string
   price: number
-  featuredImage?: string
-  inventoryCount: number
-  isActive: boolean
+  featured_image?: string
+  inventory_count: number
+  is_active: boolean
 }
 
 interface POSProductGridProps {
   onAddToCart: (item: any) => void
+  refreshTrigger?: number
 }
 
-export default function POSProductGrid({ onAddToCart }: POSProductGridProps) {
+export default function POSProductGrid({ onAddToCart, refreshTrigger }: POSProductGridProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -28,7 +30,7 @@ export default function POSProductGrid({ onAddToCart }: POSProductGridProps) {
 
   useEffect(() => {
     loadProducts()
-  }, [])
+  }, [refreshTrigger])
 
   useEffect(() => {
     filterProducts()
@@ -36,11 +38,16 @@ export default function POSProductGrid({ onAddToCart }: POSProductGridProps) {
 
   const loadProducts = async () => {
     try {
-      const response = await fetch('/api/products?isActive=true')
+      // Add cache-buster to ensure fresh data
+      const response = await fetch(`/api/products?isActive=true&_=${Date.now()}`, {
+        cache: 'no-store'
+      })
       if (response.ok) {
         const data = await response.json()
-        setProducts(data)
-        setFilteredProducts(data)
+        // API returns { products: [...], total, limit, offset }
+        const productList = data.products || []
+        setProducts(productList)
+        setFilteredProducts(productList)
       }
     } catch (error) {
       console.error('Error loading products:', error)
@@ -70,7 +77,7 @@ export default function POSProductGrid({ onAddToCart }: POSProductGridProps) {
       name: product.name,
       sku: product.sku,
       price: product.price,
-      image: product.featuredImage,
+      image: product.featured_image,
       quantity: 1,
     })
   }
@@ -108,9 +115,9 @@ export default function POSProductGrid({ onAddToCart }: POSProductGridProps) {
             className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="aspect-square relative bg-gray-100">
-              {product.featuredImage ? (
+              {product.featured_image ? (
                 <Image
-                  src={product.featuredImage}
+                  src={product.featured_image}
                   alt={product.name}
                   fill
                   className="object-cover rounded-t-lg"
@@ -131,16 +138,16 @@ export default function POSProductGrid({ onAddToCart }: POSProductGridProps) {
               <div className="flex items-center justify-between mt-3">
                 <div>
                   <div className="text-xl font-bold text-gray-900">
-                    ${product.price}
+                    {formatCurrency(product.price)}
                   </div>
-                  <div className={`text-xs ${product.inventoryCount > 10 ? 'text-green-600' : product.inventoryCount > 0 ? 'text-orange-600' : 'text-red-600'}`}>
-                    {product.inventoryCount > 0 ? `${product.inventoryCount} in stock` : 'Out of stock'}
+                  <div className={`text-xs ${product.inventory_count > 10 ? 'text-green-600' : product.inventory_count > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                    {product.inventory_count > 0 ? `${product.inventory_count} in stock` : 'Out of stock'}
                   </div>
                 </div>
 
                 <Button
                   onClick={() => handleAddToCart(product)}
-                  disabled={product.inventoryCount === 0}
+                  disabled={product.inventory_count === 0}
                   size="sm"
                   className="gap-1"
                 >

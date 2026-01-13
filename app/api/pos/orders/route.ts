@@ -10,9 +10,9 @@ import { Prisma } from '@prisma/client'
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'cashier') {
+    if (!user || (user.role !== 'cashier' && user.role !== 'admin')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Cashier access required.' },
+        { error: 'Unauthorized. Cashier or admin access required.' },
         { status: 401 }
       )
     }
@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
           totalAmount,
           amountTendered: amountTendered ? new Prisma.Decimal(amountTendered) : null,
           changeGiven: amountTendered ? new Prisma.Decimal(amountTendered).sub(totalAmount) : null,
-          shippingAddress: null,
-          billingAddress: null,
+          shippingAddress: Prisma.JsonNull,
+          billingAddress: Prisma.JsonNull,
         }
       })
 
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
             productName: product.name,
             productSku: variant?.sku || product.sku,
             productImage: variant?.imageUrl || product.featuredImage,
-            variantOptions: variant?.options || null,
+            variantOptions: variant?.options || Prisma.JsonNull,
             quantity: item.quantity,
             price: new Prisma.Decimal(item.price),
             total: new Prisma.Decimal(item.price).mul(item.quantity),
@@ -206,9 +206,9 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'cashier') {
+    if (!user || (user.role !== 'cashier' && user.role !== 'admin')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Cashier access required.' },
+        { error: 'Unauthorized. Cashier or admin access required.' },
         { status: 401 }
       )
     }

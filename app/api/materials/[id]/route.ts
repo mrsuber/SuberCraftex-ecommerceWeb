@@ -171,7 +171,6 @@ export async function DELETE(
     }
 
     const { id } = await params
-
     // Check if material exists
     const existing = await db.material.findUnique({
       where: { id }

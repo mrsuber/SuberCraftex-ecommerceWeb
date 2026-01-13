@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatCurrency as formatCurrencyUtil } from "./currency";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -8,11 +9,16 @@ export function cn(...inputs: ClassValue[]) {
 export function formatPrice(
   price: number,
   options: {
-    currency?: "USD" | "EUR" | "GBP";
+    currency?: "USD" | "EUR" | "GBP" | "XAF";
     notation?: Intl.NumberFormatOptions["notation"];
   } = {}
 ) {
-  const { currency = "USD", notation = "standard" } = options;
+  const { currency = "XAF", notation = "standard" } = options;
+
+  // Use custom formatter for XAF/FCFA
+  if (currency === "XAF") {
+    return formatCurrencyUtil(price, "XAF");
+  }
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",

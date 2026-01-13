@@ -28,6 +28,7 @@ export default async function BookingsPage() {
   const serializedBookings = bookings.map((booking) => ({
     ...booking,
     price: Number(booking.price),
+    finalPrice: booking.finalPrice ? Number(booking.finalPrice) : null,
     scheduled_date: booking.scheduledDate?.toISOString() || null,
     scheduledDate: booking.scheduledDate?.toISOString() || null,
     scheduled_time: booking.scheduledTime,

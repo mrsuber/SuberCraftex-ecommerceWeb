@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { Prisma, BookingStatus } from '@prisma/client'
 import { verifyAuth } from '@/lib/auth/verify-auth'
 import { sendEmail } from '@/lib/email/mailer'
 import { getBookingConfirmationTemplate } from '@/lib/email/templates/booking-confirmation'
+import { getWalkInBookingConfirmationTemplate } from '@/lib/email/templates/walk-in-booking-confirmation'
 import { createBookingCalendarEvent } from '@/lib/email/calendar-invite'
 import { format } from 'date-fns'
 
@@ -32,38 +34,66 @@ function calculateEndTime(startTime: string, durationMinutes: number): string {
 
 async function sendBookingConfirmationEmail(booking: any) {
   try {
-    // Generate calendar invite
-    const calendarInvite = createBookingCalendarEvent({
-      bookingNumber: booking.bookingNumber,
-      serviceName: booking.service.name,
-      scheduledDate: booking.scheduledDate,
-      scheduledTime: booking.scheduledTime,
-      duration: booking.duration,
-      customerName: booking.customerName,
-      customerEmail: booking.customerEmail,
-    })
+    // Check if this is a walk-in booking (custom production or collect/repair without scheduled date/time)
+    const isWalkInBooking = !booking.scheduledDate || !booking.scheduledTime
 
-    const { html, text } = getBookingConfirmationTemplate({
-      bookingNumber: booking.bookingNumber,
-      customerName: booking.customerName,
-      customerEmail: booking.customerEmail,
-      serviceName: booking.service.name,
-      serviceCategory: booking.service.category?.name,
-      scheduledDate: format(new Date(booking.scheduledDate), 'MMMM d, yyyy'),
-      scheduledTime: booking.scheduledTime,
-      endTime: booking.endTime,
-      duration: booking.duration,
-      price: Number(booking.price),
-      customerNotes: booking.customerNotes,
-      calendarInvite,
-    })
+    if (isWalkInBooking) {
+      // Send walk-in booking confirmation (no calendar invite needed)
+      const { html, text } = getWalkInBookingConfirmationTemplate({
+        bookingNumber: booking.bookingNumber,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        serviceName: booking.service.name,
+        serviceCategory: booking.service.category?.name,
+        serviceType: booking.serviceType,
+        desiredOutcome: booking.desiredOutcome,
+        customerNotes: booking.customerNotes,
+      })
 
-    await sendEmail({
-      to: booking.customerEmail,
-      subject: `Booking Confirmed #${booking.bookingNumber} - ${booking.service.name}`,
-      html,
-      text,
-    })
+      await sendEmail({
+        to: booking.customerEmail,
+        subject: `Booking Received #${booking.bookingNumber} - ${booking.service.name}`,
+        html,
+        text,
+      })
+
+      console.log(`✉️ Walk-in booking confirmation sent for ${booking.bookingNumber}`)
+    } else {
+      // Send scheduled booking confirmation with calendar invite
+      const calendarInvite = createBookingCalendarEvent({
+        bookingNumber: booking.bookingNumber,
+        serviceName: booking.service.name,
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: booking.scheduledTime,
+        duration: booking.duration,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+      })
+
+      const { html, text } = getBookingConfirmationTemplate({
+        bookingNumber: booking.bookingNumber,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        serviceName: booking.service.name,
+        serviceCategory: booking.service.category?.name,
+        scheduledDate: format(new Date(booking.scheduledDate), 'MMMM d, yyyy'),
+        scheduledTime: booking.scheduledTime,
+        endTime: booking.endTime,
+        duration: booking.duration,
+        price: Number(booking.price),
+        customerNotes: booking.customerNotes,
+        calendarInvite,
+      })
+
+      await sendEmail({
+        to: booking.customerEmail,
+        subject: `Booking Confirmed #${booking.bookingNumber} - ${booking.service.name}`,
+        html,
+        text,
+      })
+
+      console.log(`✉️ Scheduled booking confirmation sent for ${booking.bookingNumber}`)
+    }
   } catch (error) {
     console.error('Error sending booking confirmation email:', error)
     throw error
@@ -86,8 +116,12 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const upcoming = searchParams.get('upcoming') === 'true'
 
-    const where: any = {
-      userId: auth.user.id,
+    const where: any = {}
+
+    // Only filter by userId for regular customers
+    // Admins and tailors can see all bookings
+    if (auth.user.role !== 'admin' && auth.user.role !== 'tailor') {
+      where.userId = auth.user.id
     }
 
     if (status) {
@@ -171,6 +205,7 @@ export async function POST(request: NextRequest) {
       collectionMethod,
       requirementPhotos = [],
       desiredOutcome,
+      customerProvidedMaterials = false,
       materials = [], // Array of { materialId, quantity }
     } = body
 
@@ -284,7 +319,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Determine initial status based on service type
-      let initialStatus = 'pending'
+      let initialStatus: BookingStatus = 'pending'
       if (serviceType === 'custom_production' || serviceType === 'collect_repair') {
         initialStatus = 'quote_pending' // Requires quote before payment
       }
@@ -294,7 +329,7 @@ export async function POST(request: NextRequest) {
       // For regular onsite services, use the service base price
       let initialPrice = service.price
       if (serviceType === 'custom_production' || serviceType === 'collect_repair') {
-        initialPrice = 0 // Price will be set when admin creates and approves quote
+        initialPrice = new Prisma.Decimal(0) // Price will be set when admin creates and approves quote
       }
 
       // Create booking
@@ -318,6 +353,7 @@ export async function POST(request: NextRequest) {
           collectionMethod: collectionMethod || null,
           requirementPhotos,
           desiredOutcome: desiredOutcome || null,
+          customerProvidedMaterials,
         },
         include: {
           service: {

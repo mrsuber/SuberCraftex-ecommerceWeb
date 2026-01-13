@@ -6,6 +6,7 @@ import { ShoppingCart, Search, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cart-store";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { useState } from "react";
 
 export function Header() {
@@ -39,6 +40,7 @@ export function Header() {
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
           </Button>
+          <ThemeToggle />
           <Button variant="ghost" size="icon" asChild>
             <Link href="/account">
               <User className="h-5 w-5" />

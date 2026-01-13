@@ -8,7 +8,7 @@ const features = [
   {
     icon: Truck,
     title: "Free Shipping",
-    description: "Free shipping on all orders over $50. Fast and reliable delivery.",
+    description: "Free shipping on all orders over 25,000 FCFA. Fast and reliable delivery.",
     delay: 0.1,
   },
   {

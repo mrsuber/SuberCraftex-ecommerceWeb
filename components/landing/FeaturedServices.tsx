@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import Image from 'next/image'
+import { formatCurrency } from '@/lib/currency'
 
 interface FeaturedServicesProps {
   services: Service[]
@@ -102,13 +103,13 @@ export function FeaturedServices({ services }: FeaturedServicesProps) {
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             >
               {services.map((service, index) => {
-                const hasDiscount = service.compareAtPrice && service.compareAtPrice > service.price
-                const discountPercentage = hasDiscount
-                  ? Math.round(((service.compareAtPrice - service.price) / service.compareAtPrice) * 100)
+                const hasDiscount = service.compare_at_price && service.compare_at_price > service.price
+                const discountPercentage = hasDiscount && service.compare_at_price
+                  ? Math.round(((service.compare_at_price - service.price) / service.compare_at_price) * 100)
                   : 0
 
-                const durationLabel = service.duration === 'custom' && service.customDuration
-                  ? `${service.customDuration} min`
+                const durationLabel = service.duration === 'custom' && service.custom_duration
+                  ? `${service.custom_duration} min`
                   : DURATION_LABELS[service.duration] || '1 hour'
 
                 return (
@@ -124,9 +125,9 @@ export function FeaturedServices({ services }: FeaturedServicesProps) {
                       <div className="relative h-full bg-card border-2 border-primary/10 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-primary/30">
                         {/* Image Section */}
                         <div className="relative h-56 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
-                          {service.featuredImage ? (
+                          {service.featured_image ? (
                             <Image
-                              src={service.featuredImage}
+                              src={service.featured_image}
                               alt={service.name}
                               fill
                               className="object-cover group-hover:scale-110 transition-transform duration-300"
@@ -139,7 +140,7 @@ export function FeaturedServices({ services }: FeaturedServicesProps) {
 
                           {/* Overlay Badges */}
                           <div className="absolute top-4 left-4 flex flex-col gap-2">
-                            {service.isFeatured && (
+                            {service.is_featured && (
                               <Badge className="bg-primary shadow-lg">
                                 Featured
                               </Badge>
@@ -168,7 +169,7 @@ export function FeaturedServices({ services }: FeaturedServicesProps) {
                               {service.name}
                             </h3>
                             <p className="text-sm text-muted-foreground line-clamp-2">
-                              {service.shortDescription || service.description || 'Professional service booking available'}
+                              {service.short_description || service.description || 'Professional service booking available'}
                             </p>
                           </div>
 
@@ -185,11 +186,11 @@ export function FeaturedServices({ services }: FeaturedServicesProps) {
                             <div>
                               <div className="flex items-baseline gap-2">
                                 <span className="text-2xl font-bold text-primary">
-                                  ${service.price.toFixed(2)}
+                                  {formatCurrency(service.price)}
                                 </span>
                                 {hasDiscount && (
                                   <span className="text-sm text-muted-foreground line-through">
-                                    ${service.compareAtPrice!.toFixed(2)}
+                                    {formatCurrency(service.compare_at_price!)}
                                   </span>
                                 )}
                               </div>

@@ -1,0 +1,86 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireApiAuth } from '@/lib/auth/api-auth';
+import { db } from '@/lib/db';
+
+// PATCH - Approve/reject review or add admin response
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireApiAuth();
+
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    ;
+    const body = await request.json();
+    const { isApproved, adminResponse } = body;
+
+    const updateData: any = {};
+
+    if (typeof isApproved === 'boolean') {
+      updateData.isApproved = isApproved;
+    }
+
+    if (adminResponse !== undefined) {
+      updateData.adminResponse = adminResponse;
+      updateData.adminRespondedAt = new Date();
+    }
+
+    const review = await db.review.update({
+      where: { id },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            fullName: true,
+            email: true,
+          },
+        },
+        product: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    console.log(
+      `✅ Review ${isApproved ? 'approved' : 'updated'} for ${review.product.name} by ${user.email}`
+    );
+
+    return NextResponse.json({ review });
+  } catch (error) {
+    console.error('Error updating review:', error);
+    return NextResponse.json({ error: 'Failed to update review' }, { status: 500 });
+  }
+}
+
+// DELETE - Delete review
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireApiAuth();
+
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    ;
+
+    const review = await db.review.delete({
+      where: { id },
+    });
+
+    console.log(`✅ Review deleted by ${user.email}`);
+
+    return NextResponse.json({ message: 'Review deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    return NextResponse.json({ error: 'Failed to delete review' }, { status: 500 });
+  }
+}

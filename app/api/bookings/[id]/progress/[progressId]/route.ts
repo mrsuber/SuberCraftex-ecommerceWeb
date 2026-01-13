@@ -4,18 +4,19 @@ import { getCurrentUser } from '@/lib/session'
 
 /**
  * PATCH /api/bookings/[id]/progress/[progressId]
- * Update progress update (admin only)
+ * Update progress update (admin or tailor only)
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; progressId: string }> }
 ) {
   try {
-    // Check admin authentication
+    const { id, progressId } = await params
+    // Check authentication - allow admin and tailor
     const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'tailor')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
+        { error: 'Unauthorized. Admin or Tailor access required.' },
         { status: 401 }
       )
     }
@@ -25,7 +26,7 @@ export async function PATCH(
 
     // Check if progress update exists
     const existing = await db.bookingProgress.findUnique({
-      where: { id: params.progressId }
+      where: { id: progressId }
     })
 
     if (!existing) {
@@ -36,7 +37,7 @@ export async function PATCH(
     }
 
     // Verify it belongs to the correct booking
-    if (existing.booking_id !== params.id) {
+    if (existing.bookingId !== id) {
       return NextResponse.json(
         { error: 'Progress update does not belong to this booking' },
         { status: 400 }
@@ -45,7 +46,7 @@ export async function PATCH(
 
     // Update progress update
     const progressUpdate = await db.bookingProgress.update({
-      where: { id: params.progressId },
+      where: { id: progressId },
       data: {
         ...(status && { status }),
         ...(description && { description }),
@@ -53,7 +54,7 @@ export async function PATCH(
       }
     })
 
-    console.log(`📊 Progress update ${params.progressId} updated`)
+    console.log(`📊 Progress update ${progressId} updated`)
 
     return NextResponse.json(progressUpdate)
   } catch (error) {
@@ -67,25 +68,26 @@ export async function PATCH(
 
 /**
  * DELETE /api/bookings/[id]/progress/[progressId]
- * Delete progress update (admin only)
+ * Delete progress update (admin or tailor only)
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; progressId: string }> }
 ) {
   try {
-    // Check admin authentication
+    const { id, progressId } = await params
+    // Check authentication - allow admin and tailor
     const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'tailor')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
+        { error: 'Unauthorized. Admin or Tailor access required.' },
         { status: 401 }
       )
     }
 
     // Check if progress update exists
     const existing = await db.bookingProgress.findUnique({
-      where: { id: params.progressId }
+      where: { id: progressId }
     })
 
     if (!existing) {
@@ -96,7 +98,7 @@ export async function DELETE(
     }
 
     // Verify it belongs to the correct booking
-    if (existing.booking_id !== params.id) {
+    if (existing.bookingId !== id) {
       return NextResponse.json(
         { error: 'Progress update does not belong to this booking' },
         { status: 400 }
@@ -105,10 +107,10 @@ export async function DELETE(
 
     // Delete progress update
     await db.bookingProgress.delete({
-      where: { id: params.progressId }
+      where: { id: progressId }
     })
 
-    console.log(`🗑️ Progress update ${params.progressId} deleted`)
+    console.log(`🗑️ Progress update ${progressId} deleted`)
 
     return NextResponse.json({
       success: true,

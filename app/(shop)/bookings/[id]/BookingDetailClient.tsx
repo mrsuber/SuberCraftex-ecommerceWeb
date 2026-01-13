@@ -11,9 +11,13 @@ import { BookingStatusBadge } from '@/components/bookings/BookingStatusBadge'
 import { QuoteDisplay } from '@/components/bookings/QuoteDisplay'
 import { QuoteApprovalActions } from '@/components/bookings/QuoteApprovalActions'
 import { ProgressTimeline } from '@/components/bookings/ProgressTimeline'
+import { MeasurementDisplay } from '@/components/bookings/MeasurementDisplay'
+import { FittingAppointmentsDisplay } from '@/components/bookings/FittingAppointmentsDisplay'
+import { BookingJourneyTimeline } from '@/components/bookings/BookingJourneyTimeline'
 import { PhotoGallery } from '@/components/shared/PhotoGallery'
 import { StockIndicator } from '@/components/materials/StockIndicator'
 import { CancelBookingDialog } from '@/components/bookings/CancelBookingDialog'
+import { ScheduleFittingDialog } from '@/components/tailor/ScheduleFittingDialog'
 import {
   Calendar,
   Clock,
@@ -27,6 +31,8 @@ import {
   Store,
   ArrowLeft,
   AlertCircle,
+  Ruler,
+  Scissors,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -210,6 +216,9 @@ export function BookingDetailClient({ booking, currentUser }: BookingDetailClien
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Journey Timeline */}
+          <BookingJourneyTimeline booking={booking} />
+
           {/* Service Information */}
           <Card>
             <CardHeader>
@@ -421,6 +430,63 @@ export function BookingDetailClient({ booking, currentUser }: BookingDetailClien
               currentStatus={booking.status}
             />
           )}
+
+          {/* Measurements */}
+          {(booking.serviceType === 'custom_production' || booking.serviceType === 'collect_repair') && (
+            <MeasurementDisplay measurement={booking.measurement} />
+          )}
+
+          {/* Fitting Appointments */}
+          {(booking.serviceType === 'custom_production' || booking.serviceType === 'collect_repair') && (
+            <FittingAppointmentsDisplay fittings={booking.fittingAppointments || []} />
+          )}
+
+          {/* Tailor Actions */}
+          {currentUser?.role === 'tailor' &&
+            (booking.serviceType === 'custom_production' || booking.serviceType === 'collect_repair') && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tailor Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                  {/* Record Measurements Button */}
+                  {!booking.measurement && booking.status === 'quote_approved' && (
+                    <Link href={`/dashboard/bookings/${booking.id}/measurement`}>
+                      <Button className="gap-2">
+                        <Ruler className="h-4 w-4" />
+                        Record Measurements
+                      </Button>
+                    </Link>
+                  )}
+
+                  {/* Update Measurements Button */}
+                  {booking.measurement && (
+                    <Link href={`/dashboard/bookings/${booking.id}/measurement`}>
+                      <Button variant="outline" className="gap-2">
+                        <Ruler className="h-4 w-4" />
+                        Update Measurements
+                      </Button>
+                    </Link>
+                  )}
+
+                  {/* Schedule Fitting Button */}
+                  {booking.measurement && (
+                    <ScheduleFittingDialog
+                      bookingId={booking.id}
+                      bookingNumber={booking.bookingNumber}
+                      customerName={booking.customerName}
+                      trigger={
+                        <Button variant="outline" className="gap-2">
+                          <Scissors className="h-4 w-4" />
+                          Schedule Fitting
+                        </Button>
+                      }
+                      onSuccess={() => router.refresh()}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
           {/* Waiting for Quote */}
           {!booking.quote &&

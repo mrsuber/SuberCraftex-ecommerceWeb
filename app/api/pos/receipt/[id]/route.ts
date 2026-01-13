@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { format } from 'date-fns'
+import { formatCurrency } from '@/lib/currency'
 
 /**
  * GET /api/pos/receipt/[id]
@@ -228,8 +229,9 @@ function generateReceiptHTML(order: any): string {
   <div class="header">
     <h1>SuberCraftex</h1>
     <p>Craftsmanship Excellence</p>
-    <p>123 Main Street, Your City</p>
-    <p>Tel: (123) 456-7890</p>
+    <p>Clerks Quarters, Southwest Buea</p>
+    <p>Cameroon</p>
+    <p>Tel: +237653255547</p>
     <p>www.subercraftex.com</p>
   </div>
 
@@ -248,8 +250,8 @@ function generateReceiptHTML(order: any): string {
       <div class="item">
         <div class="item-header">${item.productName}</div>
         <div class="item-details">
-          <span>${item.quantity} x $${Number(item.price).toFixed(2)}</span>
-          <span>$${Number(item.total).toFixed(2)}</span>
+          <span>${item.quantity} x ${formatCurrency(Number(item.price))}</span>
+          <span>${formatCurrency(Number(item.total))}</span>
         </div>
         ${item.variantOptions ? `<div style="font-size: 10px; color: #666;">${JSON.stringify(item.variantOptions)}</div>` : ''}
       </div>
@@ -257,17 +259,17 @@ function generateReceiptHTML(order: any): string {
   </div>
 
   <div class="totals">
-    <p><span>Subtotal:</span><span>$${subtotal.toFixed(2)}</span></p>
-    ${discountAmount > 0 ? `<p><span>Discount:</span><span>-$${discountAmount.toFixed(2)}</span></p>` : ''}
-    ${taxAmount > 0 ? `<p><span>Tax:</span><span>$${taxAmount.toFixed(2)}</span></p>` : ''}
-    <p class="total"><span>TOTAL:</span><span>$${totalAmount.toFixed(2)}</span></p>
+    <p><span>Subtotal:</span><span>${formatCurrency(subtotal)}</span></p>
+    ${discountAmount > 0 ? `<p><span>Discount:</span><span>-${formatCurrency(discountAmount)}</span></p>` : ''}
+    ${taxAmount > 0 ? `<p><span>Tax:</span><span>${formatCurrency(taxAmount)}</span></p>` : ''}
+    <p class="total"><span>TOTAL:</span><span>${formatCurrency(totalAmount)}</span></p>
   </div>
 
   <div class="payment">
     <p><span>Payment Method:</span><span>${formatPaymentMethod(order.paymentMethod)}</span></p>
     ${amountTendered !== null ? `
-      <p><span>Amount Tendered:</span><span>$${amountTendered.toFixed(2)}</span></p>
-      <p class="change"><span>Change:</span><span>$${(changeGiven || 0).toFixed(2)}</span></p>
+      <p><span>Amount Tendered:</span><span>${formatCurrency(amountTendered)}</span></p>
+      <p class="change"><span>Change:</span><span>${formatCurrency(changeGiven || 0)}</span></p>
     ` : ''}
   </div>
 

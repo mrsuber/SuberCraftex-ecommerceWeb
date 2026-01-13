@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/stores/cart-store";
 import { toast } from "sonner";
 import { Product } from "@/types";
+import { formatCurrency } from "@/lib/currency";
 
 interface ProductInfoProps {
   product: Product;
@@ -110,12 +111,12 @@ export function ProductInfo({
       {/* Price */}
       <div className="flex items-baseline gap-3">
         <span className="text-4xl font-bold text-primary">
-          ${product.price.toFixed(2)}
+          {formatCurrency(product.price)}
         </span>
         {product.compare_at_price && (
           <>
             <span className="text-2xl text-muted-foreground line-through">
-              ${product.compare_at_price.toFixed(2)}
+              {formatCurrency(product.compare_at_price)}
             </span>
             <Badge variant="destructive" className="text-sm">
               Save {discount}%

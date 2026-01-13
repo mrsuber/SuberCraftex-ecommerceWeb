@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { FileText, Package, Wrench, DollarSign, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Quote, QuoteStatus } from '@/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface QuoteDisplayProps {
   quote: Quote
@@ -77,7 +78,7 @@ export function QuoteDisplay({ quote, showHistory = false }: QuoteDisplayProps) 
                 <p className="text-sm text-gray-500">All required materials</p>
               </div>
             </div>
-            <p className="text-lg font-semibold">${materialCost.toFixed(2)}</p>
+            <p className="text-lg font-semibold">{formatCurrency(materialCost)}</p>
           </div>
 
           <Separator />
@@ -93,7 +94,7 @@ export function QuoteDisplay({ quote, showHistory = false }: QuoteDisplayProps) 
                 </p>
               </div>
             </div>
-            <p className="text-lg font-semibold">${laborCost.toFixed(2)}</p>
+            <p className="text-lg font-semibold">{formatCurrency(laborCost)}</p>
           </div>
 
           <Separator />
@@ -104,7 +105,7 @@ export function QuoteDisplay({ quote, showHistory = false }: QuoteDisplayProps) 
               <DollarSign className="w-6 h-6 text-primary" />
               <p className="text-lg font-bold">Total Cost</p>
             </div>
-            <p className="text-2xl font-bold text-primary">${totalCost.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(totalCost)}</p>
           </div>
         </CardContent>
       </Card>
@@ -122,7 +123,7 @@ export function QuoteDisplay({ quote, showHistory = false }: QuoteDisplayProps) 
                 {((downPaymentAmount / totalCost) * 100).toFixed(0)}% of total
               </p>
             </div>
-            <p className="text-xl font-bold text-primary">${downPaymentAmount.toFixed(2)}</p>
+            <p className="text-xl font-bold text-primary">{formatCurrency(downPaymentAmount)}</p>
           </div>
 
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
@@ -130,7 +131,7 @@ export function QuoteDisplay({ quote, showHistory = false }: QuoteDisplayProps) 
               <p className="font-medium">Remaining Balance</p>
               <p className="text-sm text-gray-600">Due upon completion</p>
             </div>
-            <p className="text-lg font-semibold">${remainingBalance.toFixed(2)}</p>
+            <p className="text-lg font-semibold">{formatCurrency(remainingBalance)}</p>
           </div>
         </CardContent>
       </Card>

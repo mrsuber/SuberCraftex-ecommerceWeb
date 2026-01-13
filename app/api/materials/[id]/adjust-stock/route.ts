@@ -15,6 +15,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Check admin authentication
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {
@@ -44,7 +45,7 @@ export async function POST(
 
     // Get current material
     const material = await db.material.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     })
 
     if (!material) {
@@ -72,7 +73,7 @@ export async function POST(
 
     // Update stock quantity
     const updated = await db.material.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         stockQuantity: newStock
       },

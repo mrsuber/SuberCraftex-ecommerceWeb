@@ -20,7 +20,6 @@ export async function GET(
     }
 
     const { id } = await params
-
     // Get quote with history
     const quote = await db.quote.findUnique({
       where: { bookingId: id },
@@ -55,8 +54,8 @@ export async function GET(
       )
     }
 
-    // Check authorization (admin or booking owner)
-    if (user.role !== 'admin' && quote.booking.userId !== user.id) {
+    // Check authorization (admin, tailor, or booking owner)
+    if (user.role !== 'admin' && user.role !== 'tailor' && quote.booking.userId !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -85,22 +84,23 @@ export async function GET(
 
 /**
  * POST /api/bookings/[id]/quote
- * Create or update quote (admin only)
+ * Create or update quote (admin or tailor only)
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check admin authentication
+    // Check authentication - allow admin and tailor
     const user = await getCurrentUser()
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'tailor')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
+        { error: 'Unauthorized. Admin or Tailor access required.' },
         { status: 401 }
       )
     }
 
+    const { id } = await params
     const body = await request.json()
     const {
       material_cost,
@@ -127,8 +127,7 @@ export async function POST(
     const totalCost = Number(material_cost) + Number(labor_cost)
     const downPaymentAmount = totalCost * (down_payment_percentage / 100)
 
-    const { id } = await params
-
+    
     // Check if booking exists
     const booking = await db.serviceBooking.findUnique({
       where: { id },
@@ -182,7 +181,7 @@ export async function POST(
         data: {
           quoteId: quote.id,
           action: 'updated',
-          notes: 'Quote updated by admin',
+          notes: `Quote updated by ${user.role}`,
           createdBy: user.id,
         }
       })
@@ -210,7 +209,7 @@ export async function POST(
         data: {
           quoteId: quote.id,
           action: 'created',
-          notes: 'Quote created by admin',
+          notes: `Quote created by ${user.role}`,
           createdBy: user.id,
         }
       })
@@ -222,7 +221,7 @@ export async function POST(
       })
     }
 
-    console.log(`📋 Quote ${existing ? 'updated' : 'created'} for booking ${booking.bookingNumber} - Total: $${totalCost.toFixed(2)}`)
+    console.log(`📋 Quote ${existing ? 'updated' : 'created'} for booking ${booking.bookingNumber} - Total: ${totalCost.toFixed(2)}`)
 
     // Serialize Decimal fields
     const serialized = {

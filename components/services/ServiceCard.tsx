@@ -9,6 +9,7 @@ import { Clock, Star, Tag } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { formatCurrency } from '@/lib/currency'
 
 interface ServiceCardProps {
   service: Service
@@ -31,7 +32,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
   }, [])
 
   const hasDiscount = service.compare_at_price && service.compare_at_price > service.price
-  const discountPercentage = hasDiscount
+  const discountPercentage = hasDiscount && service.compare_at_price
     ? Math.round(((service.compare_at_price - service.price) / service.compare_at_price) * 100)
     : 0
 
@@ -118,11 +119,11 @@ export function ServiceCard({ service }: ServiceCardProps) {
             {/* Price */}
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold">
-                ${Number(service.price).toFixed(2)}
+                {formatCurrency(Number(service.price))}
               </span>
               {hasDiscount && (
                 <span className="text-sm text-muted-foreground line-through">
-                  ${Number(service.compare_at_price).toFixed(2)}
+                  {formatCurrency(Number(service.compare_at_price))}
                 </span>
               )}
             </div>

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Edit, MoreHorizontal, Trash2, Eye, Clock, Search } from 'lucide-react'
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/currency'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -161,10 +162,10 @@ export function ServicesTable({ initialServices, categories }: ServicesTableProp
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="font-medium">${service.price.toFixed(2)}</div>
+                      <div className="font-medium">{formatCurrency(service.price)}</div>
                       {service.compare_at_price && (
                         <div className="text-xs text-muted-foreground line-through">
-                          ${service.compare_at_price.toFixed(2)}
+                          {formatCurrency(service.compare_at_price)}
                         </div>
                       )}
                     </div>

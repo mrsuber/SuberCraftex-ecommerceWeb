@@ -52,7 +52,7 @@ export function ServiceCalendar({ serviceId, onDateSelect, selectedDate }: Servi
   // Check if a date has available slots
   const isDateAvailable = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd')
-    return availability?.availability[dateStr]?.length > 0
+    return (availability?.availability[dateStr]?.length ?? 0) > 0
   }
 
   // Disable dates that have no availability

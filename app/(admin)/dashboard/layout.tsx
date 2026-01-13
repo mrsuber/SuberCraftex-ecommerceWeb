@@ -10,8 +10,8 @@ export default async function AdminLayout({
 }) {
   const user = await getSession();
 
-  // Allow admins and drivers to access dashboard
-  if (!user || (user.role !== 'admin' && user.role !== 'driver')) {
+  // Allow admins, drivers, cashiers, and tailors to access dashboard
+  if (!user || (user.role !== 'admin' && user.role !== 'driver' && user.role !== 'cashier' && user.role !== 'tailor')) {
     redirect("/login");
   }
 

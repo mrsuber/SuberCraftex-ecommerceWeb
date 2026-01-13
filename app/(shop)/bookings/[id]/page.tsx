@@ -87,6 +87,12 @@ export default async function BookingPage({ params }: BookingPageProps) {
           createdAt: 'desc',
         },
       },
+      measurement: true,
+      fittingAppointments: {
+        orderBy: {
+          scheduledDate: 'asc',
+        },
+      },
     },
   })
 
@@ -249,6 +255,37 @@ export default async function BookingPage({ params }: BookingPageProps) {
       notes: p.notes,
       createdAt: p.createdAt.toISOString(),
       created_at: p.createdAt.toISOString(),
+    })),
+    measurement: booking.measurement
+      ? {
+          id: booking.measurement.id,
+          bookingId: booking.measurement.bookingId,
+          tailorId: booking.measurement.tailorId,
+          measurements: booking.measurement.measurements,
+          notes: booking.measurement.notes,
+          customerSignatureUrl: booking.measurement.customerSignatureUrl,
+          takenAt: booking.measurement.takenAt.toISOString(),
+          createdAt: booking.measurement.createdAt.toISOString(),
+          updatedAt: booking.measurement.updatedAt.toISOString(),
+        }
+      : null,
+    fittingAppointments: booking.fittingAppointments.map((f) => ({
+      id: f.id,
+      bookingId: f.bookingId,
+      tailorId: f.tailorId,
+      scheduledDate: f.scheduledDate.toISOString(),
+      scheduledTime: f.scheduledTime,
+      durationMinutes: f.durationMinutes,
+      fittingNumber: f.fittingNumber,
+      status: f.status,
+      customerCalled: f.customerCalled,
+      calledAt: f.calledAt?.toISOString() || null,
+      calledBy: f.calledBy,
+      attended: f.attended,
+      attendedAt: f.attendedAt?.toISOString() || null,
+      notes: f.notes,
+      createdAt: f.createdAt.toISOString(),
+      updatedAt: f.updatedAt.toISOString(),
     })),
   }
 

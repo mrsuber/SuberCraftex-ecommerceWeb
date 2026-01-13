@@ -13,15 +13,14 @@ export async function POST(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'cashier') {
+    if (!user || (user.role !== 'cashier' && user.role !== 'admin')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Cashier access required.' },
+        { error: 'Unauthorized. Cashier or admin access required.' },
         { status: 401 }
       )
     }
 
     const { id } = await params
-
     const cashier = await db.cashier.findUnique({
       where: { userId: user.id }
     })
@@ -127,7 +126,7 @@ export async function POST(
       return paidOrder
     })
 
-    console.log(`💳 Payment processed: ${order.orderNumber} - $${Number(updatedOrder.totalAmount).toFixed(2)} (${updatedOrder.paymentMethod})`)
+    console.log(`💳 Payment processed: ${order.orderNumber} - ${Number(updatedOrder.totalAmount).toFixed(2)} (${updatedOrder.paymentMethod})`)
 
     return NextResponse.json({
       success: true,

@@ -16,7 +16,7 @@ export function CartSummary() {
   const [couponCode, setCouponCode] = useState("");
 
   const subtotal = total;
-  const shipping = subtotal > 50 ? 0 : 10;
+  const shipping = subtotal > 25000 ? 0 : 5000; // Free shipping over 25,000 FCFA
   const tax = subtotal * 0.08; // 8% tax
   const discount = 0; // TODO: Apply coupon logic
   const grandTotal = subtotal + shipping + tax - discount;
@@ -45,9 +45,9 @@ export function CartSummary() {
           </span>
         </div>
 
-        {subtotal > 0 && subtotal < 50 && (
+        {subtotal > 0 && subtotal < 25000 && (
           <p className="text-xs text-muted-foreground">
-            Add {formatPrice(50 - subtotal)} more for free shipping!
+            Add {formatPrice(25000 - subtotal)} more for free shipping!
           </p>
         )}
 

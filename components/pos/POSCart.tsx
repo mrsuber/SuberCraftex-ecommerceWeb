@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Trash2, Minus, Plus, ShoppingCart, CreditCard, Smartphone, Printer } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface CartItem {
   productId: string
@@ -246,7 +247,7 @@ export default function POSCart({
               />
               {change > 0 && (
                 <p className="text-sm text-green-600 mt-1">
-                  Change: ${change.toFixed(2)}
+                  Change: {formatCurrency(change)}
                 </p>
               )}
             </div>
@@ -256,21 +257,21 @@ export default function POSCart({
           <Card className="p-4 bg-gray-50 space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal:</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>Discount:</span>
-                <span>-${discount.toFixed(2)}</span>
+                <span>-{formatCurrency(discount)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span>Tax ({taxRate}%):</span>
-              <span>${tax.toFixed(2)}</span>
+              <span>{formatCurrency(tax)}</span>
             </div>
             <div className="flex justify-between text-xl font-bold pt-2 border-t">
               <span>Total:</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{formatCurrency(total)}</span>
             </div>
           </Card>
         </div>
@@ -282,7 +283,7 @@ export default function POSCart({
             className="w-full"
             size="lg"
           >
-            {loading ? 'Processing...' : `Complete Payment ($${total.toFixed(2)})`}
+            {loading ? 'Processing...' : `Complete Payment (${formatCurrency(total)})`}
           </Button>
           <Button
             onClick={() => setShowCheckout(false)}
@@ -330,7 +331,7 @@ export default function POSCart({
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm line-clamp-2">{item.name}</h3>
                     <p className="text-xs text-gray-500 mt-1">{item.sku}</p>
-                    <p className="text-sm font-bold mt-1">${item.price}</p>
+                    <p className="text-sm font-bold mt-1">{formatCurrency(item.price)}</p>
                   </div>
 
                   <div className="flex flex-col items-end justify-between">
@@ -364,7 +365,7 @@ export default function POSCart({
                     </div>
 
                     <p className="text-sm font-bold mt-1">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      {formatCurrency(item.price * item.quantity)}
                     </p>
                   </div>
                 </div>
@@ -382,7 +383,7 @@ export default function POSCart({
           </div>
           <div className="flex justify-between text-xl font-bold">
             <span>Subtotal:</span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span>{formatCurrency(subtotal)}</span>
           </div>
         </div>
 

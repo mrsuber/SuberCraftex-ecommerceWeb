@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle, DollarSign, LogOut } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface POSSessionManagerProps {
   activeSession?: any
@@ -78,9 +79,9 @@ export default function POSSessionManager({
       const data = await response.json()
       alert(
         `Session closed successfully!\n\n` +
-        `Expected: $${data.session.expectedCash.toFixed(2)}\n` +
-        `Actual: $${data.session.actualCash.toFixed(2)}\n` +
-        `Difference: $${data.session.cashDifference.toFixed(2)}`
+        `Expected: ${formatCurrency(data.session.expectedCash)}\n` +
+        `Actual: ${formatCurrency(data.session.actualCash)}\n` +
+        `Difference: ${formatCurrency(data.session.cashDifference)}`
       )
       onSessionClosed?.()
       setShowCloseDialog(false)
@@ -165,15 +166,15 @@ export default function POSSessionManager({
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Opening Balance:</span>
-                <span className="font-medium">${activeSession.openingBalance.toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(activeSession.openingBalance)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Cash Sales:</span>
-                <span className="font-medium">${activeSession.totalCash.toFixed(2)}</span>
+                <span className="font-medium">{formatCurrency(activeSession.totalCash)}</span>
               </div>
               <div className="flex justify-between text-sm font-bold pt-2 border-t">
                 <span>Expected Cash:</span>
-                <span className="text-green-600">${expectedCash.toFixed(2)}</span>
+                <span className="text-green-600">{formatCurrency(expectedCash)}</span>
               </div>
             </div>
 
@@ -195,8 +196,8 @@ export default function POSSessionManager({
               {actualCash && (
                 <p className={`text-sm mt-1 ${difference === 0 ? 'text-green-600' : difference > 0 ? 'text-blue-600' : 'text-red-600'}`}>
                   {difference === 0 ? '✓ Perfect balance!' :
-                   difference > 0 ? `Over by $${Math.abs(difference).toFixed(2)}` :
-                   `Short by $${Math.abs(difference).toFixed(2)}`}
+                   difference > 0 ? `Over by ${formatCurrency(Math.abs(difference))}` :
+                   `Short by ${formatCurrency(Math.abs(difference))}`}
                 </p>
               )}
             </div>

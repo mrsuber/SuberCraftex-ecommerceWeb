@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { Calendar, Clock, DollarSign, Loader2 } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface ServiceBookingFormProps {
   service: Service
@@ -116,7 +117,7 @@ export function ServiceBookingForm({ service }: ServiceBookingFormProps) {
             )}
             <div className="flex items-center gap-2 text-sm font-semibold pt-2 border-t">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span>${service.price.toFixed(2)}</span>
+              <span>{formatCurrency(service.price)}</span>
             </div>
           </CardContent>
         </Card>

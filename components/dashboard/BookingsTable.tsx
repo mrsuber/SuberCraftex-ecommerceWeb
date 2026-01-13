@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ServiceBooking, BookingStatus } from '@/types'
+import { formatCurrency } from '@/lib/currency'
 import {
   Table,
   TableBody,
@@ -46,6 +47,13 @@ const STATUS_COLORS: Record<BookingStatus, string> = {
   cancelled: 'bg-red-500',
   no_show: 'bg-gray-500',
   rescheduled: 'bg-orange-500',
+  quote_pending: 'bg-amber-500',
+  quote_sent: 'bg-cyan-500',
+  quote_approved: 'bg-teal-500',
+  quote_rejected: 'bg-rose-500',
+  awaiting_payment: 'bg-indigo-500',
+  payment_partial: 'bg-blue-400',
+  awaiting_collection: 'bg-sky-500',
 }
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -56,6 +64,13 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   cancelled: 'Cancelled',
   no_show: 'No Show',
   rescheduled: 'Rescheduled',
+  quote_pending: 'Quote Pending',
+  quote_sent: 'Quote Sent',
+  quote_approved: 'Quote Approved',
+  quote_rejected: 'Quote Rejected',
+  awaiting_payment: 'Awaiting Payment',
+  payment_partial: 'Partial Payment',
+  awaiting_collection: 'Awaiting Collection',
 }
 
 export function BookingsTable({ initialBookings }: BookingsTableProps) {
@@ -63,7 +78,7 @@ export function BookingsTable({ initialBookings }: BookingsTableProps) {
   const { toast } = useToast()
   const [bookings, setBookings] = useState<ServiceBooking[]>(initialBookings)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch = search
@@ -73,7 +88,7 @@ export function BookingsTable({ initialBookings }: BookingsTableProps) {
         booking.service?.name.toLowerCase().includes(search.toLowerCase())
       : true
 
-    const matchesStatus = statusFilter ? booking.status === statusFilter : true
+    const matchesStatus = statusFilter === 'all' ? true : booking.status === statusFilter
 
     return matchesSearch && matchesStatus
   })
@@ -130,7 +145,7 @@ export function BookingsTable({ initialBookings }: BookingsTableProps) {
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="confirmed">Confirmed</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
@@ -196,11 +211,13 @@ export function BookingsTable({ initialBookings }: BookingsTableProps) {
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <div className="space-y-1">
                         <div className="text-sm">
-                          {format(new Date(booking.scheduled_date), 'MMM d, yyyy')}
+                          {booking.scheduled_date
+                            ? format(new Date(booking.scheduled_date), 'MMM d, yyyy')
+                            : 'Not scheduled'}
                         </div>
                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {booking.scheduled_time}
+                          {booking.scheduled_time || 'N/A'}
                         </div>
                       </div>
                     </div>
@@ -209,7 +226,7 @@ export function BookingsTable({ initialBookings }: BookingsTableProps) {
                     <Badge variant="outline">{booking.duration} min</Badge>
                   </TableCell>
                   <TableCell className="font-medium">
-                    ${booking.price.toFixed(2)}
+                    {formatCurrency(booking.price)}
                   </TableCell>
                   <TableCell>
                     <Badge

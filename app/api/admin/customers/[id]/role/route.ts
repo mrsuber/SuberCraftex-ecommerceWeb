@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 
 const roleSchema = z.object({
-  role: z.enum(['customer', 'admin', 'driver', 'cashier']),
+  role: z.enum(['customer', 'admin', 'driver', 'cashier', 'tailor']),
 });
 
 // PATCH - Update user role
@@ -63,6 +63,26 @@ export async function PATCH(
             },
           });
           console.log(`✅ Created Cashier profile for user ${user.email}`);
+        }
+      }
+
+      // Create Tailor profile if role is changed to tailor and profile doesn't exist
+      if (role === 'tailor') {
+        const existingTailor = await tx.tailor.findUnique({
+          where: { userId: id },
+        });
+
+        if (!existingTailor) {
+          await tx.tailor.create({
+            data: {
+              userId: id,
+              fullName: user.fullName || 'Tailor',
+              email: user.email,
+              phone: user.phone || 'Not provided',
+              specialties: [], // Admin can update specialties later
+            },
+          });
+          console.log(`✅ Created Tailor profile for user ${user.email}`);
         }
       }
 

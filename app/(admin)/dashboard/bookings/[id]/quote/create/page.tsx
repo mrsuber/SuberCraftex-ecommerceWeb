@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { requireAdmin } from '@/lib/session'
+import { requireAdminOrTailor } from '@/lib/session'
 import { QuoteForm } from '@/components/dashboard/QuoteForm'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -19,8 +19,8 @@ export const metadata: Metadata = {
 }
 
 export default async function QuoteCreatePage({ params }: QuoteCreatePageProps) {
-  // Require admin authentication
-  await requireAdmin()
+  // Require admin or tailor authentication
+  await requireAdminOrTailor()
 
   const { id } = await params
 

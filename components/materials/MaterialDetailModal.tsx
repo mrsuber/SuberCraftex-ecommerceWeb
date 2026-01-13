@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator'
 import { StockIndicator } from './StockIndicator'
 import type { Material } from '@/types'
 import { Package, Tag, Box, Ruler } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface MaterialDetailModalProps {
   material: Material
@@ -70,7 +71,7 @@ export function MaterialDetailModal({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-3xl font-bold text-primary">
-                ${Number(material.price).toFixed(2)}
+                {formatCurrency(Number(material.price))}
               </div>
               <div className="text-sm text-gray-500">per {material.unit}</div>
             </div>

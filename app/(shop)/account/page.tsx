@@ -57,7 +57,7 @@ export default async function AccountPage() {
                 <CardTitle className="text-lg">Account Menu</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {(user.role === 'admin' || user.role === 'driver') && (
+                {(user.role === 'admin' || user.role === 'driver' || user.role === 'cashier' || user.role === 'tailor') && (
                   <>
                     <Link href="/dashboard" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
                       <LayoutDashboard className="h-5 w-5" />

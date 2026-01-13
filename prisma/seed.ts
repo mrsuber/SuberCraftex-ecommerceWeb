@@ -287,7 +287,7 @@ async function main() {
   const blindsCategory = await prisma.serviceCategory.findUnique({ where: { slug: 'blinds-bedsheets' } })
 
   // Create sample services
-  const services = [
+  const services: any[] = [
     {
       name: 'Custom Dining Table',
       slug: 'custom-dining-table',

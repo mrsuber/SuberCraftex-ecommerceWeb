@@ -68,7 +68,7 @@ export async function POST(
     const result = await db.$transaction(async (tx) => {
       // Update payment status
       const updatedPayment = await tx.bookingPayment.update({
-        where: { id: params.paymentId },
+        where: { id: paymentId },
         data: {
           status: 'completed',
           notes: payment.notes
@@ -89,7 +89,7 @@ export async function POST(
       }
 
       const updatedBooking = await tx.serviceBooking.update({
-        where: { id: params.id },
+        where: { id: id },
         data: {
           status: newBookingStatus,
         }

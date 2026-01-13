@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { StockIndicator } from './StockIndicator'
 import type { Material } from '@/types'
 import { Package, Eye } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface MaterialCardProps {
   material: Material
@@ -66,7 +67,7 @@ export function MaterialCard({
           <div className="flex items-center justify-between pt-2">
             <div>
               <p className="text-lg font-bold text-primary">
-                ${Number(material.price).toFixed(2)}
+                {formatCurrency(Number(material.price))}
               </p>
               <p className="text-xs text-gray-500">per {material.unit}</p>
             </div>

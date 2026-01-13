@@ -163,6 +163,11 @@ export async function GET(
 
         // Check if this slot conflicts with existing bookings
         const hasConflict = existingBookings.some((booking) => {
+          // Skip bookings without required date/time fields
+          if (!booking.scheduledDate || !booking.scheduledTime || !booking.endTime) {
+            return false
+          }
+
           if (booking.scheduledDate.toISOString().split('T')[0] !== dateStr) {
             return false
           }
@@ -190,7 +195,7 @@ export async function GET(
           // Check max bookings per day limit
           if (service.maxBookingsPerDay) {
             const bookingsOnThisDay = existingBookings.filter(
-              (b) => b.scheduledDate.toISOString().split('T')[0] === dateStr
+              (b) => b.scheduledDate && b.scheduledDate.toISOString().split('T')[0] === dateStr
             ).length
 
             if (bookingsOnThisDay >= service.maxBookingsPerDay) {

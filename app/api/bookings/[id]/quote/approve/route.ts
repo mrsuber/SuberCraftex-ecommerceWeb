@@ -20,7 +20,6 @@ export async function POST(
     }
 
     const { id } = await params
-
     // Get quote with booking details
     const quote = await db.quote.findUnique({
       where: { bookingId: id },
@@ -127,7 +126,7 @@ export async function POST(
       return updatedQuote
     })
 
-    console.log(`✅ Quote approved for booking ${quote.booking.bookingNumber} - Total: $${Number(quote.totalCost).toFixed(2)}`)
+    console.log(`✅ Quote approved for booking ${quote.booking.bookingNumber} - Total: ${Number(quote.totalCost).toFixed(2)}`)
 
     return NextResponse.json({
       success: true,

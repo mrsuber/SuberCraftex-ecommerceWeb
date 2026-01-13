@@ -193,9 +193,9 @@ export function ProgressUpdateForm({ bookingId, bookingNumber }: ProgressUpdateF
         </CardHeader>
         <CardContent>
           <PhotoUpload
-            photos={photos}
-            onPhotosChange={setPhotos}
-            maxPhotos={5}
+            value={photos}
+            onChange={setPhotos}
+            maxFiles={5}
             type="progress"
             bookingId={bookingId}
           />

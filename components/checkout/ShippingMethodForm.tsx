@@ -9,6 +9,7 @@ import { shippingMethodSchema, type ShippingMethod } from "@/lib/validations/che
 import { ArrowLeft, ArrowRight, Package, Truck, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { formatCurrency } from "@/lib/currency";
 
 const shippingOptions = [
   {
@@ -22,14 +23,14 @@ const shippingOptions = [
     value: "express" as const,
     label: "Express Shipping",
     description: "2-3 business days",
-    price: 10,
+    price: 5000,
     icon: Truck,
   },
   {
     value: "overnight" as const,
     label: "Overnight Shipping",
     description: "1 business day",
-    price: 25,
+    price: 12000,
     icon: Zap,
   },
 ];
@@ -104,7 +105,7 @@ export function ShippingMethodForm({ defaultValues, onSubmit, onBack }: Shipping
                       </div>
                     </div>
                     <div className="text-lg font-bold">
-                      {option.price === 0 ? "Free" : `$${option.price}`}
+                      {option.price === 0 ? "Free" : formatCurrency(option.price)}
                     </div>
                   </div>
                 </button>

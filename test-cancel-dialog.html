@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cancel Booking Dialog Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-step { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .info { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+        code { background: #e9ecef; padding: 2px 5px; border-radius: 3px; }
+        h2 { color: #333; }
+        .checklist { list-style-type: none; }
+        .checklist li:before { content: "☐ "; font-size: 1.2em; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Cancel Booking Dialog Test Guide</h1>
+    
+    <div class="test-step info">
+        <h2>📋 Prerequisites</h2>
+        <ul>
+            <li>✅ Server running at http://localhost:3000</li>
+            <li>✅ User logged in (use admin@subercraftex.com / admin123)</li>
+            <li>✅ At least one active booking exists</li>
+        </ul>
+    </div>
+
+    <div class="test-step">
+        <h2>Step 1: Navigate to Bookings</h2>
+        <ol>
+            <li>Open browser: <code>http://localhost:3000</code></li>
+            <li>Click on <strong>"Bookings"</strong> in the navigation menu</li>
+            <li>You should see a list of bookings</li>
+        </ol>
+    </div>
+
+    <div class="test-step">
+        <h2>Step 2: Open a Booking</h2>
+        <ol>
+            <li>Click on any booking that shows status: <strong>"quote_pending"</strong> or <strong>"pending"</strong></li>
+            <li>Booking detail page should load</li>
+            <li>Look for <strong>"Cancel Booking"</strong> button (red outline) next to status badge</li>
+        </ol>
+    </div>
+
+    <div class="test-step warning">
+        <h2>Step 3: Test Cancel Dialog UI</h2>
+        <ol>
+            <li>Click the <strong>"Cancel Booking"</strong> button</li>
+            <li><strong>CHECK:</strong> Dialog appears with WHITE background (not black/transparent)</li>
+            <li><strong>CHECK:</strong> Dialog title is visible: "Cancel Booking #BK-XXXXX?"</li>
+            <li><strong>CHECK:</strong> Description text is visible</li>
+            <li><strong>CHECK:</strong> Textarea is visible with placeholder text</li>
+            <li><strong>CHECK:</strong> Two buttons visible: "Keep Booking" and "Yes, Cancel Booking"</li>
+        </ol>
+    </div>
+
+    <div class="test-step">
+        <h2>Step 4: Test Validation</h2>
+        <ol>
+            <li>Try clicking <strong>"Yes, Cancel Booking"</strong> without entering a reason</li>
+            <li><strong>EXPECT:</strong> Error message appears: "Please provide a reason for cancellation"</li>
+            <li><strong>EXPECT:</strong> Dialog remains open</li>
+        </ol>
+    </div>
+
+    <div class="test-step success">
+        <h2>Step 5: Complete Cancellation</h2>
+        <ol>
+            <li>Enter a cancellation reason (e.g., "Testing the cancel feature")</li>
+            <li>Click <strong>"Yes, Cancel Booking"</strong></li>
+            <li><strong>EXPECT:</strong> Success toast message appears</li>
+            <li><strong>EXPECT:</strong> Redirect to /bookings after 1.5 seconds</li>
+            <li><strong>EXPECT:</strong> Booking shows status "Cancelled" in the list</li>
+        </ol>
+    </div>
+
+    <div class="test-step info">
+        <h2>Step 6: Verify Backend Changes</h2>
+        <ol>
+            <li>Click on the cancelled booking again</li>
+            <li><strong>CHECK:</strong> Status badge shows "Cancelled"</li>
+            <li><strong>CHECK:</strong> "Cancel Booking" button is NOT visible anymore</li>
+            <li><strong>CHECK:</strong> Cancellation reason is saved (visible in admin view)</li>
+        </ol>
+    </div>
+
+    <div class="test-step warning">
+        <h2>✅ Expected Visual Checklist</h2>
+        <ul class="checklist">
+            <li>Dialog has WHITE background (light mode) or DARK GRAY (dark mode)</li>
+            <li>All text is clearly visible (black on white)</li>
+            <li>Textarea has white background with border</li>
+            <li>"Keep Booking" button has outline style</li>
+            <li>"Yes, Cancel Booking" button is RED</li>
+            <li>Dialog appears centered on screen</li>
+            <li>Background has semi-transparent overlay</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('📋 Cancel Booking Dialog Test Guide Loaded');
+        console.log('🌐 Open http://localhost:3000 to start testing');
+    </script>
+</body>
+</html>

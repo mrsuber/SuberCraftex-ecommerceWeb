@@ -19,6 +19,12 @@ import {
   Tags,
   Image,
   Boxes,
+  CreditCard,
+  Scissors,
+  Ruler,
+  ClipboardCheck,
+  UserPlus,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +33,11 @@ const adminNavigation = [
     name: "Overview",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    name: "Point of Sale",
+    href: "/dashboard/pos",
+    icon: CreditCard,
   },
   {
     name: "Products",
@@ -79,6 +90,11 @@ const adminNavigation = [
     icon: Users,
   },
   {
+    name: "Investors",
+    href: "/dashboard/investors",
+    icon: TrendingUp,
+  },
+  {
     name: "Suppliers",
     href: "/dashboard/suppliers",
     icon: Building2,
@@ -113,14 +129,63 @@ const driverNavigation = [
   },
 ];
 
+const cashierNavigation = [
+  {
+    name: "Point of Sale",
+    href: "/dashboard/pos",
+    icon: CreditCard,
+  },
+];
+
+const tailorNavigation = [
+  {
+    name: "Overview",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "Walk-In Order",
+    href: "/dashboard/tailor/walk-in",
+    icon: UserPlus,
+  },
+  {
+    name: "Bookings",
+    href: "/dashboard/bookings",
+    icon: Calendar,
+  },
+  {
+    name: "Measurements",
+    href: "/dashboard/tailor/measurements",
+    icon: Ruler,
+  },
+  {
+    name: "Fittings",
+    href: "/dashboard/tailor/fittings",
+    icon: Scissors,
+  },
+  {
+    name: "Materials",
+    href: "/dashboard/materials",
+    icon: Boxes,
+  },
+];
+
 interface AdminSidebarProps {
   userRole: string;
 }
 
 export function AdminSidebar({ userRole }: AdminSidebarProps) {
   const pathname = usePathname();
-  const navigation = userRole === 'driver' ? driverNavigation : adminNavigation;
-  const dashboardTitle = userRole === 'driver' ? 'Driver Dashboard' : 'Admin Dashboard';
+  const navigation =
+    userRole === 'driver' ? driverNavigation :
+    userRole === 'cashier' ? cashierNavigation :
+    userRole === 'tailor' ? tailorNavigation :
+    adminNavigation;
+  const dashboardTitle =
+    userRole === 'driver' ? 'Driver Dashboard' :
+    userRole === 'cashier' ? 'Cashier Dashboard' :
+    userRole === 'tailor' ? 'Tailor Dashboard' :
+    'Admin Dashboard';
 
   return (
     <aside className="w-64 bg-background border-r min-h-screen sticky top-0">

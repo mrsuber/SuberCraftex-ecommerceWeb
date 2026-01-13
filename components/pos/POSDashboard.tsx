@@ -7,6 +7,7 @@ import POSCart from './POSCart'
 import POSOrderList from './POSOrderList'
 import POSSessionStats from './POSSessionStats'
 import { ShoppingCart, Package, DollarSign, Clock } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 
 interface POSSession {
   id: string
@@ -162,7 +163,7 @@ export default function POSDashboard() {
               <div className="text-right">
                 <div className="text-sm text-gray-600">Session Sales</div>
                 <div className="text-xl font-bold text-green-600">
-                  ${activeSession.totalSales.toFixed(2)}
+                  {formatCurrency(activeSession.totalSales)}
                 </div>
               </div>
               <POSSessionManager
@@ -188,7 +189,7 @@ export default function POSDashboard() {
                 <DollarSign className="w-5 h-5 text-green-600" />
                 <div>
                   <div className="text-xs text-green-600">Cash</div>
-                  <div className="text-lg font-bold text-green-900">${activeSession.totalCash.toFixed(2)}</div>
+                  <div className="text-lg font-bold text-green-900">{formatCurrency(activeSession.totalCash)}</div>
                 </div>
               </div>
             </div>
@@ -197,7 +198,7 @@ export default function POSDashboard() {
                 <Package className="w-5 h-5 text-purple-600" />
                 <div>
                   <div className="text-xs text-purple-600">Card</div>
-                  <div className="text-lg font-bold text-purple-900">${activeSession.totalCard.toFixed(2)}</div>
+                  <div className="text-lg font-bold text-purple-900">{formatCurrency(activeSession.totalCard)}</div>
                 </div>
               </div>
             </div>
@@ -206,7 +207,7 @@ export default function POSDashboard() {
                 <Clock className="w-5 h-5 text-orange-600" />
                 <div>
                   <div className="text-xs text-orange-600">Mobile</div>
-                  <div className="text-lg font-bold text-orange-900">${activeSession.totalMobile.toFixed(2)}</div>
+                  <div className="text-lg font-bold text-orange-900">{formatCurrency(activeSession.totalMobile)}</div>
                 </div>
               </div>
             </div>
@@ -218,7 +219,12 @@ export default function POSDashboard() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side - Products */}
         <div className="flex-1 overflow-auto p-6">
-          <POSProductGrid onAddToCart={handleAddToCart} />
+          <POSProductGrid onAddToCart={handleAddToCart} refreshTrigger={refreshTrigger} />
+
+          {/* Orders List */}
+          <div className="mt-6">
+            <POSOrderList sessionId={activeSession.id} refreshTrigger={refreshTrigger} />
+          </div>
         </div>
 
         {/* Right Side - Cart */}
