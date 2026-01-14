@@ -109,7 +109,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                   <TableCell>
                     <div>
                       <div className="font-medium">
-                        {order.shipping_address.full_name}
+                        {order.shipping_address?.full_name || order.guest_email || 'N/A'}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {order.guest_email}
