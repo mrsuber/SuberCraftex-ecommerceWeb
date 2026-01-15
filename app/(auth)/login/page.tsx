@@ -63,10 +63,10 @@ export default function LoginPage() {
       toast.success("Welcome back!");
 
       // Redirect based on user role
+      // Admin, cashier, driver, tailor go to admin dashboard
+      // Everyone else (customers, investors) go to account page - they can shop normally
       if (data.user.role === 'admin' || data.user.role === 'cashier' || data.user.role === 'driver' || data.user.role === 'tailor') {
         router.push("/dashboard");
-      } else if (data.user.role === 'investor') {
-        router.push("/investor/dashboard");
       } else {
         router.push("/account");
       }

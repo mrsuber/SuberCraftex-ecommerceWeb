@@ -31,6 +31,8 @@ export async function POST(
 
     const body = await request.json()
     const {
+      grossAmount,
+      charges = 0,
       amount,
       paymentMethod,
       referenceNumber,
@@ -38,9 +40,17 @@ export async function POST(
       notes,
     } = body
 
+    // Validate amounts
+    if (!grossAmount || grossAmount <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid gross amount' },
+        { status: 400 }
+      )
+    }
+
     if (!amount || amount <= 0) {
       return NextResponse.json(
-        { error: 'Invalid deposit amount' },
+        { error: 'Invalid net amount' },
         { status: 400 }
       )
     }
@@ -52,54 +62,29 @@ export async function POST(
       )
     }
 
-    // Create deposit record and update investor balances in a transaction
-    const result = await db.$transaction(async (tx) => {
-      // Create deposit record
-      const deposit = await tx.investorDeposit.create({
-        data: {
-          investorId: investor.id,
-          amount,
-          paymentMethod,
-          referenceNumber: referenceNumber || null,
-          receiptUrl: receiptUrl || null,
-          notes: notes || null,
-          depositedAt: new Date(),
-        },
-      })
-
-      // Update investor balances
-      const updatedInvestor = await tx.investor.update({
-        where: { id: investor.id },
-        data: {
-          cashBalance: {
-            increment: amount,
-          },
-          totalInvested: {
-            increment: amount,
-          },
-        },
-      })
-
-      // Create transaction record
-      await tx.investorTransaction.create({
-        data: {
-          investorId: investor.id,
-          type: 'deposit',
-          amount,
-          balanceAfter: updatedInvestor.cashBalance,
-          profitAfter: updatedInvestor.profitBalance,
-          description: `Deposit via ${paymentMethod}${referenceNumber ? ` (Ref: ${referenceNumber})` : ''}`,
-          notes: notes || null,
-          createdBy: user.id,
-        },
-      })
-
-      return { deposit, updatedInvestor }
+    // Create deposit record with pending_confirmation status
+    // The investor must confirm before funds are added to their balance
+    const deposit = await db.investorDeposit.create({
+      data: {
+        investorId: investor.id,
+        grossAmount,
+        charges: charges || 0,
+        amount,
+        paymentMethod,
+        referenceNumber: referenceNumber || null,
+        receiptUrl: receiptUrl || null,
+        notes: notes || null,
+        confirmationStatus: 'pending_confirmation',
+        depositedAt: new Date(),
+      },
     })
 
-    console.log(`✅ Deposit recorded: ${investor.investorNumber} - ${amount}`)
+    console.log(`✅ Deposit recorded (pending confirmation): ${investor.investorNumber} - Gross: ${grossAmount}, Charges: ${charges}, Net: ${amount}`)
 
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json({
+      deposit,
+      message: 'Deposit recorded. Waiting for investor confirmation before funds are credited.',
+    }, { status: 201 })
   } catch (error) {
     console.error('Error recording deposit:', error)
     return NextResponse.json(

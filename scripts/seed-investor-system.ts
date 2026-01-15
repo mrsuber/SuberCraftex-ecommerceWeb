@@ -14,7 +14,7 @@ async function main() {
     where: {
       investor: {
         email: {
-          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
         },
       },
     },
@@ -34,7 +34,7 @@ async function main() {
     where: {
       investor: {
         email: {
-          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
         },
       },
     },
@@ -44,7 +44,7 @@ async function main() {
     where: {
       investor: {
         email: {
-          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
         },
       },
     },
@@ -54,7 +54,7 @@ async function main() {
     where: {
       investor: {
         email: {
-          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
         },
       },
     },
@@ -64,7 +64,7 @@ async function main() {
     where: {
       investor: {
         email: {
-          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
         },
       },
     },
@@ -74,7 +74,7 @@ async function main() {
     where: {
       investor: {
         email: {
-          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+          in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
         },
       },
     },
@@ -91,7 +91,7 @@ async function main() {
   await db.investor.deleteMany({
     where: {
       email: {
-        in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+        in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
       },
     },
   })
@@ -99,7 +99,7 @@ async function main() {
   await db.user.deleteMany({
     where: {
       email: {
-        in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com'],
+        in: ['investor1@test.com', 'investor2@test.com', 'investor3@test.com', 'investor4@test.com', 'investor5@test.com'],
       },
     },
   })
@@ -135,8 +135,13 @@ async function main() {
       phone: '+237670123456',
       idType: 'national_id',
       idNumber: 'CM-NID-123456789',
+      idDocumentUrl: 'https://placehold.co/600x400/png?text=ID+Front',
+      idDocumentBackUrl: 'https://placehold.co/600x400/png?text=ID+Back',
+      selfieUrl: 'https://placehold.co/400x400/png?text=Selfie',
+      kycStatus: 'approved',
+      kycSubmittedAt: new Date('2024-01-10'),
       isVerified: true,
-      verifiedAt: new Date(),
+      verifiedAt: new Date('2024-01-11'),
       status: 'active',
       agreementAccepted: true,
       agreementAcceptedAt: new Date(),
@@ -176,8 +181,12 @@ async function main() {
       phone: '+237675234567',
       idType: 'passport',
       idNumber: 'CM-PASS-987654321',
+      idDocumentUrl: 'https://placehold.co/600x400/png?text=Passport+Front',
+      selfieUrl: 'https://placehold.co/400x400/png?text=Marie+Selfie',
+      kycStatus: 'approved',
+      kycSubmittedAt: new Date('2024-01-18'),
       isVerified: true,
-      verifiedAt: new Date(),
+      verifiedAt: new Date('2024-01-19'),
       status: 'active',
       agreementAccepted: true,
       agreementAcceptedAt: new Date(),
@@ -217,6 +226,11 @@ async function main() {
       phone: '+237678345678',
       idType: 'driver_license',
       idNumber: 'CM-DL-456789123',
+      idDocumentUrl: 'https://placehold.co/600x400/png?text=Drivers+License+Front',
+      idDocumentBackUrl: 'https://placehold.co/600x400/png?text=Drivers+License+Back',
+      selfieUrl: 'https://placehold.co/400x400/png?text=Paul+Selfie',
+      kycStatus: 'pending',
+      kycSubmittedAt: new Date(),
       isVerified: false,
       status: 'pending_verification',
       agreementAccepted: true,
@@ -229,7 +243,91 @@ async function main() {
     },
   })
 
-  console.log('✓ Created Investor 3: Paul Njoh (Pending Verification)')
+  console.log('✓ Created Investor 3: Paul Njoh (KYC Pending Review)')
+
+  // Investor 4 - KYC Not Started (just registered, needs to submit documents)
+  const investor4User = await db.user.upsert({
+    where: { email: 'investor4@test.com' },
+    update: {},
+    create: {
+      email: 'investor4@test.com',
+      passwordHash: password,
+      role: 'investor',
+      fullName: 'Grace Mbeki',
+      phone: '+237679456789',
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+    },
+  })
+
+  const investor4 = await db.investor.upsert({
+    where: { userId: investor4User.id },
+    update: {},
+    create: {
+      userId: investor4User.id,
+      investorNumber: 'INV-2024-0004',
+      fullName: 'Grace Mbeki',
+      email: 'investor4@test.com',
+      phone: '+237679456789',
+      kycStatus: 'not_started',
+      isVerified: false,
+      status: 'pending_verification',
+      agreementAccepted: true,
+      agreementAcceptedAt: new Date(),
+      cashBalance: 0,
+      profitBalance: 0,
+      totalInvested: 0,
+      totalProfit: 0,
+      totalWithdrawn: 0,
+    },
+  })
+
+  console.log('✓ Created Investor 4: Grace Mbeki (KYC Not Started)')
+
+  // Investor 5 - KYC Rejected (needs to resubmit)
+  const investor5User = await db.user.upsert({
+    where: { email: 'investor5@test.com' },
+    update: {},
+    create: {
+      email: 'investor5@test.com',
+      passwordHash: password,
+      role: 'investor',
+      fullName: 'Emmanuel Fon',
+      phone: '+237680567890',
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+    },
+  })
+
+  const investor5 = await db.investor.upsert({
+    where: { userId: investor5User.id },
+    update: {},
+    create: {
+      userId: investor5User.id,
+      investorNumber: 'INV-2024-0005',
+      fullName: 'Emmanuel Fon',
+      email: 'investor5@test.com',
+      phone: '+237680567890',
+      idType: 'national_id',
+      idNumber: 'CM-NID-BLURRY123',
+      idDocumentUrl: 'https://placehold.co/600x400/png?text=Blurry+ID',
+      selfieUrl: 'https://placehold.co/400x400/png?text=Emmanuel+Selfie',
+      kycStatus: 'rejected',
+      kycSubmittedAt: new Date('2024-03-01'),
+      kycRejectionReason: 'ID document is too blurry and text is not readable. Please upload a clearer photo of your ID card.',
+      isVerified: false,
+      status: 'pending_verification',
+      agreementAccepted: true,
+      agreementAcceptedAt: new Date(),
+      cashBalance: 0,
+      profitBalance: 0,
+      totalInvested: 0,
+      totalProfit: 0,
+      totalWithdrawn: 0,
+    },
+  })
+
+  console.log('✓ Created Investor 5: Emmanuel Fon (KYC Rejected - Needs Resubmission)')
 
   // Get admin user for transaction tracking
   const admin = await db.user.findFirst({
@@ -839,41 +937,53 @@ async function main() {
   console.log('\n✅ Investor system seeding completed!')
   console.log('\n📊 Summary:')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('Investors Created: 3')
-  console.log('  - Active & Verified: 2')
-  console.log('  - Pending Verification: 1')
+  console.log('Investors Created: 5')
+  console.log('  - KYC Approved (Active): 2')
+  console.log('  - KYC Pending Review: 1')
+  console.log('  - KYC Not Started: 1')
+  console.log('  - KYC Rejected: 1')
   console.log('')
   console.log('Equipment Created: 2')
   console.log('  - Industrial Sewing Machine (200k)')
   console.log('  - Embroidery Machine (150k)')
   console.log('')
-  console.log('Investor 1 (John Kamara):')
+  console.log('Investor 1 (John Kamara) - KYC APPROVED:')
   console.log('  - Total Invested: 500,000 FCFA')
   console.log('  - Cash Balance: 150,000 FCFA')
   console.log('  - Profit Balance: 4,250 FCFA')
   console.log('  - Product Allocations: 2 (250,000 FCFA)')
   console.log('  - Equipment: 50% of Sewing Machine (100,000 FCFA)')
   console.log('')
-  console.log('Investor 2 (Marie Ngono):')
+  console.log('Investor 2 (Marie Ngono) - KYC APPROVED:')
   console.log('  - Total Invested: 300,000 FCFA')
   console.log('  - Cash Balance: 60,000 FCFA')
   console.log('  - Profit Balance: 5,350 FCFA')
   console.log('  - Product Allocations: 1 (120,000 FCFA)')
   console.log('  - Equipment: 30% of Sewing Machine + 40% of Embroidery (120,000 FCFA)')
   console.log('')
-  console.log('Investor 3 (Paul Njoh):')
-  console.log('  - Status: Pending Verification')
+  console.log('Investor 3 (Paul Njoh) - KYC PENDING:')
+  console.log('  - Documents submitted, awaiting admin review')
   console.log('  - No investments yet')
+  console.log('')
+  console.log('Investor 4 (Grace Mbeki) - KYC NOT STARTED:')
+  console.log('  - Needs to complete KYC verification')
+  console.log('  - Will be redirected to /investor/verify')
+  console.log('')
+  console.log('Investor 5 (Emmanuel Fon) - KYC REJECTED:')
+  console.log('  - Previous submission rejected (blurry ID)')
+  console.log('  - Can resubmit documents')
   console.log('')
   console.log('Withdrawal Requests: 3')
   console.log('  - Pending: 2')
   console.log('  - Approved: 1')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('\n🔐 Test Credentials:')
+  console.log('\n🔐 Test Credentials (all use password: password123):')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('Investor 1: investor1@test.com / password123')
-  console.log('Investor 2: investor2@test.com / password123')
-  console.log('Investor 3: investor3@test.com / password123')
+  console.log('investor1@test.com - KYC Approved, can access dashboard')
+  console.log('investor2@test.com - KYC Approved, can access dashboard')
+  console.log('investor3@test.com - KYC Pending, limited dashboard access')
+  console.log('investor4@test.com - KYC Not Started, redirects to verify page')
+  console.log('investor5@test.com - KYC Rejected, redirects to verify page')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 }
 

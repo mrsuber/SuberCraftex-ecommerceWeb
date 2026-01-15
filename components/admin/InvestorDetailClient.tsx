@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +25,15 @@ import {
   Settings as SettingsIcon,
   Plus,
   Loader2,
+  FileCheck,
+  XCircle,
+  Eye,
+  User,
+  CreditCard,
+  Upload,
+  ImageIcon,
+  Trash2,
+  Receipt,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import WithdrawalProcessDialog from './WithdrawalProcessDialog'
@@ -48,11 +57,23 @@ export default function InvestorDetailClient({
   // Deposit form
   const [depositOpen, setDepositOpen] = useState(false)
   const [depositForm, setDepositForm] = useState({
-    amount: '',
-    paymentMethod: 'bank_transfer',
+    grossAmount: '',  // Total amount investor sent
+    charges: '',      // Transaction fees
+    amount: '',       // Net amount to credit (auto-calculated)
+    paymentMethod: 'cash',
     referenceNumber: '',
+    receiptUrl: '',
     notes: '',
   })
+  const [uploadingReceipt, setUploadingReceipt] = useState(false)
+  const receiptInputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-calculate net amount when gross amount or charges change
+  const calculateNetAmount = (gross: string, charges: string) => {
+    const grossNum = parseFloat(gross) || 0
+    const chargesNum = parseFloat(charges) || 0
+    return Math.max(0, grossNum - chargesNum).toString()
+  }
 
   // Product allocation form
   const [productAllocOpen, setProductAllocOpen] = useState(false)
@@ -74,6 +95,14 @@ export default function InvestorDetailClient({
 
   // Verification
   const [verifying, setVerifying] = useState(false)
+
+  // KYC Review
+  const [kycRejectOpen, setKycRejectOpen] = useState(false)
+  const [kycRejectionReason, setKycRejectionReason] = useState('')
+  const [processingKyc, setProcessingKyc] = useState(false)
+
+  // Image preview
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   // Withdrawal processing
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false)
@@ -154,16 +183,155 @@ export default function InvestorDetailClient({
     }
   }
 
+  const handleKycApprove = async () => {
+    if (!confirm('Are you sure you want to approve this KYC verification?')) {
+      return
+    }
+
+    setProcessingKyc(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/admin/investors/${investor.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kycAction: 'approve' }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to approve KYC')
+      }
+
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setProcessingKyc(false)
+    }
+  }
+
+  const handleKycReject = async () => {
+    setProcessingKyc(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/admin/investors/${investor.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kycAction: 'reject',
+          kycRejectionReason: kycRejectionReason || 'Verification documents rejected. Please resubmit with clearer images.',
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to reject KYC')
+      }
+
+      setKycRejectOpen(false)
+      setKycRejectionReason('')
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setProcessingKyc(false)
+    }
+  }
+
+  const getKycStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: any; icon: any; label: string }> = {
+      not_started: { variant: 'outline', icon: Clock, label: 'Not Started' },
+      pending: { variant: 'secondary', icon: Clock, label: 'Pending Review' },
+      approved: { variant: 'default', icon: CheckCircle2, label: 'Approved' },
+      rejected: { variant: 'destructive', icon: XCircle, label: 'Rejected' },
+    }
+
+    const config = variants[status] || variants.not_started
+    const Icon = config.icon
+
+    return (
+      <Badge variant={config.variant as any} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    )
+  }
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a valid image (JPEG, PNG, WebP) or PDF file')
+      return
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB')
+      return
+    }
+
+    setUploadingReceipt(true)
+    setError('')
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'receipt')
+      formData.append('investorId', investor.id)
+
+      const response = await fetch('/api/admin/investors/upload-receipt', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to upload receipt')
+      }
+
+      const data = await response.json()
+      setDepositForm({ ...depositForm, receiptUrl: data.url })
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setUploadingReceipt(false)
+    }
+  }
+
   const handleRecordDeposit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
+    const grossAmount = parseFloat(depositForm.grossAmount) || 0
+    const charges = parseFloat(depositForm.charges) || 0
+    const netAmount = grossAmount - charges
+
+    if (netAmount <= 0) {
+      setError('Net amount must be greater than zero')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch(`/api/admin/investors/${investor.id}/deposits`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(depositForm),
+        body: JSON.stringify({
+          grossAmount: grossAmount,
+          charges: charges,
+          amount: netAmount,
+          paymentMethod: depositForm.paymentMethod,
+          referenceNumber: depositForm.referenceNumber || null,
+          receiptUrl: depositForm.receiptUrl || null,
+          notes: depositForm.notes || null,
+        }),
       })
 
       if (!response.ok) {
@@ -173,9 +341,12 @@ export default function InvestorDetailClient({
 
       setDepositOpen(false)
       setDepositForm({
+        grossAmount: '',
+        charges: '',
         amount: '',
-        paymentMethod: 'bank_transfer',
+        paymentMethod: 'cash',
         referenceNumber: '',
+        receiptUrl: '',
         notes: '',
       })
       router.refresh()
@@ -272,7 +443,26 @@ export default function InvestorDetailClient({
         </div>
         <div className="flex items-center gap-3">
           {getStatusBadge(investor.status)}
-          {!investor.isVerified && (
+          {investor.kycStatus && getKycStatusBadge(investor.kycStatus)}
+          {/* Show KYC Review buttons if pending */}
+          {investor.kycStatus === 'pending' && (
+            <>
+              <Button onClick={handleKycApprove} disabled={processingKyc}>
+                {processingKyc ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
+                Approve KYC
+              </Button>
+              <Button variant="destructive" onClick={() => setKycRejectOpen(true)} disabled={processingKyc}>
+                <XCircle className="mr-2 h-4 w-4" />
+                Reject KYC
+              </Button>
+            </>
+          )}
+          {/* Legacy verify button for investors without KYC documents */}
+          {!investor.isVerified && investor.kycStatus !== 'pending' && !investor.idDocumentUrl && (
             <Button onClick={handleVerifyInvestor} disabled={verifying}>
               {verifying ? (
                 <>
@@ -394,18 +584,7 @@ export default function InvestorDetailClient({
                 </DialogHeader>
                 <form onSubmit={handleRecordDeposit} className="space-y-4">
                   <div>
-                    <Label htmlFor="amount">Amount (FCFA)</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      value={depositForm.amount}
-                      onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="paymentMethod">Payment Method</Label>
+                    <Label htmlFor="paymentMethod">Payment Method *</Label>
                     <Select
                       value={depositForm.paymentMethod}
                       onValueChange={(value) => setDepositForm({ ...depositForm, paymentMethod: value })}
@@ -414,36 +593,167 @@ export default function InvestorDetailClient({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                         <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="mobile_payment">Mobile Payment</SelectItem>
+                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                        <SelectItem value="mobile_payment">Mobile Money</SelectItem>
+                        <SelectItem value="check">Check</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Amount Section */}
+                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
+                    <h4 className="font-medium text-sm text-gray-700">Amount Details</h4>
+
+                    <div>
+                      <Label htmlFor="grossAmount">Amount on Receipt (FCFA) *</Label>
+                      <Input
+                        id="grossAmount"
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="e.g., 1010 (total shown on receipt)"
+                        value={depositForm.grossAmount}
+                        onChange={(e) => {
+                          const newGross = e.target.value
+                          setDepositForm({
+                            ...depositForm,
+                            grossAmount: newGross,
+                            amount: calculateNetAmount(newGross, depositForm.charges)
+                          })
+                        }}
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Total amount shown on the receipt/proof of payment</p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="charges">Transaction Charges/Fees (FCFA)</Label>
+                      <Input
+                        id="charges"
+                        type="number"
+                        step="1"
+                        min="0"
+                        placeholder="e.g., 10 (mobile money fees)"
+                        value={depositForm.charges}
+                        onChange={(e) => {
+                          const newCharges = e.target.value
+                          setDepositForm({
+                            ...depositForm,
+                            charges: newCharges,
+                            amount: calculateNetAmount(depositForm.grossAmount, newCharges)
+                          })
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Mobile money fees, bank charges, etc.</p>
+                    </div>
+
+                    {/* Net Amount Display */}
+                    {depositForm.grossAmount && (
+                      <div className="pt-3 border-t border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Net Amount to Credit:</span>
+                          <span className="text-lg font-bold text-green-600">
+                            {formatCurrency(parseFloat(calculateNetAmount(depositForm.grossAmount, depositForm.charges)) || 0)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">This amount will be added to investor's cash balance</p>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
-                    <Label htmlFor="referenceNumber">Reference Number (Optional)</Label>
+                    <Label htmlFor="referenceNumber">Reference / Receipt Number</Label>
                     <Input
                       id="referenceNumber"
+                      placeholder="e.g., Receipt #001, Transaction ID"
                       value={depositForm.referenceNumber}
                       onChange={(e) => setDepositForm({ ...depositForm, referenceNumber: e.target.value })}
                     />
                   </div>
+
+                  {/* Receipt Upload */}
                   <div>
-                    <Label htmlFor="depositNotes">Notes (Optional)</Label>
+                    <Label>Receipt / Proof of Payment</Label>
+                    <input
+                      ref={receiptInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="hidden"
+                      onChange={handleReceiptUpload}
+                    />
+
+                    {depositForm.receiptUrl ? (
+                      <div className="mt-2 relative border-2 border-green-200 bg-green-50 rounded-lg p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 bg-white rounded border overflow-hidden flex items-center justify-center">
+                            {depositForm.receiptUrl.endsWith('.pdf') ? (
+                              <Receipt className="h-8 w-8 text-gray-400" />
+                            ) : (
+                              <img
+                                src={depositForm.receiptUrl}
+                                alt="Receipt"
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-green-700">Receipt uploaded</p>
+                            <p className="text-xs text-green-600">Click to view or replace</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDepositForm({ ...depositForm, receiptUrl: '' })}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => receiptInputRef.current?.click()}
+                        disabled={uploadingReceipt}
+                        className="mt-2 w-full border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        {uploadingReceipt ? (
+                          <>
+                            <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+                            <span className="text-sm text-gray-500">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 text-gray-400" />
+                            <span className="text-sm text-gray-600">Upload receipt image or PDF</span>
+                            <span className="text-xs text-gray-400">JPEG, PNG, WebP or PDF (max 10MB)</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="depositNotes">Notes</Label>
                     <Textarea
                       id="depositNotes"
+                      placeholder="Any additional notes about this deposit..."
                       value={depositForm.notes}
                       onChange={(e) => setDepositForm({ ...depositForm, notes: e.target.value })}
                     />
                   </div>
-                  <Button type="submit" disabled={loading} className="w-full">
+                  <Button type="submit" disabled={loading || uploadingReceipt} className="w-full">
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Recording...
                       </>
                     ) : (
-                      'Record Deposit'
+                      <>
+                        <DollarSign className="mr-2 h-4 w-4" />
+                        Record Deposit
+                      </>
                     )}
                   </Button>
                 </form>
@@ -679,6 +989,146 @@ export default function InvestorDetailClient({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* KYC Verification Card - Show if documents submitted */}
+          {(investor.idDocumentUrl || investor.selfieUrl) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileCheck className="h-5 w-5" />
+                  KYC Verification Documents
+                </CardTitle>
+                <CardDescription>
+                  Review the investor's identity verification documents
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* KYC Status */}
+                  <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium">KYC Status</p>
+                      <p className="text-xs text-gray-500">
+                        {investor.kycSubmittedAt
+                          ? `Submitted: ${new Date(investor.kycSubmittedAt).toLocaleString()}`
+                          : 'Not submitted'}
+                      </p>
+                    </div>
+                    {investor.kycStatus && getKycStatusBadge(investor.kycStatus)}
+                  </div>
+
+                  {investor.kycRejectionReason && investor.kycStatus === 'rejected' && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
+                      <p className="text-sm text-red-700">{investor.kycRejectionReason}</p>
+                    </div>
+                  )}
+
+                  {/* Document Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* ID Front */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        <CreditCard className="h-4 w-4" />
+                        ID Document (Front)
+                      </p>
+                      {investor.idDocumentUrl ? (
+                        <div
+                          className="relative border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setPreviewImage(investor.idDocumentUrl)}
+                        >
+                          <img
+                            src={investor.idDocumentUrl}
+                            alt="ID Front"
+                            className="w-full h-40 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Eye className="h-6 w-6 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed rounded-lg h-40 flex items-center justify-center text-gray-400">
+                          Not uploaded
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ID Back */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        <CreditCard className="h-4 w-4" />
+                        ID Document (Back)
+                      </p>
+                      {investor.idDocumentBackUrl ? (
+                        <div
+                          className="relative border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setPreviewImage(investor.idDocumentBackUrl)}
+                        >
+                          <img
+                            src={investor.idDocumentBackUrl}
+                            alt="ID Back"
+                            className="w-full h-40 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Eye className="h-6 w-6 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed rounded-lg h-40 flex items-center justify-center text-gray-400">
+                          Not uploaded
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selfie */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        Selfie Photo
+                      </p>
+                      {investor.selfieUrl ? (
+                        <div
+                          className="relative border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setPreviewImage(investor.selfieUrl)}
+                        >
+                          <img
+                            src={investor.selfieUrl}
+                            alt="Selfie"
+                            className="w-full h-40 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Eye className="h-6 w-6 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed rounded-lg h-40 flex items-center justify-center text-gray-400">
+                          Not uploaded
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons for Pending KYC */}
+                  {investor.kycStatus === 'pending' && (
+                    <div className="flex gap-3 pt-4 border-t">
+                      <Button onClick={handleKycApprove} disabled={processingKyc} className="flex-1">
+                        {processingKyc ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                        )}
+                        Approve KYC
+                      </Button>
+                      <Button variant="destructive" onClick={() => setKycRejectOpen(true)} disabled={processingKyc} className="flex-1">
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Reject KYC
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -696,10 +1146,10 @@ export default function InvestorDetailClient({
                   <span className="text-sm">{investor.phone}</span>
 
                   <span className="text-sm font-medium">ID Type:</span>
-                  <span className="text-sm">{investor.idType.replace('_', ' ').toUpperCase()}</span>
+                  <span className="text-sm">{investor.idType ? investor.idType.replace('_', ' ').toUpperCase() : 'Not provided'}</span>
 
                   <span className="text-sm font-medium">ID Number:</span>
-                  <span className="text-sm">{investor.idNumber}</span>
+                  <span className="text-sm">{investor.idNumber || 'Not provided'}</span>
 
                   <span className="text-sm font-medium">Joined:</span>
                   <span className="text-sm">{new Date(investor.createdAt).toLocaleDateString()}</span>
@@ -787,24 +1237,77 @@ export default function InvestorDetailClient({
               {investor.deposits.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-8">No deposits recorded</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {investor.deposits.map((deposit: any) => (
-                    <div key={deposit.id} className="flex justify-between items-center p-3 border rounded">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {deposit.paymentMethod.replace('_', ' ').toUpperCase()}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(deposit.depositedAt).toLocaleString()}
-                          {deposit.referenceNumber && ` • Ref: ${deposit.referenceNumber}`}
-                        </p>
-                        {deposit.notes && (
-                          <p className="text-xs text-gray-600 mt-1">{deposit.notes}</p>
+                    <div key={deposit.id} className="border rounded-lg p-4">
+                      <div className="flex gap-4">
+                        {/* Receipt thumbnail */}
+                        {deposit.receiptUrl && (
+                          <div
+                            className="w-16 h-16 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setPreviewImage(deposit.receiptUrl)}
+                          >
+                            {deposit.receiptUrl.endsWith('.pdf') ? (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Receipt className="h-6 w-6 text-gray-400" />
+                              </div>
+                            ) : (
+                              <img
+                                src={deposit.receiptUrl}
+                                alt="Receipt"
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
                         )}
+
+                        {/* Deposit details */}
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium flex items-center gap-2">
+                                {deposit.paymentMethod.replace('_', ' ').toUpperCase()}
+                                {deposit.receiptUrl && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Receipt className="h-3 w-3 mr-1" />
+                                    Receipt
+                                  </Badge>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(deposit.depositedAt).toLocaleString()}
+                              </p>
+                            </div>
+                            <span className="text-lg font-bold text-green-600">
+                              +{formatCurrency(parseFloat(deposit.amount))}
+                            </span>
+                          </div>
+
+                          {deposit.referenceNumber && (
+                            <p className="text-xs text-gray-600 mt-2">
+                              <span className="font-medium">Reference:</span> {deposit.referenceNumber}
+                            </p>
+                          )}
+
+                          {deposit.notes && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              <span className="font-medium">Notes:</span> {deposit.notes}
+                            </p>
+                          )}
+
+                          {deposit.receiptUrl && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0 h-auto mt-2 text-xs"
+                              onClick={() => setPreviewImage(deposit.receiptUrl)}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              View Receipt
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold text-green-600">
-                        +{formatCurrency(parseFloat(deposit.amount))}
-                      </span>
                     </div>
                   ))}
                 </div>
@@ -1067,6 +1570,61 @@ export default function InvestorDetailClient({
           onSuccess={() => router.refresh()}
         />
       )}
+
+      {/* KYC Rejection Dialog */}
+      <Dialog open={kycRejectOpen} onOpenChange={setKycRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject KYC Verification</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting this verification. The investor will be notified and can resubmit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="rejectionReason">Rejection Reason</Label>
+              <Textarea
+                id="rejectionReason"
+                placeholder="E.g., ID document is blurry, selfie doesn't match ID photo, expired document..."
+                value={kycRejectionReason}
+                onChange={(e) => setKycRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setKycRejectOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleKycReject} disabled={processingKyc} className="flex-1">
+                {processingKyc ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <XCircle className="mr-2 h-4 w-4" />
+                )}
+                Reject KYC
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Document Preview</DialogTitle>
+          </DialogHeader>
+          {previewImage && (
+            <div className="flex justify-center">
+              <img
+                src={previewImage}
+                alt="Document Preview"
+                className="max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

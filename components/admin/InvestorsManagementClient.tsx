@@ -29,6 +29,8 @@ import {
   Search,
   Eye,
   Filter,
+  FileCheck,
+  XCircle,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 
@@ -57,9 +59,29 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
   const stats = {
     total: investors.length,
     pendingVerification: investors.filter(i => i.status === 'pending_verification').length,
+    pendingKyc: investors.filter(i => i.kycStatus === 'pending').length,
     active: investors.filter(i => i.status === 'active').length,
     totalInvested: investors.reduce((sum, i) => sum + parseFloat(i.totalInvested), 0),
     totalProfit: investors.reduce((sum, i) => sum + parseFloat(i.totalProfit), 0),
+  }
+
+  const getKycBadge = (kycStatus: string) => {
+    const variants: Record<string, { variant: any; icon: any; label: string }> = {
+      not_started: { variant: 'outline', icon: Clock, label: 'KYC Not Started' },
+      pending: { variant: 'secondary', icon: FileCheck, label: 'KYC Pending' },
+      approved: { variant: 'default', icon: CheckCircle2, label: 'KYC Approved' },
+      rejected: { variant: 'destructive', icon: XCircle, label: 'KYC Rejected' },
+    }
+
+    const config = variants[kycStatus] || variants.not_started
+    const Icon = config.icon
+
+    return (
+      <Badge variant={config.variant as any} className="flex items-center gap-1 text-xs">
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    )
   }
 
   const getStatusBadge = (status: string) => {
@@ -105,11 +127,12 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Verification</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
+            <CardTitle className="text-sm font-medium">Pending KYC Review</CardTitle>
+            <FileCheck className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{stats.pendingVerification}</div>
+            <div className="text-2xl font-bold text-amber-600">{stats.pendingKyc}</div>
+            <p className="text-xs text-muted-foreground mt-1">Awaiting document review</p>
           </CardContent>
         </Card>
 
@@ -216,11 +239,7 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
                       <TableCell>
                         <div className="space-y-1">
                           {getStatusBadge(investor.status)}
-                          {!investor.isVerified && (
-                            <Badge variant="secondary" className="text-xs">
-                              Unverified
-                            </Badge>
-                          )}
+                          {investor.kycStatus && getKycBadge(investor.kycStatus)}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Package, MapPin, Heart, Settings, LayoutDashboard, Calendar } from "lucide-react";
+import { LogOut, Package, MapPin, Heart, Settings, LayoutDashboard, Calendar, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +62,15 @@ export default async function AccountPage() {
                     <Link href="/dashboard" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
                       <LayoutDashboard className="h-5 w-5" />
                       <span>Dashboard</span>
+                    </Link>
+                    <Separator />
+                  </>
+                )}
+                {user.role === 'investor' && (
+                  <>
+                    <Link href="/investor/dashboard" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
+                      <TrendingUp className="h-5 w-5" />
+                      <span>Investor Dashboard</span>
                     </Link>
                     <Separator />
                   </>

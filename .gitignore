@@ -63,3 +63,6 @@ temp/
 /public/uploads/
 
 /lib/generated/prisma
+
+# KYC uploads
+public/uploads/

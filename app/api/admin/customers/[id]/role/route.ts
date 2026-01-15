@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 
 const roleSchema = z.object({
-  role: z.enum(['customer', 'admin', 'driver', 'cashier', 'tailor']),
+  role: z.enum(['customer', 'admin', 'driver', 'cashier', 'tailor', 'investor']),
 });
 
 // PATCH - Update user role
@@ -83,6 +83,32 @@ export async function PATCH(
             },
           });
           console.log(`✅ Created Tailor profile for user ${user.email}`);
+        }
+      }
+
+      // Create Investor profile if role is changed to investor and profile doesn't exist
+      if (role === 'investor') {
+        const existingInvestor = await tx.investor.findUnique({
+          where: { userId: id },
+        });
+
+        if (!existingInvestor) {
+          // Generate investor number
+          const year = new Date().getFullYear();
+          const count = await tx.investor.count();
+          const investorNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`;
+
+          await tx.investor.create({
+            data: {
+              userId: id,
+              investorNumber,
+              fullName: user.fullName || 'Investor',
+              email: user.email,
+              phone: user.phone || 'Not provided',
+              status: 'pending_verification',
+            },
+          });
+          console.log(`✅ Created Investor profile for user ${user.email}`);
         }
       }
 

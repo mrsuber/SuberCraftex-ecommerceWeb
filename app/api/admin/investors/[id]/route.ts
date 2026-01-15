@@ -93,7 +93,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { status, notes, isVerified } = body
+    const { status, notes, isVerified, kycAction, kycRejectionReason } = body
 
     const updateData: any = {}
 
@@ -105,11 +105,26 @@ export async function PATCH(
       updateData.notes = notes
     }
 
-    if (typeof isVerified === 'boolean' && isVerified && !investor.isVerified) {
+    // Handle KYC approval/rejection
+    if (kycAction === 'approve') {
+      updateData.kycStatus = 'approved'
       updateData.isVerified = true
       updateData.verifiedAt = new Date()
       updateData.verifiedBy = user.id
       updateData.status = 'active'
+      updateData.kycRejectionReason = null
+      console.log(`✅ Admin ${user.email} approved KYC for investor ${investor.investorNumber}`)
+    } else if (kycAction === 'reject') {
+      updateData.kycStatus = 'rejected'
+      updateData.kycRejectionReason = kycRejectionReason || 'Verification documents rejected. Please resubmit.'
+      console.log(`❌ Admin ${user.email} rejected KYC for investor ${investor.investorNumber}`)
+    } else if (typeof isVerified === 'boolean' && isVerified && !investor.isVerified) {
+      // Legacy verification without KYC
+      updateData.isVerified = true
+      updateData.verifiedAt = new Date()
+      updateData.verifiedBy = user.id
+      updateData.status = 'active'
+      updateData.kycStatus = 'approved'
     }
 
     const updatedInvestor = await db.investor.update({

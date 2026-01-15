@@ -18,7 +18,15 @@ import {
   AlertCircle,
   Wallet,
   PiggyBank,
+  Receipt,
+  Eye,
+  XCircle,
+  Loader2,
 } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/currency'
 import WithdrawalRequestDialog from './WithdrawalRequestDialog'
 import AccountSettingsDialog from './AccountSettingsDialog'
@@ -33,6 +41,79 @@ export default function InvestorDashboardClient({ investor }: InvestorDashboardC
   const [activeTab, setActiveTab] = useState('overview')
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
+
+  // Deposit confirmation state
+  const [confirmingDeposit, setConfirmingDeposit] = useState<string | null>(null)
+  const [disputeDialogOpen, setDisputeDialogOpen] = useState(false)
+  const [selectedDeposit, setSelectedDeposit] = useState<any>(null)
+  const [disputeReason, setDisputeReason] = useState('')
+  const [processingDeposit, setProcessingDeposit] = useState(false)
+  const [previewReceipt, setPreviewReceipt] = useState<string | null>(null)
+
+  // Filter pending deposits that need confirmation
+  const pendingDeposits = investor.deposits?.filter(
+    (d: any) => d.confirmationStatus === 'pending_confirmation'
+  ) || []
+
+  const handleConfirmDeposit = async (depositId: string) => {
+    setConfirmingDeposit(depositId)
+    setProcessingDeposit(true)
+
+    try {
+      const response = await fetch(`/api/investors/deposits/${depositId}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'confirm' }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to confirm deposit')
+      }
+
+      toast.success('Deposit confirmed! Funds have been added to your balance.')
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setConfirmingDeposit(null)
+      setProcessingDeposit(false)
+    }
+  }
+
+  const handleDisputeDeposit = async () => {
+    if (!selectedDeposit || !disputeReason.trim()) {
+      toast.error('Please provide a reason for disputing')
+      return
+    }
+
+    setProcessingDeposit(true)
+
+    try {
+      const response = await fetch(`/api/investors/deposits/${selectedDeposit.id}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'dispute', notes: disputeReason }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to dispute deposit')
+      }
+
+      toast.success('Dispute submitted. Our team will review and contact you.')
+      setDisputeDialogOpen(false)
+      setSelectedDeposit(null)
+      setDisputeReason('')
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setProcessingDeposit(false)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any; icon: any }> = {
@@ -112,6 +193,127 @@ export default function InvestorDashboardClient({ investor }: InvestorDashboardC
               </div>
             </div>
           </div>
+        )}
+
+        {/* Pending Deposits Confirmation */}
+        {pendingDeposits.length > 0 && (
+          <Card className="mb-6 border-blue-200 bg-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-900">
+                <Clock className="h-5 w-5" />
+                Deposits Awaiting Your Confirmation ({pendingDeposits.length})
+              </CardTitle>
+              <CardDescription className="text-blue-700">
+                Please review and confirm these deposits. Funds will be added to your balance after confirmation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pendingDeposits.map((deposit: any) => (
+                <div key={deposit.id} className="bg-white rounded-lg border p-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {/* Receipt Preview */}
+                    {deposit.receiptUrl && (
+                      <div
+                        className="w-full md:w-24 h-24 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setPreviewReceipt(deposit.receiptUrl)}
+                      >
+                        <img
+                          src={deposit.receiptUrl}
+                          alt="Receipt"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Deposit Details */}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {deposit.paymentMethod?.replace('_', ' ').toUpperCase()}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(deposit.depositedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                          Pending Confirmation
+                        </Badge>
+                      </div>
+
+                      {/* Amount Breakdown */}
+                      <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 rounded-lg text-sm mb-3">
+                        <div>
+                          <p className="text-gray-500">Receipt Amount</p>
+                          <p className="font-semibold">{formatCurrency(parseFloat(deposit.grossAmount))}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Charges</p>
+                          <p className="font-semibold text-red-600">-{formatCurrency(parseFloat(deposit.charges || 0))}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">To Be Credited</p>
+                          <p className="font-bold text-green-600">{formatCurrency(parseFloat(deposit.amount))}</p>
+                        </div>
+                      </div>
+
+                      {deposit.referenceNumber && (
+                        <p className="text-sm text-gray-600 mb-2">
+                          <span className="font-medium">Reference:</span> {deposit.referenceNumber}
+                        </p>
+                      )}
+
+                      {deposit.notes && (
+                        <p className="text-sm text-gray-600 mb-3">
+                          <span className="font-medium">Admin Notes:</span> {deposit.notes}
+                        </p>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap gap-2">
+                        {deposit.receiptUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPreviewReceipt(deposit.receiptUrl)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Receipt
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => handleConfirmDeposit(deposit.id)}
+                          disabled={processingDeposit}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {confirmingDeposit === deposit.id ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                          )}
+                          Confirm Amount is Correct
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedDeposit(deposit)
+                            setDisputeDialogOpen(true)
+                          }}
+                          disabled={processingDeposit}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Dispute
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         )}
 
         {/* Stats Cards */}
@@ -577,6 +779,78 @@ export default function InvestorDashboardClient({ investor }: InvestorDashboardC
         investor={investor}
         onSuccess={() => router.refresh()}
       />
+
+      {/* Dispute Deposit Dialog */}
+      <Dialog open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dispute Deposit</DialogTitle>
+            <DialogDescription>
+              Please explain why you're disputing this deposit. Our team will review and contact you.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDeposit && (
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-50 rounded-lg text-sm">
+                <p><span className="font-medium">Amount:</span> {formatCurrency(parseFloat(selectedDeposit.amount))}</p>
+                <p><span className="font-medium">Date:</span> {new Date(selectedDeposit.depositedAt).toLocaleString()}</p>
+                <p><span className="font-medium">Method:</span> {selectedDeposit.paymentMethod?.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <Label htmlFor="disputeReason">Reason for Dispute *</Label>
+                <Textarea
+                  id="disputeReason"
+                  placeholder="E.g., The amount is incorrect, I didn't make this deposit, etc."
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDisputeDialogOpen(false)
+                    setSelectedDeposit(null)
+                    setDisputeReason('')
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDisputeDeposit}
+                  disabled={processingDeposit || !disputeReason.trim()}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  {processingDeposit ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : null}
+                  Submit Dispute
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Preview Dialog */}
+      <Dialog open={!!previewReceipt} onOpenChange={() => setPreviewReceipt(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Receipt / Proof of Payment</DialogTitle>
+          </DialogHeader>
+          {previewReceipt && (
+            <div className="flex justify-center">
+              <img
+                src={previewReceipt}
+                alt="Receipt"
+                className="max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

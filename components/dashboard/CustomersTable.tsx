@@ -24,7 +24,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
-import { MoreHorizontal, Mail, Ban, Search, Shield, Truck, User, DollarSign } from "lucide-react";
+import { MoreHorizontal, Mail, Ban, Search, Shield, Truck, User, DollarSign, TrendingUp, Scissors } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -55,7 +55,7 @@ export function CustomersTable({ customers }: CustomersTableProps) {
       customer.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleChangeRole = async (customerId: string, role: 'customer' | 'admin' | 'driver' | 'cashier') => {
+  const handleChangeRole = async (customerId: string, role: 'customer' | 'admin' | 'driver' | 'cashier' | 'tailor' | 'investor') => {
     if (!confirm(`Are you sure you want to change this user's role to ${role}?`)) return;
 
     setLoadingActions(prev => new Set(prev).add(customerId));
@@ -172,16 +172,22 @@ export function CustomersTable({ customers }: CustomersTableProps) {
                       variant={
                         customer.role === 'admin'
                           ? 'default'
+                          : customer.role === 'investor'
+                          ? 'default'
                           : customer.role === 'driver'
                           ? 'secondary'
                           : customer.role === 'cashier'
+                          ? 'secondary'
+                          : customer.role === 'tailor'
                           ? 'secondary'
                           : 'outline'
                       }
                     >
                       {customer.role === 'admin' && <Shield className="mr-1 h-3 w-3" />}
+                      {customer.role === 'investor' && <TrendingUp className="mr-1 h-3 w-3" />}
                       {customer.role === 'driver' && <Truck className="mr-1 h-3 w-3" />}
                       {customer.role === 'cashier' && <DollarSign className="mr-1 h-3 w-3" />}
+                      {customer.role === 'tailor' && <Scissors className="mr-1 h-3 w-3" />}
                       {customer.role === 'customer' && <User className="mr-1 h-3 w-3" />}
                       {customer.role.charAt(0).toUpperCase() + customer.role.slice(1)}
                     </Badge>
@@ -238,6 +244,20 @@ export function CustomersTable({ customers }: CustomersTableProps) {
                             >
                               <DollarSign className="mr-2 h-4 w-4" />
                               Cashier
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(customer.id, 'tailor')}
+                              disabled={customer.role === 'tailor'}
+                            >
+                              <Scissors className="mr-2 h-4 w-4" />
+                              Tailor
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(customer.id, 'investor')}
+                              disabled={customer.role === 'investor'}
+                            >
+                              <TrendingUp className="mr-2 h-4 w-4" />
+                              Investor
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleChangeRole(customer.id, 'admin')}

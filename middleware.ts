@@ -40,12 +40,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect to account if accessing auth pages while logged in
-  if (isAuthPath && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/account";
-    return NextResponse.redirect(url);
-  }
+  // Don't redirect logged-in users from auth pages - let them access if needed
+  // This prevents redirect loops when there's a session mismatch
 
   return NextResponse.next();
 }

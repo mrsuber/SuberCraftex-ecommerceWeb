@@ -1376,6 +1376,13 @@ enum InvestorStatus {
   exited                // Exited from investment
 }
 
+enum KycStatus {
+  not_started           // User hasn't started KYC
+  pending               // Documents submitted, awaiting review
+  approved              // KYC approved
+  rejected              // KYC rejected, user can resubmit
+}
+
 enum TransactionType {
   deposit               // Cash deposit by investor
   withdrawal_cash       // Cash withdrawal
@@ -1420,9 +1427,17 @@ model Investor {
   phone             String
 
   // Identification & Verification
-  idType            String          @map("id_type") // passport, national_id, driver_license
-  idNumber          String          @map("id_number")
-  idDocumentUrl     String?         @map("id_document_url") // Uploaded ID document
+  idType            String?         @map("id_type") // passport, national_id, driver_license
+  idNumber          String?         @map("id_number")
+  idDocumentUrl     String?         @map("id_document_url") // Uploaded ID document (front)
+  idDocumentBackUrl String?         @map("id_document_back_url") // Uploaded ID document (back, optional)
+  selfieUrl         String?         @map("selfie_url") // Selfie holding ID or just face
+
+  // KYC Verification Status
+  kycStatus         KycStatus       @default(not_started) @map("kyc_status")
+  kycSubmittedAt    DateTime?       @map("kyc_submitted_at")
+  kycRejectionReason String?        @map("kyc_rejection_reason")
+
   isVerified        Boolean         @default(false) @map("is_verified")
   verifiedAt        DateTime?       @map("verified_at")
   verifiedBy        String?         @map("verified_by") // Admin user ID
@@ -1465,11 +1480,22 @@ model Investor {
 model InvestorDeposit {
   id              String   @id @default(uuid())
   investorId      String   @map("investor_id")
-  amount          Decimal  @db.Decimal(12, 2)
-  paymentMethod   String   @map("payment_method") // bank_transfer, cash, mobile_payment
-  referenceNumber String?  @map("reference_number") // Bank transfer reference
-  receiptUrl      String?  @map("receipt_url") // Payment receipt/proof
-  notes           String?
+
+  // Amount fields
+  grossAmount     Decimal  @db.Decimal(12, 2) @map("gross_amount") // Total amount sent by investor (e.g., 1010)
+  charges         Decimal  @default(0) @db.Decimal(12, 2) // Transaction fees/charges (e.g., 10)
+  amount          Decimal  @db.Decimal(12, 2) // Net amount credited to account (e.g., 1000)
+
+  paymentMethod   String   @map("payment_method") // bank_transfer, cash, mobile_payment, check
+  referenceNumber String?  @map("reference_number") // Bank transfer reference or receipt number
+  receiptUrl      String?  @map("receipt_url") // Payment receipt/proof image
+  notes           String?  // Admin notes
+
+  // Confirmation workflow - investor must confirm before funds can be allocated
+  confirmationStatus String @default("pending_confirmation") @map("confirmation_status") // pending_confirmation, confirmed, disputed
+  confirmedAt        DateTime? @map("confirmed_at")
+  investorNotes      String?   @map("investor_notes") // Notes from investor if they dispute
+
   depositedAt     DateTime @default(now()) @map("deposited_at")
   createdAt       DateTime @default(now()) @map("created_at")
 
@@ -1478,6 +1504,7 @@ model InvestorDeposit {
 
   @@index([investorId])
   @@index([depositedAt])
+  @@index([confirmationStatus])
   @@map("investor_deposits")
 }
 

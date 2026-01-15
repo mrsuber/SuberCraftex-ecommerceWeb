@@ -270,7 +270,7 @@ export interface User {
   full_name: string | null;
   phone: string | null;
   avatar_url: string | null;
-  role: "customer" | "admin" | "driver";
+  role: "customer" | "admin" | "driver" | "cashier" | "tailor" | "investor";
   created_at: string;
   updated_at: string;
 }

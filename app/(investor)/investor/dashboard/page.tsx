@@ -80,6 +80,12 @@ export default async function InvestorDashboardPage() {
     redirect('/investor/agreement')
   }
 
+  // Redirect to verification page if KYC not approved
+  // Dashboard is ONLY accessible after admin approves KYC verification
+  if (!investor.isVerified || investor.kycStatus !== 'approved') {
+    redirect('/investor/verify')
+  }
+
   // Serialize dates and decimals for client component
   const serializedInvestor = {
     ...investor,
@@ -96,8 +102,13 @@ export default async function InvestorDashboardPage() {
     agreementAcceptedAt: investor.agreementAcceptedAt?.toISOString() || null,
     deposits: investor.deposits.map(d => ({
       ...d,
+      grossAmount: d.grossAmount?.toString() || d.amount.toString(),
+      charges: d.charges?.toString() || '0',
       amount: d.amount.toString(),
       depositedAt: d.depositedAt.toISOString(),
+      confirmedAt: d.confirmedAt?.toISOString() || null,
+      confirmationStatus: d.confirmationStatus || 'confirmed',
+      investorNotes: d.investorNotes || null,
       createdAt: d.createdAt.toISOString(),
     })),
     transactions: investor.transactions.map(t => ({
