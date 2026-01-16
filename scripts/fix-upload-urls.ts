@@ -72,8 +72,8 @@ async function main() {
   const banners = await prisma.heroBanner.findMany({
     where: {
       OR: [
-        { image_url: { startsWith: '/uploads/' } },
-        { mobile_image_url: { startsWith: '/uploads/' } },
+        { imageUrl: { startsWith: '/uploads/' } },
+        { mobileImageUrl: { startsWith: '/uploads/' } },
       ],
     },
   });
@@ -81,11 +81,11 @@ async function main() {
   console.log(`\n🖼️  Hero banners with /uploads/ URLs: ${banners.length}`);
   for (const banner of banners) {
     const updates: any = {};
-    if (banner.image_url?.startsWith('/uploads/')) {
-      updates.image_url = banner.image_url.replace('/uploads/', '/api/uploads/');
+    if (banner.imageUrl?.startsWith('/uploads/')) {
+      updates.imageUrl = banner.imageUrl.replace('/uploads/', '/api/uploads/');
     }
-    if (banner.mobile_image_url?.startsWith('/uploads/')) {
-      updates.mobile_image_url = banner.mobile_image_url.replace('/uploads/', '/api/uploads/');
+    if (banner.mobileImageUrl?.startsWith('/uploads/')) {
+      updates.mobileImageUrl = banner.mobileImageUrl.replace('/uploads/', '/api/uploads/');
     }
     if (Object.keys(updates).length > 0) {
       await prisma.heroBanner.update({
