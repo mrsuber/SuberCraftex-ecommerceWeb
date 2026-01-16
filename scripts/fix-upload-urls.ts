@@ -10,37 +10,26 @@ async function main() {
   console.log('🔧 Fixing upload URLs...\n');
 
   // Fix category images
-  const categories = await prisma.category.findMany({
-    where: {
-      imageUrl: {
-        startsWith: '/uploads/',
-      },
-    },
-  });
-
-  console.log(`📁 Categories with /uploads/ URLs: ${categories.length}`);
+  const categories = await prisma.category.findMany();
+  let categoryFixCount = 0;
   for (const cat of categories) {
-    const newUrl = cat.imageUrl!.replace('/uploads/', '/api/uploads/');
-    await prisma.category.update({
-      where: { id: cat.id },
-      data: { imageUrl: newUrl },
-    });
-    console.log(`   ✅ ${cat.name}: ${cat.imageUrl} → ${newUrl}`);
+    if (cat.imageUrl?.startsWith('/uploads/')) {
+      const newUrl = cat.imageUrl.replace('/uploads/', '/api/uploads/');
+      await prisma.category.update({
+        where: { id: cat.id },
+        data: { imageUrl: newUrl },
+      });
+      console.log(`   ✅ Category: ${cat.name}`);
+      categoryFixCount++;
+    }
   }
+  console.log(`📁 Categories fixed: ${categoryFixCount}`);
 
   // Fix product images
-  const products = await prisma.product.findMany({
-    where: {
-      OR: [
-        { featuredImage: { startsWith: '/uploads/' } },
-        { images: { hasSome: [] } }, // Will filter below
-      ],
-    },
-  });
-
+  const products = await prisma.product.findMany();
   let productFixCount = 0;
   for (const product of products) {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
 
     // Fix featured image
     if (product.featuredImage?.startsWith('/uploads/')) {
@@ -69,18 +58,10 @@ async function main() {
   console.log(`\n📦 Products fixed: ${productFixCount}`);
 
   // Fix hero banners
-  const banners = await prisma.heroBanner.findMany({
-    where: {
-      OR: [
-        { imageUrl: { startsWith: '/uploads/' } },
-        { mobileImageUrl: { startsWith: '/uploads/' } },
-      ],
-    },
-  });
-
-  console.log(`\n🖼️  Hero banners with /uploads/ URLs: ${banners.length}`);
+  const banners = await prisma.heroBanner.findMany();
+  let bannerFixCount = 0;
   for (const banner of banners) {
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (banner.imageUrl?.startsWith('/uploads/')) {
       updates.imageUrl = banner.imageUrl.replace('/uploads/', '/api/uploads/');
     }
@@ -93,24 +74,18 @@ async function main() {
         data: updates,
       });
       console.log(`   ✅ Banner: ${banner.title}`);
+      bannerFixCount++;
     }
   }
+  console.log(`\n🖼️  Hero banners fixed: ${bannerFixCount}`);
 
   // Fix service images
-  const services = await prisma.service.findMany({
-    where: {
-      OR: [
-        { imageUrl: { startsWith: '/uploads/' } },
-        { images: { hasSome: [] } },
-      ],
-    },
-  });
-
+  const services = await prisma.service.findMany();
   let serviceFixCount = 0;
   for (const service of services) {
-    const updates: any = {};
-    if (service.imageUrl?.startsWith('/uploads/')) {
-      updates.imageUrl = service.imageUrl.replace('/uploads/', '/api/uploads/');
+    const updates: Record<string, unknown> = {};
+    if (service.featuredImage?.startsWith('/uploads/')) {
+      updates.featuredImage = service.featuredImage.replace('/uploads/', '/api/uploads/');
     }
     if (service.images && service.images.length > 0) {
       const hasUploadUrls = service.images.some(img => img.startsWith('/uploads/'));
@@ -132,21 +107,20 @@ async function main() {
   console.log(`\n🛠️  Services fixed: ${serviceFixCount}`);
 
   // Fix material images
-  const materials = await prisma.material.findMany({
-    where: {
-      imageUrl: { startsWith: '/uploads/' },
-    },
-  });
-
-  console.log(`\n🧵 Materials with /uploads/ URLs: ${materials.length}`);
+  const materials = await prisma.material.findMany();
+  let materialFixCount = 0;
   for (const material of materials) {
-    const newUrl = material.imageUrl!.replace('/uploads/', '/api/uploads/');
-    await prisma.material.update({
-      where: { id: material.id },
-      data: { imageUrl: newUrl },
-    });
-    console.log(`   ✅ Material: ${material.name}`);
+    if (material.imageUrl?.startsWith('/uploads/')) {
+      const newUrl = material.imageUrl.replace('/uploads/', '/api/uploads/');
+      await prisma.material.update({
+        where: { id: material.id },
+        data: { imageUrl: newUrl },
+      });
+      console.log(`   ✅ Material: ${material.name}`);
+      materialFixCount++;
+    }
   }
+  console.log(`\n🧵 Materials fixed: ${materialFixCount}`);
 
   console.log('\n✅ All upload URLs fixed!');
 }
