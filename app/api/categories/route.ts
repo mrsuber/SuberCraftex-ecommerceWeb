@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
             description: true,
             imageUrl: true,
             sortOrder: true,
+            _count: { select: { products: true } },
           }
         } : false,
         _count: { select: { products: true } },
@@ -35,19 +36,43 @@ export async function GET(request: NextRequest) {
       orderBy: { sortOrder: 'asc' },
     });
 
-    // Transform to consistent format
-    const result = categories.map(cat => ({
-      id: cat.id,
-      name: cat.name,
-      slug: cat.slug,
-      description: cat.description,
-      imageUrl: cat.imageUrl,
-      parentId: cat.parentId,
-      parent: cat.parent,
-      children: (cat as any).children || [],
-      sortOrder: cat.sortOrder,
-      productCount: cat._count.products,
-    }));
+    // Transform to consistent format with aggregated product counts
+    const result = categories.map(cat => {
+      // Calculate total products including children
+      let totalProducts = cat._count.products;
+      const children = (cat as any).children || [];
+
+      // Add products from children (subcategories)
+      if (children.length > 0) {
+        for (const child of children) {
+          totalProducts += child._count?.products || 0;
+        }
+      }
+
+      // Transform children to remove _count from output
+      const transformedChildren = children.map((child: any) => ({
+        id: child.id,
+        name: child.name,
+        slug: child.slug,
+        description: child.description,
+        imageUrl: child.imageUrl,
+        sortOrder: child.sortOrder,
+        productCount: child._count?.products || 0,
+      }));
+
+      return {
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        description: cat.description,
+        imageUrl: cat.imageUrl,
+        parentId: cat.parentId,
+        parent: cat.parent,
+        children: transformedChildren,
+        sortOrder: cat.sortOrder,
+        productCount: totalProducts,
+      };
+    });
 
     return NextResponse.json(result);
   } catch (error) {

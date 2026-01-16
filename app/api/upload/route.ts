@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
     let url: string;
 
     // Determine upload path based on type
+    // Note: We use /api/uploads/ path to serve files dynamically since
+    // Next.js doesn't serve files added to public/ after build time
     if (type && bookingId) {
       // Booking-specific upload: /public/uploads/bookings/{bookingId}/{type}/
       if (!['requirement', 'material', 'progress'].includes(type)) {
@@ -70,11 +72,11 @@ export async function POST(request: NextRequest) {
         bookingId,
         type
       );
-      url = `/uploads/bookings/${bookingId}/${type}/${filename}`;
+      url = `/api/uploads/bookings/${bookingId}/${type}/${filename}`;
     } else {
       // Product upload: /public/uploads/products/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'products');
-      url = `/uploads/products/${filename}`;
+      url = `/api/uploads/products/${filename}`;
     }
 
     // Create uploads directory if it doesn't exist
