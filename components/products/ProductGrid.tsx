@@ -13,6 +13,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface Category {
+  id: string;
+  name: string;
+  children?: Category[];
+}
+
 export function ProductGrid() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -22,6 +28,23 @@ export function ProductGrid() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Fetch categories to know parent-child relationships
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const res = await fetch("/api/categories?parentOnly=true&includeChildren=true");
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     async function fetchProducts() {
@@ -46,6 +69,18 @@ export function ProductGrid() {
     fetchProducts();
   }, []);
 
+  // Get all category IDs including subcategories for a given parent category
+  const getCategoryIdsForFilter = (categoryId: string): string[] => {
+    // Check if this is a parent category
+    const parentCategory = categories.find(c => c.id === categoryId);
+    if (parentCategory && parentCategory.children && parentCategory.children.length > 0) {
+      // Return parent ID plus all child IDs
+      return [categoryId, ...parentCategory.children.map(c => c.id)];
+    }
+    // It's either a subcategory or a category with no children
+    return [categoryId];
+  };
+
   // Apply filters when searchParams or products change
   useEffect(() => {
     if (products.length === 0) {
@@ -67,18 +102,14 @@ export function ProductGrid() {
       });
     }
 
-    // Category filter - supports both single category ID and multiple category names
-    const categoryId = searchParams.get("category"); // From categories page
-    const categories = searchParams.get("categories"); // From filter sidebar
+    // Category filter - supports categoryId from filter sidebar
+    const categoryId = searchParams.get("categoryId") || searchParams.get("category");
 
     if (categoryId) {
-      // Filter by single category ID (from categories page)
-      filtered = filtered.filter((product) => product.category_id === categoryId);
-    } else if (categories) {
-      // Filter by multiple category names (from filter sidebar)
-      const categoryList = categories.split(",");
+      // Get all relevant category IDs (parent + children if parent selected)
+      const categoryIds = getCategoryIdsForFilter(categoryId);
       filtered = filtered.filter((product) =>
-        product.category && categoryList.includes(product.category.name)
+        product.category_id && categoryIds.includes(product.category_id)
       );
     }
 
@@ -95,7 +126,7 @@ export function ProductGrid() {
     }
 
     setFilteredProducts(filtered);
-  }, [products, searchParams]);
+  }, [products, searchParams, categories]);
 
   // Apply sorting when filteredProducts or sortBy changes
   useEffect(() => {

@@ -3,17 +3,53 @@ import { requireApiAuth } from '@/lib/auth/api-auth';
 import { db } from '@/lib/db';
 
 // GET - List all categories
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const includeChildren = searchParams.get('includeChildren') === 'true';
+    const parentOnly = searchParams.get('parentOnly') === 'true';
+
+    const where: any = { isActive: true };
+    if (parentOnly) {
+      where.parentId = null;
+    }
+
     const categories = await db.category.findMany({
+      where,
       include: {
-        parent: { select: { name: true } },
+        parent: { select: { id: true, name: true, slug: true } },
+        children: includeChildren ? {
+          where: { isActive: true },
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            imageUrl: true,
+            sortOrder: true,
+          }
+        } : false,
         _count: { select: { products: true } },
       },
       orderBy: { sortOrder: 'asc' },
     });
 
-    return NextResponse.json(categories);
+    // Transform to consistent format
+    const result = categories.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description,
+      imageUrl: cat.imageUrl,
+      parentId: cat.parentId,
+      parent: cat.parent,
+      children: (cat as any).children || [],
+      sortOrder: cat.sortOrder,
+      productCount: cat._count.products,
+    }));
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching categories:', error);
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
