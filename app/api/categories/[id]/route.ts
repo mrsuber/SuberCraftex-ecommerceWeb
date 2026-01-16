@@ -17,6 +17,35 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
+    // Validate parent category if provided
+    if (body.parentId) {
+      const parent = await db.category.findUnique({ where: { id: body.parentId } });
+      if (!parent) {
+        return NextResponse.json({ error: 'Parent category not found' }, { status: 400 });
+      }
+      // Prevent nested subcategories (only 2 levels allowed)
+      if (parent.parentId) {
+        return NextResponse.json({ error: 'Cannot create subcategory under another subcategory' }, { status: 400 });
+      }
+      // Prevent category from being its own parent
+      if (body.parentId === id) {
+        return NextResponse.json({ error: 'Category cannot be its own parent' }, { status: 400 });
+      }
+    }
+
+    // Check if this category has children (can't set parent if it has children)
+    if (body.parentId) {
+      const hasChildren = await db.category.findFirst({
+        where: { parentId: id },
+      });
+      if (hasChildren) {
+        return NextResponse.json(
+          { error: 'Cannot set parent for a category that has subcategories' },
+          { status: 400 }
+        );
+      }
+    }
+
     const category = await db.category.update({
       where: { id },
       data: body,
@@ -45,10 +74,12 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check if category has products
+    // Check if category has products or subcategories
     const category = await db.category.findUnique({
       where: { id },
-      include: { _count: { select: { products: true } } },
+      include: {
+        _count: { select: { products: true, children: true } },
+      },
     });
 
     if (!category) {
@@ -58,6 +89,13 @@ export async function DELETE(
     if (category._count.products > 0) {
       return NextResponse.json(
         { error: `Cannot delete category with ${category._count.products} products` },
+        { status: 400 }
+      );
+    }
+
+    if (category._count.children > 0) {
+      return NextResponse.json(
+        { error: `Cannot delete category with ${category._count.children} subcategories. Delete subcategories first.` },
         { status: 400 }
       );
     }

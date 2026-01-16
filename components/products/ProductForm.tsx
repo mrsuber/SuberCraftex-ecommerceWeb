@@ -18,11 +18,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Upload, X } from "lucide-react";
 import Image from "next/image";
 
-interface ProductFormProps {
-  categories: Array<{
+interface CategoryWithChildren {
+  id: string;
+  name: string;
+  parentId: string | null;
+  children?: Array<{
     id: string;
     name: string;
   }>;
+}
+
+interface ProductFormProps {
+  categories: CategoryWithChildren[];
   product?: any;
 }
 
@@ -190,12 +197,25 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               <SelectContent>
                 <SelectItem value="none">No Category</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
+                  cat.parentId === null ? (
+                    // This is a parent category
+                    <div key={cat.id}>
+                      <SelectItem value={cat.id} className="font-medium">
+                        {cat.name}
+                      </SelectItem>
+                      {cat.children && cat.children.map((child) => (
+                        <SelectItem key={child.id} value={child.id} className="pl-6 text-muted-foreground">
+                          └ {child.name}
+                        </SelectItem>
+                      ))}
+                    </div>
+                  ) : null
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Select a subcategory for more specific categorization
+            </p>
           </div>
         </CardContent>
       </Card>

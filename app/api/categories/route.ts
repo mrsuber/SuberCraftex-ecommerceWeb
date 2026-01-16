@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, description, sortOrder, isActive } = body;
+    const { name, slug, description, parentId, imageUrl, sortOrder, isActive } = body;
 
     if (!name || !slug) {
       return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
@@ -78,17 +78,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Category with this slug already exists' }, { status: 400 });
     }
 
+    // Validate parent category if provided
+    if (parentId) {
+      const parent = await db.category.findUnique({ where: { id: parentId } });
+      if (!parent) {
+        return NextResponse.json({ error: 'Parent category not found' }, { status: 400 });
+      }
+      // Prevent nested subcategories (only 2 levels allowed)
+      if (parent.parentId) {
+        return NextResponse.json({ error: 'Cannot create subcategory under another subcategory' }, { status: 400 });
+      }
+    }
+
     const category = await db.category.create({
       data: {
         name,
         slug,
         description: description || null,
+        parentId: parentId || null,
+        imageUrl: imageUrl || null,
         sortOrder: sortOrder || 0,
         isActive: isActive ?? true,
       },
     });
 
-    console.log(`✅ Category created: ${name}`);
+    const categoryType = parentId ? 'Subcategory' : 'Category';
+    console.log(`✅ ${categoryType} created: ${name}`);
 
     return NextResponse.json(category, { status: 201 });
   } catch (error) {

@@ -16,11 +16,33 @@ export default async function EditProductPage({
 
   const [product, categories] = await Promise.all([
     db.product.findUnique({ where: { id } }),
+    // Fetch parent categories with their children for hierarchical display
     db.category.findMany({
-      where: { isActive: true },
-      orderBy: { name: 'asc' },
+      where: {
+        isActive: true,
+        parentId: null, // Only parent categories
+      },
+      include: {
+        children: {
+          where: { isActive: true },
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { sortOrder: 'asc' },
     }),
   ]);
+
+  // Transform categories to match the expected format
+  const categoriesWithChildren = categories.map(cat => ({
+    id: cat.id,
+    name: cat.name,
+    parentId: null,
+    children: cat.children,
+  }));
 
   if (!product) {
     redirect("/dashboard/products");
@@ -45,7 +67,7 @@ export default async function EditProductPage({
         <p className="text-muted-foreground">Update product details</p>
       </div>
 
-      <ProductForm categories={categories} product={serializedProduct} />
+      <ProductForm categories={categoriesWithChildren} product={serializedProduct} />
     </div>
   );
 }
