@@ -186,8 +186,8 @@ export const getOrderConfirmationTemplate = (data: OrderConfirmationData) => {
           <tr>
             <td>${item.productName}</td>
             <td class="text-right">${item.quantity}</td>
-            <td class="text-right">$${item.price.toFixed(2)}</td>
-            <td class="text-right">$${item.total.toFixed(2)}</td>
+            <td class="text-right">${Math.round(item.price).toLocaleString()} FCFA</td>
+            <td class="text-right">${Math.round(item.total).toLocaleString()} FCFA</td>
           </tr>
         `).join('')}
       </tbody>
@@ -196,19 +196,19 @@ export const getOrderConfirmationTemplate = (data: OrderConfirmationData) => {
     <div class="totals">
       <div class="total-row">
         <span>Subtotal</span>
-        <span>$${data.subtotal.toFixed(2)}</span>
+        <span>${Math.round(data.subtotal).toLocaleString()} FCFA</span>
       </div>
       <div class="total-row">
         <span>Shipping</span>
-        <span>$${data.shippingCost.toFixed(2)}</span>
+        <span>${Math.round(data.shippingCost).toLocaleString()} FCFA</span>
       </div>
       <div class="total-row">
         <span>Tax</span>
-        <span>$${data.taxAmount.toFixed(2)}</span>
+        <span>${Math.round(data.taxAmount).toLocaleString()} FCFA</span>
       </div>
       <div class="total-row grand">
         <span>Total</span>
-        <span>$${data.totalAmount.toFixed(2)}</span>
+        <span>${Math.round(data.totalAmount).toLocaleString()} FCFA</span>
       </div>
     </div>
 
@@ -276,12 +276,12 @@ Order Number: ${data.orderNumber}
 Order Date: ${data.orderDate}
 
 ORDER DETAILS:
-${data.items.map(item => `${item.productName} x${item.quantity} - $${item.total.toFixed(2)}`).join('\n')}
+${data.items.map(item => `${item.productName} x${item.quantity} - ${Math.round(item.total).toLocaleString()} FCFA`).join('\n')}
 
-Subtotal: $${data.subtotal.toFixed(2)}
-Shipping: $${data.shippingCost.toFixed(2)}
-Tax: $${data.taxAmount.toFixed(2)}
-Total: $${data.totalAmount.toFixed(2)}
+Subtotal: ${Math.round(data.subtotal).toLocaleString()} FCFA
+Shipping: ${Math.round(data.shippingCost).toLocaleString()} FCFA
+Tax: ${Math.round(data.taxAmount).toLocaleString()} FCFA
+Total: ${Math.round(data.totalAmount).toLocaleString()} FCFA
 
 SHIPPING ADDRESS:
 ${data.shippingAddress.fullName}

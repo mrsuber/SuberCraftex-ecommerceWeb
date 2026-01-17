@@ -7,7 +7,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, currency = "usd" } = await request.json();
+    const { amount, currency = "xaf" } = await request.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json(

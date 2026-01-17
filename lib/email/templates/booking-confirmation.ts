@@ -199,7 +199,7 @@ export const getBookingConfirmationTemplate = (data: BookingConfirmationData) =>
       </div>
     </div>
 
-    <div class="price">$${data.price.toFixed(2)}</div>
+    <div class="price">${Math.round(data.price).toLocaleString()} FCFA</div>
 
     ${data.customerNotes ? `
       <div class="notes-section">
@@ -255,7 +255,7 @@ Date: ${data.scheduledDate}
 Time: ${data.scheduledTime} - ${data.endTime}
 Duration: ${data.duration} minutes
 
-Price: $${data.price.toFixed(2)}
+Price: ${Math.round(data.price).toLocaleString()} FCFA
 
 ${data.customerNotes ? `Your Notes: ${data.customerNotes}` : ''}
 

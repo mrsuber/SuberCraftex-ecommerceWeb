@@ -53,6 +53,7 @@ model User {
   goodsReceipts       GoodsReceipt[]
   serviceBookings     ServiceBooking[]
   cartItemServices    CartItemService[]
+  bookingReviews      BookingReview[]
 
   @@map("users")
 }
@@ -899,6 +900,7 @@ model Service {
   orderItems        OrderItemService[]
   materials         ServiceMaterial[]    // Link to materials
   upcomingServices  UpcomingService[]    // Link to upcoming services
+  bookingReviews    BookingReview[]      // Reviews from completed bookings
 
   @@index([categoryId])
   @@index([slug])
@@ -1005,6 +1007,7 @@ model ServiceBooking {
   measurement      Measurement?
   fittingAppointments FittingAppointment[]
   equipmentJobUsages EquipmentJobUsage[]
+  review             BookingReview?
 
   @@index([serviceId])
   @@index([userId])
@@ -1014,6 +1017,32 @@ model ServiceBooking {
   @@index([scheduledDate])
   @@index([bookingNumber])
   @@map("service_bookings")
+}
+
+// ============================================================================
+// BOOKING REVIEWS
+// ============================================================================
+
+model BookingReview {
+  id        String   @id @default(uuid())
+  bookingId String   @unique @map("booking_id")
+  userId    String   @map("user_id")
+  serviceId String   @map("service_id")
+  rating    Int      // 1-5
+  title     String?
+  content   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  booking ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id])
+  service Service        @relation(fields: [serviceId], references: [id])
+
+  @@index([userId])
+  @@index([serviceId])
+  @@index([rating])
+  @@map("booking_reviews")
 }
 
 // ============================================================================

@@ -191,7 +191,7 @@ export const getBookingRescheduleTemplate = (data: BookingRescheduleData) => {
       </div>
       <div class="info-row">
         <span class="info-label">Price</span>
-        <span class="info-value">$${data.price.toFixed(2)}</span>
+        <span class="info-value">${Math.round(data.price).toLocaleString()} FCFA</span>
       </div>
     </div>
 
@@ -244,7 +244,7 @@ UPDATED BOOKING DETAILS:
 Service: ${data.serviceName}
 Duration: ${data.duration} minutes
 Time Slot: ${data.newTime} - ${data.endTime}
-Price: $${data.price.toFixed(2)}
+Price: ${Math.round(data.price).toLocaleString()} FCFA
 
 Please arrive 5-10 minutes early for your rescheduled appointment.
 

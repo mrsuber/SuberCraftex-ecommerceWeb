@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Clock, Tag, Star, MapPin, Hammer, Wrench } from 'lucide-react'
 import Image from 'next/image'
+import { formatPrice } from '@/lib/utils'
 
 interface ServicePageProps {
   params: Promise<{ id: string }>
@@ -195,11 +196,11 @@ export default async function ServicePage({ params }: ServicePageProps) {
               {/* Price */}
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-bold">
-                  ${Number(service.price).toFixed(2)}
+                  {formatPrice(Number(service.price))}
                 </span>
                 {hasDiscount && (
                   <span className="text-xl text-muted-foreground line-through">
-                    ${Number(service.compareAtPrice).toFixed(2)}
+                    {formatPrice(Number(service.compareAtPrice))}
                   </span>
                 )}
               </div>
