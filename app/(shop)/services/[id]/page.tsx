@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Clock, Tag, Star, MapPin, Hammer, Wrench } from 'lucide-react'
 import Image from 'next/image'
-import { formatPrice } from '@/lib/utils'
 
 interface ServicePageProps {
   params: Promise<{ id: string }>
@@ -106,11 +105,6 @@ export default async function ServicePage({ params }: ServicePageProps) {
     } : undefined,
   }
 
-  const hasDiscount = service.compareAtPrice && service.compareAtPrice > service.price
-  const discountPercentage = hasDiscount
-    ? Math.round(((Number(service.compareAtPrice) - Number(service.price)) / Number(service.compareAtPrice)) * 100)
-    : 0
-
   const durationLabel = service.duration === 'custom' && service.customDuration
     ? `${service.customDuration} minutes`
     : DURATION_LABELS[service.duration] || '1 hour'
@@ -142,11 +136,6 @@ export default async function ServicePage({ params }: ServicePageProps) {
                 <Badge variant="default" className="bg-primary">
                   <Star className="w-3 h-3 mr-1" />
                   Featured
-                </Badge>
-              )}
-              {hasDiscount && (
-                <Badge variant="destructive">
-                  {discountPercentage}% OFF
                 </Badge>
               )}
             </div>
@@ -193,16 +182,12 @@ export default async function ServicePage({ params }: ServicePageProps) {
 
               <Separator />
 
-              {/* Price */}
-              <div className="flex items-baseline gap-3">
-                <span className="text-4xl font-bold">
-                  {formatPrice(Number(service.price))}
-                </span>
-                {hasDiscount && (
-                  <span className="text-xl text-muted-foreground line-through">
-                    {formatPrice(Number(service.compareAtPrice))}
-                  </span>
-                )}
+              {/* Pricing Note */}
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-lg font-semibold text-primary">Request Quote</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Submit your requirements and we&apos;ll send you a detailed quote. Pricing is discussed per service request.
+                </p>
               </div>
 
               {/* Duration & Service Types */}
