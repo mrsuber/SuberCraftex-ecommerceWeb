@@ -2,6 +2,7 @@ import { HeroBanners } from "@/components/landing/HeroBanners";
 import { Features } from "@/components/landing/Features";
 import { FeaturedProducts } from "@/components/landing/FeaturedProducts";
 import { FeaturedServices } from "@/components/landing/FeaturedServices";
+import { UpcomingServices } from "@/components/landing/UpcomingServices";
 import { CTA } from "@/components/landing/CTA";
 import { db } from "@/lib/db";
 
@@ -103,11 +104,55 @@ export default async function Home() {
     } : undefined,
   }));
 
+  // Fetch active upcoming services
+  const upcomingServices = await db.upcomingService.findMany({
+    where: {
+      isActive: true,
+    },
+    include: {
+      service: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          featuredImage: true,
+        },
+      },
+    },
+    orderBy: [{ serviceDate: 'asc' }, { order: 'asc' }],
+    take: 6,
+  });
+
+  // Serialize upcoming services
+  const serializedUpcoming = upcomingServices.map((s) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    short_description: s.shortDescription,
+    image_url: s.imageUrl,
+    service_date: s.serviceDate.toISOString(),
+    service_id: s.serviceId,
+    cta_text: s.ctaText,
+    location: s.location,
+    price: s.price?.toString() || null,
+    order: s.order,
+    is_active: s.isActive,
+    created_at: s.createdAt.toISOString(),
+    updated_at: s.updatedAt.toISOString(),
+    service: s.service ? {
+      id: s.service.id,
+      name: s.service.name,
+      slug: s.service.slug,
+      featured_image: s.service.featuredImage,
+    } : null,
+  }));
+
   return (
     <main>
       <HeroBanners initialBanners={serializedBanners as any} />
       <FeaturedServices services={serializedServices as any} />
       <FeaturedProducts />
+      <UpcomingServices services={serializedUpcoming} />
       <Features />
       <CTA />
     </main>

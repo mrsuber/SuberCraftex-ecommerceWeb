@@ -743,3 +743,27 @@ export interface HeroBanner {
   created_at: string;
   updated_at: string;
 }
+
+// Upcoming Services Types
+export interface UpcomingService {
+  id: string;
+  title: string;
+  description: string | null;
+  short_description: string | null;
+  image_url: string;
+  service_date: string;
+  service_id: string | null;
+  cta_text: string | null;
+  location: string | null;
+  price: string | null;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  service?: {
+    id: string;
+    name: string;
+    slug: string;
+    featured_image: string | null;
+  } | null;
+}

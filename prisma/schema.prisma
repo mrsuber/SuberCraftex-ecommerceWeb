@@ -891,13 +891,14 @@ model Service {
   updatedAt                DateTime         @updatedAt @map("updated_at")
 
   // Relations
-  category         ServiceCategory    @relation(fields: [categoryId], references: [id])
-  bookings         ServiceBooking[]
-  availability     ServiceAvailability[]
-  blockouts        ServiceBlockout[]
-  cartItems        CartItemService[]
-  orderItems       OrderItemService[]
-  materials        ServiceMaterial[]    // NEW: Link to materials
+  category          ServiceCategory     @relation(fields: [categoryId], references: [id])
+  bookings          ServiceBooking[]
+  availability      ServiceAvailability[]
+  blockouts         ServiceBlockout[]
+  cartItems         CartItemService[]
+  orderItems        OrderItemService[]
+  materials         ServiceMaterial[]    // Link to materials
+  upcomingServices  UpcomingService[]    // Link to upcoming services
 
   @@index([categoryId])
   @@index([slug])
@@ -1363,6 +1364,36 @@ model HeroBanner {
   @@index([startDate])
   @@index([endDate])
   @@map("hero_banners")
+}
+
+// ============================================================================
+// UPCOMING SERVICES
+// ============================================================================
+
+model UpcomingService {
+  id               String    @id @default(uuid())
+  title            String
+  description      String?
+  shortDescription String?   @map("short_description")
+  imageUrl         String    @map("image_url")
+  serviceDate      DateTime  @map("service_date")    // Date when service launches
+  serviceId        String?   @map("service_id")      // Optional link to existing Service
+  ctaText          String?   @default("Learn More") @map("cta_text")
+  location         String?                           // Where service will be offered
+  price            Decimal?  @db.Decimal(10, 2)      // Expected price (optional)
+  order            Int       @default(0)
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  service          Service?  @relation(fields: [serviceId], references: [id])
+
+  @@index([isActive])
+  @@index([order])
+  @@index([serviceDate])
+  @@index([serviceId])
+  @@map("upcoming_services")
 }
 
 // ============================================================================

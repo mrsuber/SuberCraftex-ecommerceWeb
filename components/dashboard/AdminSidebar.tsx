@@ -25,6 +25,7 @@ import {
   ClipboardCheck,
   UserPlus,
   TrendingUp,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,11 @@ const adminNavigation = [
     name: "Hero Banners",
     href: "/dashboard/hero-banners",
     icon: Image,
+  },
+  {
+    name: "Upcoming Services",
+    href: "/dashboard/upcoming-services",
+    icon: Clock,
   },
   {
     name: "Orders",
