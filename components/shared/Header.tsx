@@ -30,6 +30,7 @@ export function Header() {
         <nav className="hidden md:flex items-center space-x-6">
           <Link href="/catalog" className="text-sm font-medium transition-colors hover:text-primary">Catalog</Link>
           <Link href="/services" className="text-sm font-medium transition-colors hover:text-primary">Services</Link>
+          <Link href="/upcoming-services" className="text-sm font-medium transition-colors hover:text-primary">Coming Soon</Link>
           <Link href="/bookings" className="text-sm font-medium transition-colors hover:text-primary">Bookings</Link>
           <Link href="/categories" className="text-sm font-medium transition-colors hover:text-primary">Categories</Link>
           <Link href="/about" className="text-sm font-medium transition-colors hover:text-primary">About</Link>
@@ -59,6 +60,7 @@ export function Header() {
           <nav className="container flex flex-col space-y-4 py-4">
             <Link href="/catalog" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Catalog</Link>
             <Link href="/services" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Services</Link>
+            <Link href="/upcoming-services" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Coming Soon</Link>
             <Link href="/bookings" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Bookings</Link>
             <Link href="/categories" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
             <Link href="/about" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>About</Link>
