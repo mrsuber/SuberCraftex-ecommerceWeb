@@ -24,7 +24,20 @@ export async function GET(request: NextRequest) {
 
     // Filters
     if (categoryId) {
-      where.categoryId = categoryId;
+      // Check if this is a parent category with children
+      const category = await db.category.findUnique({
+        where: { id: categoryId },
+        include: { children: { select: { id: true } } },
+      });
+
+      if (category?.children && category.children.length > 0) {
+        // Parent category: include products from all subcategories
+        const childIds = category.children.map(c => c.id);
+        where.categoryId = { in: [categoryId, ...childIds] };
+      } else {
+        // Subcategory or category with no children
+        where.categoryId = categoryId;
+      }
     }
 
     if (featured === "true") {
