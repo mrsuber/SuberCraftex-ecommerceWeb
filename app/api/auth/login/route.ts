@@ -59,16 +59,17 @@ export async function POST(request: Request) {
     // Set auth cookie
     await setAuthCookie(token)
 
-    // Return user data (without password)
+    // Return user data (without password) - snake_case for mobile compatibility
     return NextResponse.json({
       message: 'Login successful',
+      token, // Include token for mobile apps
       user: {
         id: user.id,
         email: user.email,
         role: user.role,
-        fullName: user.fullName,
+        full_name: user.fullName,
         phone: user.phone,
-        avatarUrl: user.avatarUrl,
+        avatar_url: user.avatarUrl,
       },
     })
   } catch (error) {
