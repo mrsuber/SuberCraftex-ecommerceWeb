@@ -7,6 +7,173 @@ import { getBookingCancellationTemplate } from '@/lib/email/templates/booking-ca
 import { createBookingCalendarEvent } from '@/lib/email/calendar-invite'
 import { format } from 'date-fns'
 
+// Transform booking to snake_case for mobile app compatibility
+function transformBookingToSnakeCase(booking: any) {
+  return {
+    id: booking.id,
+    booking_number: booking.bookingNumber,
+    service_id: booking.serviceId,
+    user_id: booking.userId,
+    order_id: booking.orderId,
+    status: booking.status,
+    service_type: booking.serviceType,
+    collection_method: booking.collectionMethod,
+    scheduled_date: booking.scheduledDate,
+    scheduled_time: booking.scheduledTime,
+    end_time: booking.endTime,
+    duration: booking.duration,
+    customer_name: booking.customerName,
+    customer_email: booking.customerEmail,
+    customer_phone: booking.customerPhone,
+    customer_notes: booking.customerNotes,
+    requirement_photos: booking.requirementPhotos,
+    desired_outcome: booking.desiredOutcome,
+    admin_notes: booking.adminNotes,
+    price: Number(booking.price),
+    final_price: booking.finalPrice ? Number(booking.finalPrice) : null,
+    cancellation_reason: booking.cancellationReason,
+    completed_at: booking.completedAt,
+    cancelled_at: booking.cancelledAt,
+    created_at: booking.createdAt,
+    updated_at: booking.updatedAt,
+    customer_provided_materials: booking.customerProvidedMaterials,
+    // Transform nested user
+    user: booking.user ? {
+      id: booking.user.id,
+      email: booking.user.email,
+      full_name: booking.user.fullName,
+    } : undefined,
+    // Transform nested service
+    service: booking.service ? {
+      id: booking.service.id,
+      name: booking.service.name,
+      slug: booking.service.slug,
+      sku: booking.service.sku,
+      description: booking.service.description,
+      short_description: booking.service.shortDescription,
+      price: Number(booking.service.price),
+      compare_at_price: booking.service.compareAtPrice ? Number(booking.service.compareAtPrice) : null,
+      category_id: booking.service.categoryId,
+      images: booking.service.images,
+      featured_image: booking.service.featuredImage,
+      duration: booking.service.duration,
+      custom_duration: booking.service.customDuration,
+      buffer_time: booking.service.bufferTime,
+      max_bookings_per_day: booking.service.maxBookingsPerDay,
+      supports_onsite: booking.service.supportsOnsite,
+      supports_custom_production: booking.service.supportsCustomProduction,
+      supports_collect_repair: booking.service.supportsCollectRepair,
+      is_active: booking.service.isActive,
+      is_featured: booking.service.isFeatured,
+      tags: booking.service.tags,
+      metadata: booking.service.metadata,
+      created_at: booking.service.createdAt,
+      updated_at: booking.service.updatedAt,
+      category: booking.service.category ? {
+        id: booking.service.category.id,
+        name: booking.service.category.name,
+        slug: booking.service.category.slug,
+        description: booking.service.category.description,
+        image_url: booking.service.category.imageUrl,
+        icon: booking.service.category.icon,
+        sort_order: booking.service.category.sortOrder,
+        is_active: booking.service.category.isActive,
+      } : null,
+    } : undefined,
+    // Transform nested quote with history
+    quote: booking.quote ? {
+      id: booking.quote.id,
+      booking_id: booking.quote.bookingId,
+      material_cost: Number(booking.quote.materialCost),
+      labor_cost: Number(booking.quote.laborCost),
+      labor_hours: booking.quote.laborHours,
+      total_cost: Number(booking.quote.totalCost),
+      down_payment_amount: Number(booking.quote.downPaymentAmount),
+      notes: booking.quote.notes,
+      status: booking.quote.status,
+      valid_until: booking.quote.validUntil,
+      created_at: booking.quote.createdAt,
+      updated_at: booking.quote.updatedAt,
+      history: booking.quote.history?.map((h: any) => ({
+        id: h.id,
+        quote_id: h.quoteId,
+        version: h.version,
+        material_cost: Number(h.materialCost),
+        labor_cost: Number(h.laborCost),
+        total_cost: Number(h.totalCost),
+        notes: h.notes,
+        created_at: h.createdAt,
+      })),
+    } : undefined,
+    // Transform nested materials
+    materials: booking.materials?.map((m: any) => ({
+      id: m.id,
+      booking_id: m.bookingId,
+      material_id: m.materialId,
+      quantity: m.quantity,
+      price_at_booking: m.priceAtBooking ? Number(m.priceAtBooking) : null,
+      is_acquired: m.isAcquired,
+      created_at: m.createdAt,
+      material: m.material ? {
+        id: m.material.id,
+        sku: m.material.sku,
+        name: m.material.name,
+        description: m.material.description,
+        price: Number(m.material.price),
+        stock_quantity: m.material.stockQuantity,
+        unit: m.material.unit,
+        images: m.material.images,
+        is_active: m.material.isActive,
+      } : undefined,
+    })),
+    // Transform material requests
+    material_requests: booking.materialRequests?.map((mr: any) => ({
+      id: mr.id,
+      booking_id: mr.bookingId,
+      description: mr.description,
+      reference_url: mr.referenceUrl,
+      reference_photos: mr.referencePhotos,
+      status: mr.status,
+      admin_notes: mr.adminNotes,
+      created_at: mr.createdAt,
+      updated_at: mr.updatedAt,
+    })),
+    // Transform nested progress updates
+    progress_updates: booking.progressUpdates?.map((p: any) => ({
+      id: p.id,
+      booking_id: p.bookingId,
+      status: p.status,
+      description: p.description,
+      photos: p.photos,
+      created_by: p.createdBy,
+      created_at: p.createdAt,
+    })),
+    // Transform timeline
+    timeline: booking.timeline?.map((t: any) => ({
+      id: t.id,
+      booking_id: t.bookingId,
+      event_type: t.eventType,
+      title: t.title,
+      description: t.description,
+      metadata: t.metadata,
+      created_by: t.createdBy,
+      created_at: t.createdAt,
+    })),
+    // Transform payments
+    payments: booking.payments?.map((p: any) => ({
+      id: p.id,
+      booking_id: p.bookingId,
+      amount: Number(p.amount),
+      payment_type: p.paymentType,
+      payment_method: p.paymentMethod,
+      status: p.status,
+      stripe_payment_id: p.stripePaymentId,
+      notes: p.notes,
+      created_at: p.createdAt,
+    })),
+  }
+}
+
 // Duration mapping in minutes
 const DURATION_MINUTES: Record<string, number> = {
   half_hour: 30,
@@ -159,7 +326,8 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(booking)
+    // Transform to snake_case for mobile app compatibility
+    return NextResponse.json(transformBookingToSnakeCase(booking))
   } catch (error) {
     console.error('Error fetching booking:', error)
     return NextResponse.json(
@@ -281,7 +449,7 @@ export async function PATCH(
         })
       }
 
-      return NextResponse.json(updatedBooking)
+      return NextResponse.json(transformBookingToSnakeCase(updatedBooking))
     }
 
     // Handle status update (admin only for most statuses)
@@ -329,7 +497,7 @@ export async function PATCH(
         })
       }
 
-      return NextResponse.json(updatedBooking)
+      return NextResponse.json(transformBookingToSnakeCase(updatedBooking))
     }
 
     return NextResponse.json(
@@ -446,7 +614,7 @@ export async function DELETE(
 
     return NextResponse.json({
       message: 'Booking cancelled successfully',
-      booking: cancelledBooking,
+      booking: transformBookingToSnakeCase(cancelledBooking),
     })
   } catch (error) {
     console.error('Error cancelling booking:', error)

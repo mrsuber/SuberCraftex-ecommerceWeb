@@ -16,21 +16,43 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
+    console.log('📤 Upload request received');
+    console.log('File object:', file ? {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    } : 'null');
+
     if (!file) {
+      console.error('❌ No file in formData');
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
+    // Validate file type - be more lenient with type detection
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
+    let fileType = file.type;
+
+    // If file.type is empty or generic, try to infer from filename
+    if (!fileType || fileType === 'application/octet-stream') {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext === 'jpg' || ext === 'jpeg') fileType = 'image/jpeg';
+      else if (ext === 'png') fileType = 'image/png';
+      else if (ext === 'gif') fileType = 'image/gif';
+      else if (ext === 'webp') fileType = 'image/webp';
+      console.log(`📝 Inferred file type from extension: ${fileType}`);
+    }
+
+    if (!allowedTypes.includes(fileType)) {
+      console.error(`❌ Invalid file type: ${fileType}`);
       return NextResponse.json({
-        error: 'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed'
+        error: `Invalid file type: ${fileType}. Only JPEG, PNG, WebP, and GIF images are allowed`
       }, { status: 400 });
     }
 
     // Validate file size (5MB max)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
+      console.error(`❌ File too large: ${file.size} bytes`);
       return NextResponse.json({
         error: 'File too large. Maximum size is 5MB'
       }, { status: 400 });
