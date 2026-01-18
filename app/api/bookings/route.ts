@@ -217,6 +217,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    console.log('📋 GET /api/bookings - User:', {
+      id: auth.user.id,
+      email: auth.user.email,
+      role: auth.user.role,
+    })
+
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const upcoming = searchParams.get('upcoming') === 'true'
@@ -227,6 +233,9 @@ export async function GET(request: NextRequest) {
     // Admins and tailors can see all bookings
     if (auth.user.role !== 'admin' && auth.user.role !== 'tailor') {
       where.userId = auth.user.id
+      console.log('📋 Filtering bookings for user:', auth.user.id)
+    } else {
+      console.log('📋 Admin/Tailor user - showing all bookings')
     }
 
     if (status) {
