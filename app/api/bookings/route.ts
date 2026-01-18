@@ -217,25 +217,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('📋 GET /api/bookings - User:', {
-      id: auth.user.id,
-      email: auth.user.email,
-      role: auth.user.role,
-    })
-
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const upcoming = searchParams.get('upcoming') === 'true'
 
+    // Check if request is from mobile app (Bearer token) or web dashboard
+    const authHeader = request.headers.get('Authorization')
+    const isMobileApp = authHeader && authHeader.startsWith('Bearer ')
+
+    // Check if this is a dashboard request (has 'all' param and user is admin/tailor)
+    const showAll = searchParams.get('all') === 'true'
+    const canSeeAll = (auth.user.role === 'admin' || auth.user.role === 'tailor') && showAll && !isMobileApp
+
     const where: any = {}
 
-    // Only filter by userId for regular customers
-    // Admins and tailors can see all bookings
-    if (auth.user.role !== 'admin' && auth.user.role !== 'tailor') {
+    // For mobile app: always filter by userId (like /bookings page on web)
+    // For web dashboard with 'all' param: admins/tailors can see all bookings
+    if (!canSeeAll) {
       where.userId = auth.user.id
-      console.log('📋 Filtering bookings for user:', auth.user.id)
-    } else {
-      console.log('📋 Admin/Tailor user - showing all bookings')
     }
 
     if (status) {
