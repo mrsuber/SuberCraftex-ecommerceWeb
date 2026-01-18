@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/session'
+import { verifyAuth } from '@/lib/auth/verify-auth'
 
 /**
  * POST /api/bookings/[id]/material-requests
@@ -13,7 +13,7 @@ export async function POST(
   try {
     const { id } = await params
 
-    const user = await getCurrentUser()
+    const { user } = await verifyAuth(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -94,7 +94,7 @@ export async function GET(
   try {
     const { id } = await params
 
-    const user = await getCurrentUser()
+    const { user } = await verifyAuth(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
