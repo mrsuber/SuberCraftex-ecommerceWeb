@@ -192,6 +192,16 @@ export async function POST(request: NextRequest) {
     const auth = await verifyAuth(request)
     const body = await request.json()
 
+    console.log('📝 Booking request received:', {
+      hasAuth: !!auth.user,
+      userId: auth.user?.id,
+      serviceType: body.serviceType,
+      customerName: body.customerName,
+      customerEmail: body.customerEmail,
+      materialsCount: body.materials?.length || 0,
+      photosCount: body.requirementPhotos?.length || 0,
+    })
+
     const {
       serviceId,
       scheduledDate,
@@ -211,6 +221,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!serviceId || !customerName || !customerEmail) {
+      console.log('❌ Missing required fields:', { serviceId: !!serviceId, customerName: !!customerName, customerEmail: !!customerEmail })
       return NextResponse.json(
         { error: 'Missing required fields: serviceId, customerName, customerEmail' },
         { status: 400 }
