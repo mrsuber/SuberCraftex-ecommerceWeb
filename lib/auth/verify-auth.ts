@@ -1,13 +1,50 @@
 import { NextRequest } from 'next/server'
 import { getSession } from './session'
+import { verifyToken } from './jwt'
+import { db } from '@/lib/db'
 
 /**
  * Verify authentication from request
+ * Supports both:
+ * - Bearer token in Authorization header (for mobile apps)
+ * - Cookie-based auth (for web)
  * Returns user object and auth status
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function verifyAuth(_request: NextRequest) {
+export async function verifyAuth(request: NextRequest) {
   try {
+    // First, check for Bearer token in Authorization header (mobile app)
+    const authHeader = request.headers.get('Authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7) // Remove 'Bearer ' prefix
+      const payload = await verifyToken(token)
+
+      if (payload) {
+        // Fetch user from database
+        const user = await db.user.findUnique({
+          where: { id: payload.userId },
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            fullName: true,
+            phone: true,
+            avatarUrl: true,
+            emailVerified: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        })
+
+        if (user) {
+          return {
+            user,
+            isAuthenticated: true,
+          }
+        }
+      }
+    }
+
+    // Fall back to cookie-based session (web)
     const user = await getSession()
 
     return {

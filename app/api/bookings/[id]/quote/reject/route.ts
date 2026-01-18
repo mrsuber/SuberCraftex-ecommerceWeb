@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/session'
+import { verifyAuth } from '@/lib/auth/verify-auth'
 
 /**
  * POST /api/bookings/[id]/quote/reject
@@ -11,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
+    const { user } = await verifyAuth(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
