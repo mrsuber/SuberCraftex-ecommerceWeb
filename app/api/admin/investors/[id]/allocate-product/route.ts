@@ -56,10 +56,10 @@ export async function POST(
       )
     }
 
-    // Verify product exists
+    // Verify product exists and check inventory
     const product = await db.product.findUnique({
       where: { id: productId },
-      select: { name: true, sku: true },
+      select: { name: true, sku: true, inventoryCount: true, trackInventory: true },
     })
 
     if (!product) {
@@ -69,18 +69,34 @@ export async function POST(
       )
     }
 
-    // If variantId provided, verify it exists
+    // If variantId provided, verify it exists and check variant inventory
     let variant = null
     if (variantId) {
       variant = await db.productVariant.findUnique({
         where: { id: variantId },
-        select: { name: true, sku: true },
+        select: { name: true, sku: true, inventoryCount: true },
       })
 
       if (!variant) {
         return NextResponse.json(
           { error: 'Product variant not found' },
           { status: 404 }
+        )
+      }
+
+      // Check variant inventory
+      if (variant.inventoryCount < quantity) {
+        return NextResponse.json(
+          { error: `Insufficient stock for variant. Available: ${variant.inventoryCount}, Requested: ${quantity}` },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Check product inventory (only if tracking inventory)
+      if (product.trackInventory && product.inventoryCount < quantity) {
+        return NextResponse.json(
+          { error: `Insufficient stock. Available: ${product.inventoryCount}, Requested: ${quantity}` },
+          { status: 400 }
         )
       }
     }
@@ -117,6 +133,27 @@ export async function POST(
         },
       })
 
+      // Decrement inventory - allocated products are reserved for the investor
+      if (variantId) {
+        await tx.productVariant.update({
+          where: { id: variantId },
+          data: {
+            inventoryCount: {
+              decrement: quantity,
+            },
+          },
+        })
+      } else if (product.trackInventory) {
+        await tx.product.update({
+          where: { id: productId },
+          data: {
+            inventoryCount: {
+              decrement: quantity,
+            },
+          },
+        })
+      }
+
       // Update investor cash balance
       const updatedInvestor = await tx.investor.update({
         where: { id: investor.id },
@@ -148,10 +185,26 @@ export async function POST(
     console.log(`✅ Product allocation: ${investor.investorNumber} -> ${product.name} (${quantity} units)`)
 
     return NextResponse.json(result, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error allocating product:', error)
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+    })
+
+    // Provide more specific error messages
+    let errorMessage = 'Failed to allocate product'
+    if (error?.code === 'P2002') {
+      errorMessage = 'Duplicate allocation detected'
+    } else if (error?.code === 'P2025') {
+      errorMessage = 'Record not found during allocation'
+    } else if (error?.message) {
+      errorMessage = `Allocation failed: ${error.message}`
+    }
+
     return NextResponse.json(
-      { error: 'Failed to allocate product' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
 
     await writeFile(filePath, buffer)
 
-    // Generate public URL
-    const publicUrl = `/uploads/kyc/${investor.id}/${filename}`
+    // Generate public URL - use /api/uploads route to serve dynamically uploaded files
+    const publicUrl = `/api/uploads/kyc/${investor.id}/${filename}`
 
     console.log(`✅ KYC document uploaded: ${publicUrl}`)
 

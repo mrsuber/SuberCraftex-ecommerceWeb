@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
 
     await writeFile(filePath, buffer)
 
-    // Generate public URL
-    const publicUrl = `/uploads/receipts/${investorId}/${filename}`
+    // Generate public URL - use /api/uploads route to serve dynamically uploaded files
+    const publicUrl = `/api/uploads/receipts/${investorId}/${filename}`
 
     console.log(`✅ Receipt uploaded: ${publicUrl}`)
 

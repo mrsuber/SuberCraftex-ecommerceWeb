@@ -16,6 +16,8 @@ import {
   FileText,
   CheckCircle2,
   AlertCircle,
+  Camera,
+  CalendarPlus,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -436,6 +438,22 @@ export function TailorDashboardClient({
                               <Button size="sm" variant="outline">
                                 <FileText className="mr-2 h-4 w-4" />
                                 Create Quote
+                              </Button>
+                            </Link>
+                          )}
+                          {booking.status === 'in_progress' && (
+                            <Link href={`/dashboard/bookings/${booking.id}/progress/new`}>
+                              <Button size="sm" variant="outline">
+                                <Camera className="mr-2 h-4 w-4" />
+                                Add Progress
+                              </Button>
+                            </Link>
+                          )}
+                          {(booking.status === 'in_progress' || booking.quote?.status === 'approved') && (
+                            <Link href={`/dashboard/tailor/fittings?bookingId=${booking.id}`}>
+                              <Button size="sm" variant="outline">
+                                <CalendarPlus className="mr-2 h-4 w-4" />
+                                Schedule Fitting
                               </Button>
                             </Link>
                           )}

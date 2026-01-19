@@ -38,6 +38,17 @@ import {
 import { formatCurrency } from '@/lib/currency'
 import WithdrawalProcessDialog from './WithdrawalProcessDialog'
 
+// Helper to normalize upload URLs - handles both old (/uploads/...) and new (/api/uploads/...) formats
+const normalizeUploadUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  // If URL already starts with /api/uploads, return as is
+  if (url.startsWith('/api/uploads/')) return url;
+  // If URL starts with /uploads/, prepend /api
+  if (url.startsWith('/uploads/')) return '/api' + url;
+  // Return as is for other URLs (external URLs, etc.)
+  return url;
+};
+
 interface InvestorDetailClientProps {
   investor: any
   products: any[]
@@ -1034,10 +1045,10 @@ export default function InvestorDetailClient({
                       {investor.idDocumentUrl ? (
                         <div
                           className="relative border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => setPreviewImage(investor.idDocumentUrl)}
+                          onClick={() => setPreviewImage(normalizeUploadUrl(investor.idDocumentUrl))}
                         >
                           <img
-                            src={investor.idDocumentUrl}
+                            src={normalizeUploadUrl(investor.idDocumentUrl) || ''}
                             alt="ID Front"
                             className="w-full h-40 object-cover"
                           />
@@ -1061,10 +1072,10 @@ export default function InvestorDetailClient({
                       {investor.idDocumentBackUrl ? (
                         <div
                           className="relative border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => setPreviewImage(investor.idDocumentBackUrl)}
+                          onClick={() => setPreviewImage(normalizeUploadUrl(investor.idDocumentBackUrl))}
                         >
                           <img
-                            src={investor.idDocumentBackUrl}
+                            src={normalizeUploadUrl(investor.idDocumentBackUrl) || ''}
                             alt="ID Back"
                             className="w-full h-40 object-cover"
                           />
@@ -1088,10 +1099,10 @@ export default function InvestorDetailClient({
                       {investor.selfieUrl ? (
                         <div
                           className="relative border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => setPreviewImage(investor.selfieUrl)}
+                          onClick={() => setPreviewImage(normalizeUploadUrl(investor.selfieUrl))}
                         >
                           <img
-                            src={investor.selfieUrl}
+                            src={normalizeUploadUrl(investor.selfieUrl) || ''}
                             alt="Selfie"
                             className="w-full h-40 object-cover"
                           />
@@ -1245,7 +1256,7 @@ export default function InvestorDetailClient({
                         {deposit.receiptUrl && (
                           <div
                             className="w-16 h-16 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => setPreviewImage(deposit.receiptUrl)}
+                            onClick={() => setPreviewImage(normalizeUploadUrl(deposit.receiptUrl))}
                           >
                             {deposit.receiptUrl.endsWith('.pdf') ? (
                               <div className="w-full h-full flex items-center justify-center">
@@ -1253,7 +1264,7 @@ export default function InvestorDetailClient({
                               </div>
                             ) : (
                               <img
-                                src={deposit.receiptUrl}
+                                src={normalizeUploadUrl(deposit.receiptUrl) || ''}
                                 alt="Receipt"
                                 className="w-full h-full object-cover"
                               />
@@ -1300,7 +1311,7 @@ export default function InvestorDetailClient({
                               variant="link"
                               size="sm"
                               className="p-0 h-auto mt-2 text-xs"
-                              onClick={() => setPreviewImage(deposit.receiptUrl)}
+                              onClick={() => setPreviewImage(normalizeUploadUrl(deposit.receiptUrl))}
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               View Receipt

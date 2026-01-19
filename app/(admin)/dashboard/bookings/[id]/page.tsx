@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Calendar, Clock, User, Mail, Phone, Tag, FileText, Ruler } from 'lucide-react'
+import { Calendar, Clock, User, Mail, Phone, Tag, FileText, Ruler, CalendarPlus, Camera } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/currency'
 import Link from 'next/link'
@@ -112,6 +112,14 @@ export default async function BookingPage({ params }: BookingPageProps) {
       payments: {
         orderBy: {
           createdAt: 'desc',
+        },
+      },
+      fittingAppointments: {
+        orderBy: {
+          scheduledDate: 'asc',
+        },
+        include: {
+          tailor: true,
         },
       },
     },
@@ -614,6 +622,94 @@ export default async function BookingPage({ params }: BookingPageProps) {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Fitting Appointments Section */}
+      {(booking.status === 'in_progress' || booking.status === 'quote_approved' || booking.fittingAppointments.length > 0) && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarPlus className="h-5 w-5" />
+                Fitting Appointments
+              </CardTitle>
+              <Button asChild size="sm">
+                <Link href={`/dashboard/tailor/fittings?bookingId=${id}`}>
+                  <CalendarPlus className="h-4 w-4 mr-2" />
+                  Schedule Fitting
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {booking.fittingAppointments.length > 0 ? (
+              <div className="space-y-3">
+                {booking.fittingAppointments.map((fitting) => {
+                  const statusColors: Record<string, string> = {
+                    scheduled: 'bg-blue-500',
+                    customer_called: 'bg-yellow-500',
+                    completed: 'bg-green-500',
+                    no_show: 'bg-red-500',
+                    rescheduled: 'bg-orange-500',
+                    cancelled: 'bg-gray-500',
+                  }
+                  const statusLabels: Record<string, string> = {
+                    scheduled: 'Scheduled',
+                    customer_called: 'Called',
+                    completed: 'Completed',
+                    no_show: 'No Show',
+                    rescheduled: 'Rescheduled',
+                    cancelled: 'Cancelled',
+                  }
+
+                  return (
+                    <div
+                      key={fitting.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-primary/10 rounded-lg">
+                          <span className="text-xs font-bold text-primary">
+                            #{fitting.fittingNumber}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(fitting.scheduledDate), 'MMMM d, yyyy')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {fitting.scheduledTime} ({fitting.durationMinutes} min)
+                          </div>
+                          {fitting.customerCalled && (
+                            <div className="text-xs text-green-600 mt-1">
+                              Customer called on {fitting.calledAt ? format(new Date(fitting.calledAt), 'MMM d') : 'N/A'}
+                            </div>
+                          )}
+                          {fitting.notes && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {fitting.notes}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className={statusColors[fitting.status]}>
+                        {statusLabels[fitting.status] || fitting.status}
+                      </Badge>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CalendarPlus className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">No fitting appointments scheduled</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Schedule a fitting to meet with the customer
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
