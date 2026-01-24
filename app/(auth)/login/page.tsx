@@ -65,13 +65,12 @@ export default function LoginPage() {
       // Redirect based on user role
       // Admin, cashier, driver, tailor go to admin dashboard
       // Everyone else (customers, investors) go to account page - they can shop normally
+      // Use window.location for hard redirect to ensure cookie is properly read
       if (data.user.role === 'admin' || data.user.role === 'cashier' || data.user.role === 'driver' || data.user.role === 'tailor') {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       } else {
-        router.push("/account");
+        window.location.href = "/account";
       }
-
-      router.refresh();
     } catch (error) {
       console.error("Login error:", error);
       toast.error("An unexpected error occurred");
