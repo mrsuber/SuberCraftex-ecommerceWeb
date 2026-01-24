@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
 const COOKIE_NAME = 'auth-token'
@@ -65,11 +65,28 @@ export async function clearAuthCookie(): Promise<void> {
 }
 
 /**
- * Get the auth token from cookies
+ * Get the auth token from cookies or Authorization header
+ * Checks Authorization header first (for mobile app), then cookies (for web)
  * @returns JWT token or null if not found
  */
 export async function getAuthToken(): Promise<string | null> {
-  const cookieStore = await cookies()
-  const cookie = cookieStore.get(COOKIE_NAME)
-  return cookie?.value || null
+  // First, check Authorization header (for mobile app / API clients)
+  try {
+    const headerStore = await headers()
+    const authHeader = headerStore.get('authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7) // Remove 'Bearer ' prefix
+    }
+  } catch (error) {
+    // Headers might not be available in some contexts
+  }
+
+  // Fallback to cookie (for web)
+  try {
+    const cookieStore = await cookies()
+    const cookie = cookieStore.get(COOKIE_NAME)
+    return cookie?.value || null
+  } catch (error) {
+    return null
+  }
 }
