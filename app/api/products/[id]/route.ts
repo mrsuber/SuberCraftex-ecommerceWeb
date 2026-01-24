@@ -10,6 +10,9 @@ export async function GET(
   try {
     const { id } = await params;
 
+    // Try to get the current user (optional - won't fail if not authenticated)
+    const currentUser = await requireApiAuth();
+
     // Fetch product with category information
     const product = await db.product.findFirst({
       where: {
@@ -56,11 +59,24 @@ export async function GET(
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
       : 0;
 
+    // Check if current user has already reviewed this product
+    let userHasReviewed = false;
+    if (currentUser) {
+      const existingReview = await db.review.findFirst({
+        where: {
+          productId: id,
+          userId: currentUser.id,
+        },
+      });
+      userHasReviewed = !!existingReview;
+    }
+
     return NextResponse.json({
       product: serializeProduct(product),
       reviews: reviews || [],
       avgRating: Number(avgRating.toFixed(1)),
       reviewCount: reviews?.length || 0,
+      userHasReviewed,
     });
   } catch (error) {
     console.error("API Error:", error);
