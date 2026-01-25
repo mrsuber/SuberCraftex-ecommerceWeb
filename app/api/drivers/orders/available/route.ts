@@ -15,16 +15,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not a driver' }, { status: 403 });
     }
 
-    // Get orders that are paid/processing and don't have shipping tracking yet
+    // Get orders that need delivery and don't have a driver assigned yet
     const orders = await db.order.findMany({
       where: {
         orderStatus: {
-          in: ['paid', 'processing'],
+          in: ['pending', 'paid', 'processing'],
         },
-        shippingTracking: null, // No driver assigned yet
-        shippingMethod: {
-          not: 'in_store', // Exclude in-store pickups
+        // No driver assigned yet - check that shippingTracking relation doesn't exist
+        shippingTracking: {
+          is: null,
         },
+        // Exclude in-store pickups, allow orders with or without shipping method set
+        OR: [
+          { shippingMethod: { notIn: ['in_store'] } },
+          { shippingMethod: null },
+        ],
       },
       include: {
         orderItems: {
@@ -36,14 +41,18 @@ export async function GET(request: NextRequest) {
             price: true,
           },
         },
+        shippingTracking: true, // Include to verify it's null
       },
       orderBy: {
         createdAt: 'asc', // Oldest orders first
       },
     });
 
+    // Filter out any orders that somehow have tracking (belt and suspenders)
+    const availableOrdersFiltered = orders.filter(o => !o.shippingTracking);
+
     // Transform the data
-    const availableOrders = orders.map((order) => ({
+    const availableOrders = availableOrdersFiltered.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
       status: order.orderStatus,
