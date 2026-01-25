@@ -25,11 +25,10 @@ export async function GET(request: NextRequest) {
         shippingTracking: {
           is: null,
         },
-        // Exclude in-store pickups, allow orders with or without shipping method set
-        OR: [
-          { shippingMethod: { notIn: ['in_store'] } },
-          { shippingMethod: null },
-        ],
+        // Exclude in-store pickups
+        NOT: {
+          shippingMethod: 'in_store',
+        },
       },
       include: {
         orderItems: {
