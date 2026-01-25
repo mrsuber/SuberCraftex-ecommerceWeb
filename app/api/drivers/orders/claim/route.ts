@@ -40,8 +40,9 @@ export async function POST(request: NextRequest) {
           fullName: userRecord?.fullName || user.email.split('@')[0],
           email: user.email,
           phone: userRecord?.phone || '',
-          vehicleType: 'Motorcycle', // Default vehicle type
+          vehicleType: 'Motorcycle',
           vehicleNumber: 'Not Set',
+          licenseNumber: 'Not Set',
           isActive: true,
           isAvailable: true,
         },

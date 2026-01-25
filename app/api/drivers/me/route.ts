@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
           phone: userRecord?.phone || '',
           vehicleType: 'Motorcycle',
           vehicleNumber: 'Not Set',
+          licenseNumber: 'Not Set',
           isActive: true,
           isAvailable: true,
         },
