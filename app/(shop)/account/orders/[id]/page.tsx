@@ -238,8 +238,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               </CardContent>
             </Card>
 
-            {/* Delivery Signature */}
-            {order.shippingTracking?.signatureUrl && (
+            {/* Delivery Confirmation - Show if delivered with proof */}
+            {order.orderStatus === 'delivered' && (order.shippingTracking?.signatureUrl || order.shippingTracking?.photoUrl) && (
               <Card>
                 <CardHeader>
                   <CardTitle>Delivery Confirmation</CardTitle>
@@ -261,17 +261,41 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         </div>
                       </div>
                     )}
-                    <Separator />
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Customer Signature</p>
-                      <div className="border rounded-lg p-4 bg-muted/50">
-                        <img
-                          src={order.shippingTracking.signatureUrl}
-                          alt="Customer signature"
-                          className="max-w-full h-auto"
-                        />
-                      </div>
-                    </div>
+
+                    {/* Delivery Photo */}
+                    {order.shippingTracking.photoUrl && (
+                      <>
+                        <Separator />
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Delivery Photo</p>
+                          <div className="border rounded-lg overflow-hidden">
+                            <img
+                              src={order.shippingTracking.photoUrl}
+                              alt="Delivery proof photo"
+                              className="max-w-full h-auto object-cover"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Customer Signature */}
+                    {order.shippingTracking.signatureUrl && (
+                      <>
+                        <Separator />
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Customer Signature</p>
+                          <div className="border rounded-lg p-4 bg-muted/50">
+                            <img
+                              src={order.shippingTracking.signatureUrl}
+                              alt="Customer signature"
+                              className="max-w-full h-auto"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
                     {order.deliveredAt && (
                       <div>
                         <p className="text-sm text-muted-foreground">

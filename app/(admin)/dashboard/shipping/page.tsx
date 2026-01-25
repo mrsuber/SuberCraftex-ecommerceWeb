@@ -127,6 +127,8 @@ async function getShippingData() {
     currentLocation: s.currentLocation,
     estimatedDeliveryTime: s.estimatedDeliveryTime?.toISOString() || null,
     actualDeliveryTime: s.actualDeliveryTime?.toISOString() || null,
+    signatureUrl: s.signatureUrl || null,
+    photoUrl: s.photoUrl || null,
     createdAt: s.createdAt.toISOString(),
   }));
 
