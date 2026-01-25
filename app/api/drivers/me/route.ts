@@ -17,25 +17,6 @@ export async function GET(request: NextRequest) {
 
     let driver = await db.driver.findUnique({
       where: { userId: user.id },
-      include: {
-        shippingTracking: {
-          where: {
-            status: {
-              notIn: ['delivered', 'failed'],
-            },
-          },
-          include: {
-            order: {
-              select: {
-                id: true,
-                orderNumber: true,
-                totalAmount: true,
-                shippingAddress: true,
-              },
-            },
-          },
-        },
-      },
     });
 
     // Auto-create driver profile if it doesn't exist
@@ -55,25 +36,6 @@ export async function GET(request: NextRequest) {
           vehicleNumber: 'Not Set',
           isActive: true,
           isAvailable: true,
-        },
-        include: {
-          shippingTracking: {
-            where: {
-              status: {
-                notIn: ['delivered', 'failed'],
-              },
-            },
-            include: {
-              order: {
-                select: {
-                  id: true,
-                  orderNumber: true,
-                  totalAmount: true,
-                  shippingAddress: true,
-                },
-              },
-            },
-          },
         },
       });
 
