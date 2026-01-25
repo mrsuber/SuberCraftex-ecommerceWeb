@@ -41,7 +41,6 @@ export async function GET(
             shippingAddress: true,
             customerName: true,
             customerPhone: true,
-            customerEmail: true,
             customerNotes: true,
             createdAt: true,
             orderItems: {
@@ -82,7 +81,6 @@ export async function GET(
       shippingAddress: delivery.order.shippingAddress,
       customerName: delivery.order.customerName,
       customerPhone: delivery.order.customerPhone,
-      customerEmail: delivery.order.customerEmail,
       customerNotes: delivery.order.customerNotes,
       estimatedDeliveryTime: delivery.estimatedDeliveryTime?.toISOString() || null,
       actualDeliveryTime: delivery.actualDeliveryTime?.toISOString() || null,
