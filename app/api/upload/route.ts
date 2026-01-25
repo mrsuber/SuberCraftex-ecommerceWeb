@@ -75,10 +75,30 @@ export async function POST(request: NextRequest) {
     let uploadsDir: string;
     let url: string;
 
+    // Get delivery-specific parameters
+    const deliveryId = formData.get('deliveryId') as string | null;
+
     // Determine upload path based on type
     // Note: We use /api/uploads/ path to serve files dynamically since
     // Next.js doesn't serve files added to public/ after build time
-    if (type && bookingId) {
+    if (type && deliveryId) {
+      // Delivery-specific upload: /public/uploads/deliveries/{deliveryId}/{type}/
+      if (!['photo', 'signature'].includes(type)) {
+        return NextResponse.json({
+          error: 'Invalid delivery upload type. Must be: photo or signature'
+        }, { status: 400 });
+      }
+
+      uploadsDir = join(
+        process.cwd(),
+        'public',
+        'uploads',
+        'deliveries',
+        deliveryId,
+        type
+      );
+      url = `/api/uploads/deliveries/${deliveryId}/${type}/${filename}`;
+    } else if (type && bookingId) {
       // Booking-specific upload: /public/uploads/bookings/{bookingId}/{type}/
       if (!['requirement', 'material', 'progress'].includes(type)) {
         return NextResponse.json({
