@@ -22,21 +22,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
-    // Get driver profile
-    const driver = await db.driver.findUnique({
+    // Get driver profile or create one if it doesn't exist
+    let driver = await db.driver.findUnique({
       where: { userId: user.id },
     });
 
     if (!driver) {
-      return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 });
+      // Auto-create driver profile for users with driver role
+      const userRecord = await db.user.findUnique({
+        where: { id: user.id },
+        select: { fullName: true, email: true, phone: true },
+      });
+
+      driver = await db.driver.create({
+        data: {
+          userId: user.id,
+          fullName: userRecord?.fullName || user.email.split('@')[0],
+          email: user.email,
+          phone: userRecord?.phone || '',
+          vehicleType: 'Motorcycle', // Default vehicle type
+          vehicleNumber: 'Not Set',
+          isActive: true,
+          isAvailable: true,
+        },
+      });
+
+      console.log(`✅ Auto-created driver profile for ${driver.fullName}`);
     }
 
     if (!driver.isActive) {
       return NextResponse.json({ error: 'Driver account is not active' }, { status: 403 });
-    }
-
-    if (!driver.isAvailable) {
-      return NextResponse.json({ error: 'You are currently unavailable. Set yourself as available first.' }, { status: 403 });
     }
 
     // Check how many active deliveries driver has
@@ -71,7 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'This order has already been claimed' }, { status: 400 });
     }
 
-    if (!['paid', 'processing'].includes(order.orderStatus)) {
+    if (!['pending', 'paid', 'processing'].includes(order.orderStatus)) {
       return NextResponse.json({ error: 'This order is not available for delivery' }, { status: 400 });
     }
 

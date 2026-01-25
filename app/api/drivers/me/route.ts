@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not a driver' }, { status: 403 });
     }
 
-    const driver = await db.driver.findUnique({
+    let driver = await db.driver.findUnique({
       where: { userId: user.id },
       include: {
         shippingTracking: {
@@ -38,8 +38,46 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Auto-create driver profile if it doesn't exist
     if (!driver) {
-      return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 });
+      const userRecord = await db.user.findUnique({
+        where: { id: user.id },
+        select: { fullName: true, email: true, phone: true },
+      });
+
+      driver = await db.driver.create({
+        data: {
+          userId: user.id,
+          fullName: userRecord?.fullName || user.email.split('@')[0],
+          email: user.email,
+          phone: userRecord?.phone || '',
+          vehicleType: 'Motorcycle',
+          vehicleNumber: 'Not Set',
+          isActive: true,
+          isAvailable: true,
+        },
+        include: {
+          shippingTracking: {
+            where: {
+              status: {
+                notIn: ['delivered', 'failed'],
+              },
+            },
+            include: {
+              order: {
+                select: {
+                  id: true,
+                  orderNumber: true,
+                  totalAmount: true,
+                  shippingAddress: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      console.log(`✅ Auto-created driver profile for ${driver.fullName}`);
     }
 
     // Get stats
