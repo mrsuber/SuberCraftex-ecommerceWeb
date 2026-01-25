@@ -31,6 +31,7 @@ import {
   Filter,
   FileCheck,
   XCircle,
+  FileText,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 
@@ -60,6 +61,7 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
     total: investors.length,
     pendingVerification: investors.filter(i => i.status === 'pending_verification').length,
     pendingKyc: investors.filter(i => i.kycStatus === 'pending').length,
+    pendingAgreement: investors.filter(i => !i.agreementAccepted).length,
     active: investors.filter(i => i.status === 'active').length,
     totalInvested: investors.reduce((sum, i) => sum + parseFloat(i.totalInvested), 0),
     totalProfit: investors.reduce((sum, i) => sum + parseFloat(i.totalProfit), 0),
@@ -103,6 +105,23 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
     )
   }
 
+  const getAgreementBadge = (accepted: boolean) => {
+    if (accepted) {
+      return (
+        <Badge variant="default" className="flex items-center gap-1 text-xs bg-green-100 text-green-800 hover:bg-green-100">
+          <FileText className="h-3 w-3" />
+          T&C Accepted
+        </Badge>
+      )
+    }
+    return (
+      <Badge variant="outline" className="flex items-center gap-1 text-xs text-orange-600 border-orange-300">
+        <FileText className="h-3 w-3" />
+        T&C Pending
+      </Badge>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -114,7 +133,7 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Investors</CardTitle>
@@ -133,6 +152,17 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">{stats.pendingKyc}</div>
             <p className="text-xs text-muted-foreground mt-1">Awaiting document review</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending T&C</CardTitle>
+            <FileText className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{stats.pendingAgreement}</div>
+            <p className="text-xs text-muted-foreground mt-1">Haven't accepted terms</p>
           </CardContent>
         </Card>
 
@@ -240,6 +270,7 @@ export default function InvestorsManagementClient({ investors: initialInvestors 
                         <div className="space-y-1">
                           {getStatusBadge(investor.status)}
                           {investor.kycStatus && getKycBadge(investor.kycStatus)}
+                          {getAgreementBadge(investor.agreementAccepted)}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
