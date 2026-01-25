@@ -30,28 +30,33 @@ export async function POST(request: NextRequest) {
     const {
       fullName,
       phone,
+      email,
       idType,
       idNumber,
       idDocumentUrl,
     } = body
 
-    if (!fullName || !phone || !idType || !idNumber) {
+    // Only fullName and phone are required at registration
+    // idType and idNumber are collected during KYC verification
+    if (!fullName || !phone) {
       return NextResponse.json(
-        { error: 'Missing required fields: fullName, phone, idType, idNumber' },
+        { error: 'Missing required fields: fullName, phone' },
         { status: 400 }
       )
     }
 
-    // Check if ID number already exists
-    const existingId = await db.investor.findFirst({
-      where: { idNumber },
-    })
+    // Check if ID number already exists (only if provided)
+    if (idNumber) {
+      const existingId = await db.investor.findFirst({
+        where: { idNumber },
+      })
 
-    if (existingId) {
-      return NextResponse.json(
-        { error: 'This ID number is already registered.' },
-        { status: 400 }
-      )
+      if (existingId) {
+        return NextResponse.json(
+          { error: 'This ID number is already registered.' },
+          { status: 400 }
+        )
+      }
     }
 
     // Generate investor number
@@ -59,18 +64,24 @@ export async function POST(request: NextRequest) {
     const count = await db.investor.count()
     const investorNumber = `INV-${year}-${String(count + 1).padStart(4, '0')}`
 
+    // Determine kycStatus based on whether KYC info is provided
+    // If ID info is provided, set to 'pending' (awaiting admin review)
+    // If ID info is not provided, keep as 'not_started' (default)
+    const kycStatus = (idType && idNumber) ? 'pending' : 'not_started'
+
     // Create investor profile
     const investor = await db.investor.create({
       data: {
         userId: user.id,
         investorNumber,
         fullName,
-        email: user.email,
+        email: email || user.email,
         phone,
-        idType,
-        idNumber,
+        idType: idType || null,
+        idNumber: idNumber || null,
         idDocumentUrl: idDocumentUrl || null,
         status: 'pending_verification',
+        kycStatus,
       },
     })
 
