@@ -23,6 +23,8 @@ import {
   Phone,
   Mail,
   ExternalLink,
+  MessageCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 
@@ -53,6 +55,7 @@ interface Deposit {
 }
 
 interface GroupedDeposits {
+  disputed: Deposit[]
   awaiting_admin_confirmation: Deposit[]
   awaiting_receipt: Deposit[]
   awaiting_payment: Deposit[]
@@ -82,11 +85,49 @@ export default function PendingDepositsClient({ groupedDeposits }: PendingDeposi
   const [charges, setCharges] = useState('0')
   const [adminNotes, setAdminNotes] = useState('')
 
+  // For resolving disputes
+  const [resolvingDeposit, setResolvingDeposit] = useState<Deposit | null>(null)
+  const [disputeResponse, setDisputeResponse] = useState('')
+
   const totalPending =
+    groupedDeposits.disputed.length +
     groupedDeposits.awaiting_admin_confirmation.length +
     groupedDeposits.awaiting_receipt.length +
     groupedDeposits.awaiting_payment.length +
     groupedDeposits.pending_confirmation.length
+
+  const handleResolveDispute = async () => {
+    if (!resolvingDeposit || !disputeResponse.trim()) return
+
+    setProcessingId(resolvingDeposit.id)
+    setError('')
+
+    try {
+      const response = await fetch(
+        `/api/admin/investors/${resolvingDeposit.investor.id}/deposits/${resolvingDeposit.id}/resolve-dispute`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            response: disputeResponse,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to resolve dispute')
+      }
+
+      setResolvingDeposit(null)
+      setDisputeResponse('')
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setProcessingId(null)
+    }
+  }
 
   const handleConfirmReceipt = async (action: 'confirm' | 'reject') => {
     if (!confirmingDeposit) return
@@ -256,6 +297,129 @@ export default function PendingDepositsClient({ groupedDeposits }: PendingDeposi
         </Card>
       ) : (
         <>
+          {/* DISPUTED DEPOSITS - HIGHEST PRIORITY */}
+          {groupedDeposits.disputed.length > 0 && (
+            <Card className="border-red-300 bg-red-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  Disputed Deposits
+                  <Badge variant="destructive" className="ml-2">
+                    {groupedDeposits.disputed.length}
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-red-700">
+                  Investors have disputed these deposits. Respond to resolve and allow them to confirm.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {groupedDeposits.disputed.map((deposit) => {
+                    const grossAmount = parseFloat(deposit.grossAmount)
+                    const chargesAmount = parseFloat(deposit.charges)
+                    const netAmount = parseFloat(deposit.amount)
+
+                    return (
+                      <div key={deposit.id} className="border border-red-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+                        <div className="flex gap-4">
+                          {/* Receipt Image */}
+                          {deposit.investorReceiptUrl && (
+                            <div
+                              className="w-20 h-20 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => setPreviewImage(normalizeUploadUrl(deposit.investorReceiptUrl))}
+                            >
+                              <img
+                                src={normalizeUploadUrl(deposit.investorReceiptUrl) || ''}
+                                alt="Receipt"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            {/* Header */}
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <p className="font-semibold text-sm">
+                                  {deposit.paymentMethod === 'mobile_money' ? 'Mobile Money' : deposit.paymentMethod.replace('_', ' ').toUpperCase()}
+                                </p>
+                                <p className="text-xs text-gray-500">{deposit.depositNumber}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-lg">{formatCurrency(grossAmount)}</p>
+                                {chargesAmount > 0 && (
+                                  <p className="text-xs text-gray-500">Net: {formatCurrency(netAmount)}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Investor Info */}
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  {deposit.investor.fullName}
+                                </span>
+                                <span className="text-gray-400">|</span>
+                                <span className="text-gray-600">{deposit.investor.investorNumber}</span>
+                                <Link
+                                  href={`/dashboard/investors/${deposit.investor.id}`}
+                                  className="text-primary hover:underline flex items-center gap-1 ml-auto"
+                                >
+                                  View <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              </div>
+                            </div>
+
+                            {/* Dispute Reason - IMPORTANT */}
+                            {deposit.investorNotes && (
+                              <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded text-sm">
+                                <p className="font-medium text-red-800 flex items-center gap-1">
+                                  <MessageCircle className="h-4 w-4" />
+                                  Investor's Dispute:
+                                </p>
+                                <p className="text-red-700 mt-1">{deposit.investorNotes}</p>
+                              </div>
+                            )}
+
+                            {/* Timestamp */}
+                            <p className="text-xs text-gray-400 mt-2">
+                              Created: {new Date(deposit.createdAt).toLocaleString()}
+                            </p>
+
+                            {/* Actions */}
+                            <div className="mt-3 flex gap-2">
+                              {deposit.investorReceiptUrl && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setPreviewImage(normalizeUploadUrl(deposit.investorReceiptUrl))}
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Receipt
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setResolvingDeposit(deposit)
+                                  setDisputeResponse('')
+                                }}
+                              >
+                                <MessageCircle className="h-4 w-4 mr-1" />
+                                Respond & Resolve
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Mobile Money Receipts to Review - PRIORITY */}
           {groupedDeposits.awaiting_admin_confirmation.length > 0 && (
             <Card className="border-orange-200 bg-orange-50">
@@ -487,6 +651,81 @@ export default function PendingDepositsClient({ groupedDeposits }: PendingDeposi
                 alt="Receipt Preview"
                 className="max-h-[70vh] object-contain rounded-lg"
               />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Resolve Dispute Dialog */}
+      <Dialog open={!!resolvingDeposit} onOpenChange={() => setResolvingDeposit(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-5 w-5" />
+              Resolve Dispute
+            </DialogTitle>
+          </DialogHeader>
+
+          {resolvingDeposit && (
+            <div className="space-y-4">
+              {/* Investor Info */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="font-medium">{resolvingDeposit.investor.fullName}</p>
+                <p className="text-sm text-gray-600">{resolvingDeposit.investor.investorNumber}</p>
+              </div>
+
+              {/* Amount */}
+              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                <span className="text-sm font-medium">Deposit Amount:</span>
+                <span className="text-xl font-bold">
+                  {formatCurrency(parseFloat(resolvingDeposit.grossAmount))}
+                </span>
+              </div>
+
+              {/* Investor's Dispute */}
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="font-medium text-red-800 text-sm">Investor's Dispute Reason:</p>
+                <p className="text-red-700 mt-1">{resolvingDeposit.investorNotes || 'No reason provided'}</p>
+              </div>
+
+              {/* Admin Response */}
+              <div>
+                <Label htmlFor="disputeResponse">Your Response</Label>
+                <Textarea
+                  id="disputeResponse"
+                  placeholder="Explain the resolution or provide clarification..."
+                  value={disputeResponse}
+                  onChange={(e) => setDisputeResponse(e.target.value)}
+                  className="mt-1"
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  After responding, the deposit will be reset to "Pending Confirmation" so the investor can confirm.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setResolvingDeposit(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleResolveDispute}
+                  disabled={processingId === resolvingDeposit.id || !disputeResponse.trim()}
+                >
+                  {processingId === resolvingDeposit.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  Resolve & Reset
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

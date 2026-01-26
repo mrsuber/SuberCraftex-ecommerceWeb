@@ -16,11 +16,11 @@ export default async function PendingDepositsPage() {
     redirect('/login')
   }
 
-  // Fetch all pending deposits across all investors
+  // Fetch all pending deposits across all investors (including disputed)
   const pendingDeposits = await db.investorDeposit.findMany({
     where: {
       confirmationStatus: {
-        in: ['awaiting_payment', 'awaiting_admin_confirmation', 'awaiting_receipt', 'pending_confirmation'],
+        in: ['awaiting_payment', 'awaiting_admin_confirmation', 'awaiting_receipt', 'pending_confirmation', 'disputed'],
       },
     },
     include: {
@@ -63,6 +63,7 @@ export default async function PendingDepositsPage() {
 
   // Group by status for better display
   const groupedDeposits = {
+    disputed: deposits.filter(d => d.confirmationStatus === 'disputed'),
     awaiting_admin_confirmation: deposits.filter(d => d.confirmationStatus === 'awaiting_admin_confirmation'),
     awaiting_receipt: deposits.filter(d => d.confirmationStatus === 'awaiting_receipt'),
     awaiting_payment: deposits.filter(d => d.confirmationStatus === 'awaiting_payment'),
