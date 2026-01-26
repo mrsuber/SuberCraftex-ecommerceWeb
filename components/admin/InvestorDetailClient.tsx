@@ -1813,100 +1813,186 @@ export default function InvestorDetailClient({
             </Card>
           )}
 
-          {/* Confirmed Deposits */}
+          {/* All Deposits History */}
           <Card>
             <CardHeader>
-              <CardTitle>Deposit History</CardTitle>
+              <CardTitle>All Deposits</CardTitle>
+              <CardDescription>Complete deposit history with all details</CardDescription>
             </CardHeader>
             <CardContent>
-              {investor.deposits.filter((d: any) => d.confirmationStatus === 'confirmed' || !d.confirmationStatus || d.confirmationStatus === 'disputed').length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No confirmed deposits</p>
+              {investor.deposits.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No deposits yet</p>
               ) : (
-                <div className="space-y-3">
-                  {investor.deposits.filter((d: any) => d.confirmationStatus === 'confirmed' || !d.confirmationStatus || d.confirmationStatus === 'disputed').map((deposit: any) => (
-                    <div key={deposit.id} className="border rounded-lg p-4">
-                      <div className="flex gap-4">
-                        {/* Receipt thumbnail */}
-                        {deposit.receiptUrl && (
-                          <div
-                            className="w-16 h-16 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => setPreviewImage(normalizeUploadUrl(deposit.receiptUrl))}
-                          >
-                            {deposit.receiptUrl.endsWith('.pdf') ? (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Receipt className="h-6 w-6 text-gray-400" />
-                              </div>
-                            ) : (
-                              <img
-                                src={normalizeUploadUrl(deposit.receiptUrl) || ''}
-                                alt="Receipt"
-                                className="w-full h-full object-cover"
-                              />
+                <div className="space-y-4">
+                  {investor.deposits.map((deposit: any) => {
+                    const grossAmount = parseFloat(deposit.grossAmount || deposit.amount)
+                    const charges = parseFloat(deposit.charges || '0')
+                    const netAmount = parseFloat(deposit.amount)
+                    const isDisputed = deposit.confirmationStatus === 'disputed'
+                    const isConfirmed = deposit.confirmationStatus === 'confirmed'
+                    const isPending = ['awaiting_payment', 'awaiting_admin_confirmation', 'awaiting_receipt', 'pending_confirmation'].includes(deposit.confirmationStatus)
+
+                    return (
+                      <div
+                        key={deposit.id}
+                        className={`border rounded-lg p-4 ${isDisputed ? 'border-red-200 bg-red-50' : isConfirmed ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}
+                      >
+                        {/* Header Row */}
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="text-sm font-semibold flex items-center gap-2">
+                              {deposit.paymentMethod === 'mobile_money' ? 'Mobile Money' : deposit.paymentMethod.replace('_', ' ').toUpperCase()}
+                              {isConfirmed && (
+                                <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Confirmed
+                                </Badge>
+                              )}
+                              {isDisputed && (
+                                <Badge variant="destructive" className="text-xs">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Disputed
+                                </Badge>
+                              )}
+                              {isPending && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {deposit.confirmationStatus.replace(/_/g, ' ')}
+                                </Badge>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              DEP-{deposit.id.slice(0, 8).toUpperCase()} • {new Date(deposit.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-lg font-bold ${isConfirmed ? 'text-green-600' : 'text-gray-700'}`}>
+                              {formatCurrency(netAmount)}
+                            </span>
+                            {charges > 0 && (
+                              <p className="text-xs text-gray-500">
+                                Gross: {formatCurrency(grossAmount)} | Charges: {formatCurrency(charges)}
+                              </p>
                             )}
                           </div>
-                        )}
+                        </div>
 
-                        {/* Deposit details */}
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm font-medium flex items-center gap-2">
-                                {deposit.paymentMethod.replace('_', ' ').toUpperCase()}
-                                {deposit.confirmationStatus === 'confirmed' && (
-                                  <Badge variant="default" className="text-xs bg-green-100 text-green-800">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Confirmed
-                                  </Badge>
-                                )}
-                                {deposit.confirmationStatus === 'disputed' && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    Disputed
-                                  </Badge>
-                                )}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(deposit.depositedAt).toLocaleString()}
-                              </p>
+                        {/* Receipts Row */}
+                        <div className="flex gap-4 mb-3">
+                          {/* Investor's uploaded receipt */}
+                          {deposit.investorReceiptUrl && (
+                            <div className="flex-1">
+                              <p className="text-xs font-medium text-gray-600 mb-1">Investor's Receipt:</p>
+                              <div
+                                className="w-full h-32 bg-gray-100 rounded border overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setPreviewImage(normalizeUploadUrl(deposit.investorReceiptUrl))}
+                              >
+                                <img
+                                  src={normalizeUploadUrl(deposit.investorReceiptUrl) || ''}
+                                  alt="Investor Receipt"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="p-0 h-auto mt-1 text-xs"
+                                onClick={() => setPreviewImage(normalizeUploadUrl(deposit.investorReceiptUrl))}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View Full Size
+                              </Button>
                             </div>
-                            <span className="text-lg font-bold text-green-600">
-                              +{formatCurrency(parseFloat(deposit.amount))}
-                            </span>
-                          </div>
+                          )}
 
+                          {/* Admin's receipt (for cash deposits) */}
+                          {deposit.receiptUrl && deposit.receiptUrl !== deposit.investorReceiptUrl && (
+                            <div className="flex-1">
+                              <p className="text-xs font-medium text-gray-600 mb-1">Admin Receipt:</p>
+                              <div
+                                className="w-full h-32 bg-gray-100 rounded border overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setPreviewImage(normalizeUploadUrl(deposit.receiptUrl))}
+                              >
+                                {deposit.receiptUrl.endsWith('.pdf') ? (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Receipt className="h-8 w-8 text-gray-400" />
+                                    <span className="text-xs text-gray-500 ml-2">PDF</span>
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={normalizeUploadUrl(deposit.receiptUrl) || ''}
+                                    alt="Admin Receipt"
+                                    className="w-full h-full object-contain"
+                                  />
+                                )}
+                              </div>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="p-0 h-auto mt-1 text-xs"
+                                onClick={() => setPreviewImage(normalizeUploadUrl(deposit.receiptUrl))}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View Full Size
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Details */}
+                        <div className="space-y-2 text-sm">
                           {deposit.referenceNumber && (
-                            <p className="text-xs text-gray-600 mt-2">
+                            <p className="text-gray-600">
                               <span className="font-medium">Reference:</span> {deposit.referenceNumber}
                             </p>
                           )}
 
+                          {/* Admin Notes */}
                           {deposit.notes && (
-                            <p className="text-xs text-gray-600 mt-1">
-                              <span className="font-medium">Notes:</span> {deposit.notes}
-                            </p>
+                            <div className="p-2 bg-blue-50 rounded border border-blue-100">
+                              <p className="text-xs font-medium text-blue-800">Admin Notes:</p>
+                              <p className="text-blue-700 whitespace-pre-wrap">{deposit.notes}</p>
+                            </div>
                           )}
 
+                          {/* Investor Notes / Dispute Reason */}
                           {deposit.investorNotes && (
-                            <p className="text-xs text-gray-600 mt-1">
-                              <span className="font-medium">Investor Notes:</span> {deposit.investorNotes}
-                            </p>
+                            <div className={`p-2 rounded border ${isDisputed ? 'bg-red-100 border-red-200' : 'bg-yellow-50 border-yellow-100'}`}>
+                              <p className={`text-xs font-medium ${isDisputed ? 'text-red-800' : 'text-yellow-800'}`}>
+                                {isDisputed ? 'Dispute Reason:' : 'Investor Notes:'}
+                              </p>
+                              <p className={`${isDisputed ? 'text-red-700' : 'text-yellow-700'} whitespace-pre-wrap`}>
+                                {deposit.investorNotes}
+                              </p>
+                            </div>
                           )}
 
-                          {deposit.receiptUrl && (
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="p-0 h-auto mt-2 text-xs"
-                              onClick={() => setPreviewImage(normalizeUploadUrl(deposit.receiptUrl))}
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              View Receipt
-                            </Button>
-                          )}
+                          {/* Timestamps */}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 pt-2 border-t">
+                            <span>Created: {new Date(deposit.createdAt).toLocaleString()}</span>
+                            {deposit.adminConfirmedAt && (
+                              <span>Admin Confirmed: {new Date(deposit.adminConfirmedAt).toLocaleString()}</span>
+                            )}
+                            {deposit.confirmedAt && (
+                              <span>Investor Confirmed: {new Date(deposit.confirmedAt).toLocaleString()}</span>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Action for disputed - link to pending deposits */}
+                        {isDisputed && (
+                          <div className="mt-3 pt-3 border-t border-red-200">
+                            <Link href="/dashboard/pending-deposits">
+                              <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                Resolve in Pending Deposits
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>

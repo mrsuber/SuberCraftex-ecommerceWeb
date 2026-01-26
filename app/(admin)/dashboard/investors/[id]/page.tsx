@@ -126,8 +126,13 @@ export default async function InvestorDetailPage({
       amount: d.amount.toString(),
       depositedAt: d.depositedAt.toISOString(),
       confirmedAt: d.confirmedAt?.toISOString() || null,
+      adminConfirmedAt: d.adminConfirmedAt?.toISOString() || null,
       confirmationStatus: d.confirmationStatus || 'confirmed',
       investorNotes: d.investorNotes || null,
+      notes: d.notes || null,
+      investorReceiptUrl: d.investorReceiptUrl || null,
+      receiptUrl: d.receiptUrl || null,
+      referenceNumber: d.referenceNumber || null,
       createdAt: d.createdAt.toISOString(),
     })),
     transactions: investor.transactions.map(t => ({
