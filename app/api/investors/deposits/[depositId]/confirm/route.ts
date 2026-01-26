@@ -59,16 +59,23 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { action, notes } = body // action: 'confirm' | 'dispute'
+    // Support both formats:
+    // Old: { action: 'confirm' | 'dispute', notes: string }
+    // New: { confirmed: boolean, feedback: string }
+    const { action, notes, confirmed, feedback } = body
 
-    if (!action || !['confirm', 'dispute'].includes(action)) {
+    // Normalize to action format
+    const normalizedAction = action || (confirmed === true ? 'confirm' : confirmed === false ? 'dispute' : null)
+    const normalizedNotes = notes || feedback
+
+    if (!normalizedAction || !['confirm', 'dispute'].includes(normalizedAction)) {
       return NextResponse.json(
-        { error: 'Invalid action. Must be "confirm" or "dispute"' },
+        { error: 'Invalid action. Must be "confirm" or "dispute", or use confirmed: true/false' },
         { status: 400 }
       )
     }
 
-    if (action === 'confirm') {
+    if (normalizedAction === 'confirm') {
       // Confirm the deposit and add funds to investor's balance
       const result = await db.$transaction(async (tx) => {
         // Update deposit status
@@ -77,7 +84,7 @@ export async function POST(
           data: {
             confirmationStatus: 'confirmed',
             confirmedAt: new Date(),
-            investorNotes: notes || null,
+            investorNotes: normalizedNotes || null,
           },
         })
 
@@ -120,7 +127,7 @@ export async function POST(
       })
     } else {
       // Dispute the deposit
-      if (!notes) {
+      if (!normalizedNotes) {
         return NextResponse.json(
           { error: 'Please provide a reason for disputing this deposit' },
           { status: 400 }
@@ -131,11 +138,11 @@ export async function POST(
         where: { id: depositId },
         data: {
           confirmationStatus: 'disputed',
-          investorNotes: notes,
+          investorNotes: normalizedNotes,
         },
       })
 
-      console.log(`⚠️ Deposit disputed by investor: ${investor.investorNumber} - ${deposit.amount} - Reason: ${notes}`)
+      console.log(`⚠️ Deposit disputed by investor: ${investor.investorNumber} - ${deposit.amount} - Reason: ${normalizedNotes}`)
 
       return NextResponse.json({
         message: 'Deposit disputed. Our team will review and contact you.',

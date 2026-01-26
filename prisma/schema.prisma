@@ -1546,15 +1546,25 @@ model InvestorDeposit {
   charges         Decimal  @default(0) @db.Decimal(12, 2) // Transaction fees/charges (e.g., 10)
   amount          Decimal  @db.Decimal(12, 2) // Net amount credited to account (e.g., 1000)
 
-  paymentMethod   String   @map("payment_method") // bank_transfer, cash, mobile_payment, check
+  paymentMethod   String   @map("payment_method") // bank_transfer, cash, mobile_money, check
   referenceNumber String?  @map("reference_number") // Bank transfer reference or receipt number
-  receiptUrl      String?  @map("receipt_url") // Payment receipt/proof image
+
+  // Receipt images
+  investorReceiptUrl String?  @map("investor_receipt_url") // Receipt uploaded by investor (for mobile money)
+  receiptUrl         String?  @map("receipt_url") // Admin receipt/proof image
+
   notes           String?  // Admin notes
 
-  // Confirmation workflow - investor must confirm before funds can be allocated
-  confirmationStatus String @default("pending_confirmation") @map("confirmation_status") // pending_confirmation, confirmed, disputed
+  // Confirmation workflow for mobile money:
+  // 1. awaiting_payment - Investor requested, waiting to send money
+  // 2. awaiting_admin_confirmation - Investor uploaded receipt, waiting for admin
+  // 3. pending_confirmation - Admin confirmed receipt, waiting for investor final confirmation
+  // 4. confirmed - Complete
+  // 5. disputed - Investor disputed
+  confirmationStatus String @default("pending_confirmation") @map("confirmation_status")
   confirmedAt        DateTime? @map("confirmed_at")
   investorNotes      String?   @map("investor_notes") // Notes from investor if they dispute
+  adminConfirmedAt   DateTime? @map("admin_confirmed_at") // When admin confirmed receipt
 
   depositedAt     DateTime @default(now()) @map("deposited_at")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -1816,4 +1826,21 @@ model WithdrawalRequest {
   @@index([status])
   @@index([requestedAt])
   @@map("withdrawal_requests")
+}
+
+// ============================================================================
+// APP SETTINGS
+// ============================================================================
+
+// Key-value store for app settings
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   @db.Text
+  category  String   @default("general") // general, investor, payment, etc.
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("app_settings")
 }
