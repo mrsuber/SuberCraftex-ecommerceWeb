@@ -26,6 +26,7 @@ import {
   UserPlus,
   TrendingUp,
   Clock,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +100,11 @@ const adminNavigation = [
     name: "Investors",
     href: "/dashboard/investors",
     icon: TrendingUp,
+  },
+  {
+    name: "Pending Deposits",
+    href: "/dashboard/pending-deposits",
+    icon: Wallet,
   },
   {
     name: "Suppliers",
