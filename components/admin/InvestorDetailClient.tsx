@@ -55,6 +55,418 @@ interface InvestorDetailClientProps {
   equipment: any[]
 }
 
+// Component for handling deposit request with receipt upload (for cash deposits)
+function DepositRequestCard({ deposit, investorId, onSuccess }: { deposit: any; investorId: string; onSuccess: () => void }) {
+  const [uploading, setUploading] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const [error, setError] = useState('')
+  const [receiptUrl, setReceiptUrl] = useState('')
+  const [charges, setCharges] = useState('0')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a valid image (JPEG, PNG, WebP) or PDF file')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB')
+      return
+    }
+
+    setUploading(true)
+    setError('')
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'receipt')
+      formData.append('investorId', investorId)
+
+      const response = await fetch('/api/admin/investors/upload-receipt', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to upload receipt')
+      }
+
+      const data = await response.json()
+      setReceiptUrl(data.url)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleProcessDeposit = async () => {
+    if (!receiptUrl) {
+      setError('Please upload a receipt first')
+      return
+    }
+
+    setProcessing(true)
+    setError('')
+
+    const chargesNum = parseFloat(charges) || 0
+    const grossAmount = parseFloat(deposit.grossAmount)
+    const netAmount = grossAmount - chargesNum
+
+    try {
+      const response = await fetch(`/api/admin/investors/${investorId}/deposits/${deposit.id}/upload-receipt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          receiptUrl,
+          charges: chargesNum,
+          netAmount,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to process deposit')
+      }
+
+      onSuccess()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <p className="text-sm font-medium">
+            {deposit.paymentMethod === 'mobile_money' ? 'Mobile Money' : 'Cash'} Deposit Request
+          </p>
+          <p className="text-xs text-gray-500">
+            Requested: {new Date(deposit.createdAt).toLocaleString()}
+          </p>
+        </div>
+        <span className="text-lg font-bold text-amber-600">
+          {formatCurrency(parseFloat(deposit.grossAmount))}
+        </span>
+      </div>
+
+      {deposit.notes && (
+        <p className="text-xs text-gray-600 mb-3">
+          <span className="font-medium">Investor Notes:</span> {deposit.notes}
+        </p>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm mb-3">
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {/* Receipt Upload */}
+        <div>
+          <Label className="text-xs">Upload Receipt / Proof of Payment</Label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+
+          {receiptUrl ? (
+            <div className="mt-1 flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="text-sm text-green-700 flex-1">Receipt uploaded</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReceiptUrl('')}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-1"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Receipt
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+
+        {/* Charges Input */}
+        <div>
+          <Label className="text-xs">Transaction Charges (FCFA)</Label>
+          <Input
+            type="number"
+            min="0"
+            placeholder="0"
+            value={charges}
+            onChange={(e) => setCharges(e.target.value)}
+            className="mt-1"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Net amount: {formatCurrency(parseFloat(deposit.grossAmount) - (parseFloat(charges) || 0))}
+          </p>
+        </div>
+
+        {/* Submit Button */}
+        <Button
+          className="w-full"
+          onClick={handleProcessDeposit}
+          disabled={!receiptUrl || processing}
+        >
+          {processing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Send Receipt to Investor
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// Component for reviewing investor-uploaded mobile money receipt
+function InvestorReceiptReviewCard({
+  deposit,
+  investorId,
+  onSuccess,
+  onPreviewImage
+}: {
+  deposit: any;
+  investorId: string;
+  onSuccess: () => void;
+  onPreviewImage: (url: string) => void;
+}) {
+  const [processing, setProcessing] = useState(false)
+  const [error, setError] = useState('')
+  const [charges, setCharges] = useState('0')
+  const [notes, setNotes] = useState('')
+
+  const handleConfirmReceipt = async () => {
+    setProcessing(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/admin/investors/${investorId}/deposits/${deposit.id}/confirm-receipt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'confirm',
+          charges: parseFloat(charges) || 0,
+          notes: notes || null,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to confirm receipt')
+      }
+
+      onSuccess()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleRejectReceipt = async () => {
+    if (!confirm('Are you sure you want to reject this receipt? The investor will need to resubmit.')) {
+      return
+    }
+
+    setProcessing(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/admin/investors/${investorId}/deposits/${deposit.id}/confirm-receipt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reject',
+          notes: notes || 'Receipt rejected. Please resubmit with a clearer image.',
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to reject receipt')
+      }
+
+      onSuccess()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const grossAmount = parseFloat(deposit.grossAmount)
+  const chargesNum = parseFloat(charges) || 0
+  const netAmount = grossAmount - chargesNum
+
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <div className="flex gap-4">
+        {/* Investor Receipt Image */}
+        {deposit.investorReceiptUrl && (
+          <div
+            className="w-24 h-24 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => onPreviewImage(normalizeUploadUrl(deposit.investorReceiptUrl) || '')}
+          >
+            <img
+              src={normalizeUploadUrl(deposit.investorReceiptUrl) || ''}
+              alt="Investor Receipt"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        <div className="flex-1">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <p className="text-sm font-medium">
+                Mobile Money Deposit
+              </p>
+              <p className="text-xs text-gray-500">
+                Receipt uploaded: {new Date(deposit.createdAt).toLocaleString()}
+              </p>
+              {deposit.referenceNumber && (
+                <p className="text-xs text-gray-600 mt-1">
+                  <span className="font-medium">Reference:</span> {deposit.referenceNumber}
+                </p>
+              )}
+            </div>
+            <span className="text-lg font-bold text-amber-600">
+              {formatCurrency(grossAmount)}
+            </span>
+          </div>
+
+          {deposit.notes && (
+            <p className="text-xs text-gray-600 mb-2">
+              <span className="font-medium">Investor Notes:</span> {deposit.notes}
+            </p>
+          )}
+
+          {/* View Receipt Button */}
+          {deposit.investorReceiptUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mb-3"
+              onClick={() => onPreviewImage(normalizeUploadUrl(deposit.investorReceiptUrl) || '')}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View Full Receipt
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm my-3">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-4 pt-4 border-t space-y-3">
+        {/* Charges Input */}
+        <div>
+          <Label className="text-xs">Transaction Charges (FCFA)</Label>
+          <Input
+            type="number"
+            min="0"
+            placeholder="0"
+            value={charges}
+            onChange={(e) => setCharges(e.target.value)}
+            className="mt-1"
+          />
+          <div className="flex justify-between text-xs mt-1">
+            <span className="text-gray-500">Gross amount: {formatCurrency(grossAmount)}</span>
+            <span className={`font-medium ${netAmount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              Net amount: {formatCurrency(netAmount)}
+            </span>
+          </div>
+        </div>
+
+        {/* Admin Notes */}
+        <div>
+          <Label className="text-xs">Notes (Optional)</Label>
+          <Textarea
+            placeholder="Add any notes about this deposit..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="mt-1"
+            rows={2}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button
+            variant="destructive"
+            className="flex-1"
+            onClick={handleRejectReceipt}
+            disabled={processing}
+          >
+            {processing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <XCircle className="h-4 w-4 mr-2" />
+            )}
+            Reject
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleConfirmReceipt}
+            disabled={processing || netAmount <= 0}
+          >
+            {processing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+            )}
+            Confirm Receipt
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function InvestorDetailClient({
   investor,
   products,
@@ -993,7 +1405,14 @@ export default function InvestorDetailClient({
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="deposits">Deposits ({investor.deposits.length})</TabsTrigger>
+          <TabsTrigger value="deposits" className="relative">
+            Deposits ({investor.deposits.length})
+            {investor.deposits.filter((d: any) => ['awaiting_admin_confirmation', 'awaiting_receipt'].includes(d.confirmationStatus)).length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                {investor.deposits.filter((d: any) => ['awaiting_admin_confirmation', 'awaiting_receipt'].includes(d.confirmationStatus)).length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="allocations">Allocations</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawals ({investor.withdrawalRequests.length})</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
@@ -1239,17 +1658,172 @@ export default function InvestorDetailClient({
           </Card>
         </TabsContent>
 
-        <TabsContent value="deposits">
+        <TabsContent value="deposits" className="space-y-6">
+          {/* Mobile Money - Awaiting Admin Confirmation (Step 2) */}
+          {investor.deposits.filter((d: any) => d.confirmationStatus === 'awaiting_admin_confirmation').length > 0 && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-800">
+                  <Receipt className="h-5 w-5" />
+                  Mobile Money Receipts to Review
+                </CardTitle>
+                <CardDescription>
+                  Investor has uploaded receipt. Review and confirm the payment received.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {investor.deposits.filter((d: any) => d.confirmationStatus === 'awaiting_admin_confirmation').map((deposit: any) => (
+                    <InvestorReceiptReviewCard
+                      key={deposit.id}
+                      deposit={deposit}
+                      investorId={investor.id}
+                      onSuccess={() => router.refresh()}
+                      onPreviewImage={setPreviewImage}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Mobile Money - Awaiting Payment (Step 1) */}
+          {investor.deposits.filter((d: any) => d.confirmationStatus === 'awaiting_payment').length > 0 && (
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-yellow-800">
+                  <Clock className="h-5 w-5" />
+                  Awaiting Mobile Money Payment
+                </CardTitle>
+                <CardDescription>
+                  Investor has initiated these deposits and is sending money. Waiting for receipt upload.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {investor.deposits.filter((d: any) => d.confirmationStatus === 'awaiting_payment').map((deposit: any) => (
+                    <div key={deposit.id} className="border rounded-lg p-4 bg-white">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm font-medium">Mobile Money Deposit</p>
+                          <p className="text-xs text-gray-500">
+                            Initiated: {new Date(deposit.createdAt).toLocaleString()}
+                          </p>
+                          <Badge variant="secondary" className="mt-2">Step 1: Awaiting Payment</Badge>
+                        </div>
+                        <span className="text-lg font-bold text-amber-600">
+                          {formatCurrency(parseFloat(deposit.grossAmount))}
+                        </span>
+                      </div>
+                      {deposit.notes && (
+                        <p className="text-xs text-gray-600 mt-2">
+                          <span className="font-medium">Notes:</span> {deposit.notes}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Pending Deposit Requests - Awaiting Receipt (Cash deposits) */}
+          {investor.deposits.filter((d: any) => d.confirmationStatus === 'awaiting_receipt').length > 0 && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-800">
+                  <Clock className="h-5 w-5" />
+                  Cash Deposit Requests
+                </CardTitle>
+                <CardDescription>
+                  Investor has requested these cash deposits. Upload receipt once payment is received.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {investor.deposits.filter((d: any) => d.confirmationStatus === 'awaiting_receipt').map((deposit: any) => (
+                    <DepositRequestCard
+                      key={deposit.id}
+                      deposit={deposit}
+                      investorId={investor.id}
+                      onSuccess={() => router.refresh()}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Deposits Pending Investor Confirmation (Step 3) */}
+          {investor.deposits.filter((d: any) => d.confirmationStatus === 'pending_confirmation').length > 0 && (
+            <Card className="border-green-200 bg-green-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-800">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Awaiting Investor Final Confirmation
+                </CardTitle>
+                <CardDescription>
+                  Admin has verified payment. Waiting for investor to confirm and add funds to their account.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {investor.deposits.filter((d: any) => d.confirmationStatus === 'pending_confirmation').map((deposit: any) => (
+                    <div key={deposit.id} className="border rounded-lg p-4 bg-white">
+                      <div className="flex gap-4">
+                        {(deposit.receiptUrl || deposit.investorReceiptUrl) && (
+                          <div
+                            className="w-16 h-16 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setPreviewImage(normalizeUploadUrl(deposit.receiptUrl || deposit.investorReceiptUrl))}
+                          >
+                            <img
+                              src={normalizeUploadUrl(deposit.receiptUrl || deposit.investorReceiptUrl) || ''}
+                              alt="Receipt"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium">
+                                {deposit.paymentMethod === 'mobile_money' ? 'Mobile Money' : deposit.paymentMethod.replace('_', ' ').toUpperCase()}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Admin confirmed: {deposit.adminConfirmedAt ? new Date(deposit.adminConfirmedAt).toLocaleString() : 'N/A'}
+                              </p>
+                              <Badge variant="outline" className="mt-1 bg-green-100 text-green-800">Step 3: Awaiting Investor Confirm</Badge>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">Gross: {formatCurrency(parseFloat(deposit.grossAmount))}</p>
+                              {parseFloat(deposit.charges) > 0 && (
+                                <p className="text-xs text-red-500">Charges: -{formatCurrency(parseFloat(deposit.charges))}</p>
+                              )}
+                              <p className="text-lg font-bold text-green-600">
+                                Net: {formatCurrency(parseFloat(deposit.amount))}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Confirmed Deposits */}
           <Card>
             <CardHeader>
               <CardTitle>Deposit History</CardTitle>
             </CardHeader>
             <CardContent>
-              {investor.deposits.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No deposits recorded</p>
+              {investor.deposits.filter((d: any) => d.confirmationStatus === 'confirmed' || !d.confirmationStatus || d.confirmationStatus === 'disputed').length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No confirmed deposits</p>
               ) : (
                 <div className="space-y-3">
-                  {investor.deposits.map((deposit: any) => (
+                  {investor.deposits.filter((d: any) => d.confirmationStatus === 'confirmed' || !d.confirmationStatus || d.confirmationStatus === 'disputed').map((deposit: any) => (
                     <div key={deposit.id} className="border rounded-lg p-4">
                       <div className="flex gap-4">
                         {/* Receipt thumbnail */}
@@ -1278,10 +1852,16 @@ export default function InvestorDetailClient({
                             <div>
                               <p className="text-sm font-medium flex items-center gap-2">
                                 {deposit.paymentMethod.replace('_', ' ').toUpperCase()}
-                                {deposit.receiptUrl && (
-                                  <Badge variant="outline" className="text-xs">
-                                    <Receipt className="h-3 w-3 mr-1" />
-                                    Receipt
+                                {deposit.confirmationStatus === 'confirmed' && (
+                                  <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Confirmed
+                                  </Badge>
+                                )}
+                                {deposit.confirmationStatus === 'disputed' && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Disputed
                                   </Badge>
                                 )}
                               </p>
@@ -1303,6 +1883,12 @@ export default function InvestorDetailClient({
                           {deposit.notes && (
                             <p className="text-xs text-gray-600 mt-1">
                               <span className="font-medium">Notes:</span> {deposit.notes}
+                            </p>
+                          )}
+
+                          {deposit.investorNotes && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              <span className="font-medium">Investor Notes:</span> {deposit.investorNotes}
                             </p>
                           )}
 
