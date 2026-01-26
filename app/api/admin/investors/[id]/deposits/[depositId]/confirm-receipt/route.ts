@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth/session'
 
-// POST /api/admin/investors/[investorId]/deposits/[depositId]/confirm-receipt
+// POST /api/admin/investors/[id]/deposits/[depositId]/confirm-receipt
 // Admin confirms investor's uploaded receipt and sets charges
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ investorId: string; depositId: string }> }
+  { params }: { params: Promise<{ id: string; depositId: string }> }
 ) {
   try {
-    const { investorId, depositId } = await params
+    const { id: investorId, depositId } = await params
     const user = await getSession()
 
     if (!user || user.role !== 'admin') {
