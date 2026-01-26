@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MobileMoneySettings } from "@/components/admin/MobileMoneySettings";
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="investor">Investor</TabsTrigger>
           <TabsTrigger value="payment">Payment</TabsTrigger>
           <TabsTrigger value="shipping">Shipping</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
@@ -112,6 +114,11 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Investor Settings */}
+        <TabsContent value="investor" className="space-y-6">
+          <MobileMoneySettings />
         </TabsContent>
 
         {/* Payment Settings */}
