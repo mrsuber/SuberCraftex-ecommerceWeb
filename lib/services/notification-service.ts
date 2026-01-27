@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 // Type definitions that match Prisma schema
 type NotificationType =
@@ -28,7 +29,7 @@ interface CreateNotificationParams {
   referenceId?: string;
   referenceType?: string;
   actionUrl?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }
 
 export class NotificationService {
