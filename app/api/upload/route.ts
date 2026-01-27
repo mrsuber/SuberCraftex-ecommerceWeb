@@ -115,6 +115,10 @@ export async function POST(request: NextRequest) {
         type
       );
       url = `/api/uploads/bookings/${bookingId}/${type}/${filename}`;
+    } else if (type === 'banner') {
+      // Banner upload: /public/uploads/banners/
+      uploadsDir = join(process.cwd(), 'public', 'uploads', 'banners');
+      url = `/api/uploads/banners/${filename}`;
     } else {
       // Product upload: /public/uploads/products/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'products');

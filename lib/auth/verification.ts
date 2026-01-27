@@ -47,7 +47,7 @@ export async function sendVerificationEmail(
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #D4AF76 0%, #9d8860 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <div style="background: linear-gradient(135deg, #E11D48 0%, #8B1538 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
               <h1 style="color: white; margin: 0; font-size: 28px;">SuberCraftex</h1>
             </div>
 
@@ -57,7 +57,7 @@ export async function sendVerificationEmail(
               <p>Thank you for signing up for SuberCraftex! To complete your registration, please verify your email address by clicking the button below:</p>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${verificationUrl}" style="background: #D4AF76; color: white; padding: 14px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                <a href="${verificationUrl}" style="background: #E11D48; color: white; padding: 14px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
                   Verify Email Address
                 </a>
               </div>

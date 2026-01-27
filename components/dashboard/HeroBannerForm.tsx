@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { HeroBanner, BannerType } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -16,8 +16,9 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Upload, X, ImageIcon } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import Image from 'next/image'
 
 interface HeroBannerFormProps {
   banner?: HeroBanner
@@ -27,6 +28,10 @@ export function HeroBannerForm({ banner }: HeroBannerFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [uploadingDesktop, setUploadingDesktop] = useState(false)
+  const [uploadingMobile, setUploadingMobile] = useState(false)
+  const desktopFileRef = useRef<HTMLInputElement>(null)
+  const mobileFileRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
     title: banner?.title || '',
@@ -45,6 +50,56 @@ export function HeroBannerForm({ banner }: HeroBannerFormProps) {
     startDate: banner?.start_date ? banner.start_date.split('T')[0] : '',
     endDate: banner?.end_date ? banner.end_date.split('T')[0] : '',
   })
+
+  const handleImageUpload = async (file: File, type: 'desktop' | 'mobile') => {
+    const setUploading = type === 'desktop' ? setUploadingDesktop : setUploadingMobile
+
+    try {
+      setUploading(true)
+
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      uploadFormData.append('type', 'banner')
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to upload image')
+      }
+
+      const data = await response.json()
+
+      if (type === 'desktop') {
+        setFormData(prev => ({ ...prev, imageUrl: data.url }))
+      } else {
+        setFormData(prev => ({ ...prev, mobileImageUrl: data.url }))
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Image uploaded successfully',
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to upload image',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'desktop' | 'mobile') => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleImageUpload(file, type)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -167,28 +222,129 @@ export function HeroBannerForm({ banner }: HeroBannerFormProps) {
         <CardHeader>
           <CardTitle>Images</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl">Image URL (Desktop) *</Label>
-            <Input
-              id="imageUrl"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              placeholder="https://example.com/banner.jpg"
-              required
-            />
+        <CardContent className="space-y-6">
+          {/* Desktop Image */}
+          <div className="space-y-3">
+            <Label>Desktop Image *</Label>
+            <div className="flex gap-3">
+              <Input
+                id="imageUrl"
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                placeholder="https://example.com/banner.jpg or upload below"
+                className="flex-1"
+              />
+              <input
+                ref={desktopFileRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileChange(e, 'desktop')}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => desktopFileRef.current?.click()}
+                disabled={uploadingDesktop}
+              >
+                {uploadingDesktop ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                <span className="ml-2">Upload</span>
+              </Button>
+            </div>
+            {formData.imageUrl && (
+              <div className="relative w-full max-w-md rounded-lg overflow-hidden border bg-muted">
+                <div className="aspect-[16/9] relative">
+                  <Image
+                    src={formData.imageUrl}
+                    alt="Desktop banner preview"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {!formData.imageUrl && (
+              <div
+                className="flex flex-col items-center justify-center w-full max-w-md h-40 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => desktopFileRef.current?.click()}
+              >
+                <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Click to upload desktop image</p>
+                <p className="text-xs text-muted-foreground">Recommended: 1920x600 or 16:5 ratio</p>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="mobileImageUrl">Mobile Image URL (Optional)</Label>
-            <Input
-              id="mobileImageUrl"
-              value={formData.mobileImageUrl}
-              onChange={(e) => setFormData({ ...formData, mobileImageUrl: e.target.value })}
-              placeholder="https://example.com/banner-mobile.jpg"
-            />
+          {/* Mobile Image */}
+          <div className="space-y-3">
+            <Label>Mobile Image (Optional)</Label>
+            <div className="flex gap-3">
+              <Input
+                id="mobileImageUrl"
+                value={formData.mobileImageUrl}
+                onChange={(e) => setFormData({ ...formData, mobileImageUrl: e.target.value })}
+                placeholder="https://example.com/banner-mobile.jpg or upload below"
+                className="flex-1"
+              />
+              <input
+                ref={mobileFileRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileChange(e, 'mobile')}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => mobileFileRef.current?.click()}
+                disabled={uploadingMobile}
+              >
+                {uploadingMobile ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                <span className="ml-2">Upload</span>
+              </Button>
+            </div>
+            {formData.mobileImageUrl && (
+              <div className="relative w-full max-w-xs rounded-lg overflow-hidden border bg-muted">
+                <div className="aspect-[9/16] relative">
+                  <Image
+                    src={formData.mobileImageUrl}
+                    alt="Mobile banner preview"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={() => setFormData({ ...formData, mobileImageUrl: '' })}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              If not provided, desktop image will be used
+              If not provided, desktop image will be used. Recommended: 640x800 or 4:5 ratio
             </p>
           </div>
         </CardContent>
