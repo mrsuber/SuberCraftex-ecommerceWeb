@@ -111,6 +111,20 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Review submitted for product ${product.name} by ${user.email}`);
 
+    // Create admin notification for new review
+    try {
+      const { NotificationService } = await import('@/lib/services/notification-service');
+      await NotificationService.notifyNewReview({
+        id: review.id,
+        productName: product.name,
+        rating,
+        customerName: review.user?.fullName || undefined,
+      });
+      console.log('✅ Admin notification created for new review');
+    } catch (notifError) {
+      console.error('⚠️  Failed to create admin notification:', notifError);
+    }
+
     return NextResponse.json(
       {
         review,

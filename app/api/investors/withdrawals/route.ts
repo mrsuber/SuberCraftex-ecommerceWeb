@@ -192,6 +192,21 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Withdrawal request created: ${requestNumber} - ${type}`)
 
+    // Create admin notification for withdrawal request
+    try {
+      const { NotificationService } = await import('@/lib/services/notification-service')
+      await NotificationService.notifyWithdrawalRequest({
+        id: withdrawal.id,
+        requestNumber: withdrawal.requestNumber,
+        investorName: investor.fullName,
+        amount: (amount || 0).toString(),
+        type,
+      })
+      console.log('✅ Admin notification created for withdrawal request')
+    } catch (notifError) {
+      console.error('⚠️  Failed to create admin notification:', notifError)
+    }
+
     return NextResponse.json(withdrawal, { status: 201 })
   } catch (error) {
     console.error('Error creating withdrawal:', error)

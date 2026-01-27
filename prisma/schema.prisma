@@ -1830,6 +1830,67 @@ model WithdrawalRequest {
 }
 
 // ============================================================================
+// ADMIN NOTIFICATIONS
+// ============================================================================
+
+enum NotificationType {
+  new_order          // New order placed
+  order_paid         // Order payment received
+  order_cancelled    // Order cancelled
+  new_booking        // New service booking
+  booking_confirmed  // Booking confirmed
+  booking_cancelled  // Booking cancelled
+  new_deposit        // Investor deposit
+  deposit_confirmed  // Deposit confirmed
+  withdrawal_request // Withdrawal request submitted
+  new_review         // New product review
+  new_feedback       // Investor feedback submitted
+  low_stock          // Product low stock alert
+  kyc_submitted      // Investor KYC submitted
+  quote_approved     // Quote approved by customer
+  system             // System notifications
+}
+
+enum NotificationPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+model Notification {
+  id          String               @id @default(uuid())
+  type        NotificationType
+  title       String
+  message     String
+  priority    NotificationPriority @default(normal)
+
+  // Reference to related entity
+  referenceId   String?            @map("reference_id") // ID of order, booking, deposit, etc.
+  referenceType String?            @map("reference_type") // "order", "booking", "deposit", etc.
+  actionUrl     String?            @map("action_url") // URL to navigate to when clicked
+
+  // Read status
+  isRead      Boolean              @default(false) @map("is_read")
+  readAt      DateTime?            @map("read_at")
+
+  // Optional: track who read it (for multi-admin setups)
+  readBy      String?              @map("read_by")
+
+  // Metadata for additional context
+  metadata    Json?
+
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  @@index([type])
+  @@index([isRead])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([referenceType])
+  @@map("notifications")
+}
+
+// ============================================================================
 // APP SETTINGS
 // ============================================================================
 

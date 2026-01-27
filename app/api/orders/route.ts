@@ -89,6 +89,20 @@ export async function POST(request: NextRequest) {
 
     console.log('Order created successfully:', order.orderNumber);
 
+    // Create admin notification for new order
+    try {
+      const { NotificationService } = await import('@/lib/services/notification-service');
+      await NotificationService.notifyNewOrder({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        totalAmount: order.totalAmount.toString(),
+        customerName: shippingAddress.fullName,
+      });
+      console.log('✅ Admin notification created for new order');
+    } catch (notifError) {
+      console.error('⚠️  Failed to create admin notification:', notifError);
+    }
+
     // Send order confirmation email
     try {
       const { sendEmail } = await import('@/lib/email/mailer');

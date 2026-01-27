@@ -523,6 +523,21 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if email fails
     })
 
+    // Create admin notification for new booking
+    try {
+      const { NotificationService } = await import('@/lib/services/notification-service')
+      await NotificationService.notifyNewBooking({
+        id: booking.id,
+        bookingNumber: booking.bookingNumber,
+        serviceName: booking.service.name,
+        customerName: booking.customerName,
+        scheduledDate: booking.scheduledDate || undefined,
+      })
+      console.log('✅ Admin notification created for new booking')
+    } catch (notifError) {
+      console.error('⚠️  Failed to create admin notification:', notifError)
+    }
+
     // Transform booking to snake_case for mobile app compatibility
     return NextResponse.json(transformBookingToSnakeCase(booking), { status: 201 })
   } catch (error: any) {

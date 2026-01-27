@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, User, LogOut, UserCircle, Settings as SettingsIcon, Store } from "lucide-react";
+import { Search, User, LogOut, UserCircle, Settings as SettingsIcon, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { NotificationDropdown } from "./NotificationDropdown";
 
 export function AdminHeader() {
   const router = useRouter();
@@ -49,10 +50,7 @@ export function AdminHeader() {
         {/* Actions */}
         <div className="flex items-center gap-2">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
-          </Button>
+          <NotificationDropdown />
 
           {/* User Menu */}
           <DropdownMenu>

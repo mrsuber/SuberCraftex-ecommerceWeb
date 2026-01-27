@@ -81,6 +81,20 @@ export async function POST(
 
     console.log(`✅ Investor uploaded receipt for deposit: ${depositId} - Investor: ${investor.investorNumber}`)
 
+    // Create admin notification for new deposit
+    try {
+      const { NotificationService } = await import('@/lib/services/notification-service')
+      await NotificationService.notifyNewDeposit({
+        id: updatedDeposit.id,
+        investorName: investor.fullName,
+        amount: updatedDeposit.grossAmount.toString(),
+        paymentMethod: updatedDeposit.paymentMethod,
+      })
+      console.log('✅ Admin notification created for deposit receipt upload')
+    } catch (notifError) {
+      console.error('⚠️  Failed to create admin notification:', notifError)
+    }
+
     return NextResponse.json({
       message: 'Receipt uploaded successfully. Waiting for admin confirmation.',
       deposit: {
