@@ -1527,6 +1527,7 @@ model Investor {
   equipmentAllocations InvestorEquipmentAllocation[]
   profitDistributions ProfitDistribution[]
   withdrawalRequests WithdrawalRequest[]
+  feedback          Feedback[]
 
   @@index([userId])
   @@index([email])
@@ -1843,4 +1844,79 @@ model AppSetting {
 
   @@index([category])
   @@map("app_settings")
+}
+
+// ============================================================================
+// FEEDBACK SYSTEM
+// ============================================================================
+
+enum FeedbackType {
+  bug_report
+  feature_request
+  improvement
+  general
+  complaint
+}
+
+enum FeedbackStatus {
+  pending           // New feedback, not reviewed
+  under_review      // Being reviewed by admin
+  in_progress       // Being worked on
+  resolved          // Issue resolved or feature implemented
+  closed            // Closed without action
+}
+
+enum FeedbackPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+model Feedback {
+  id           String           @id @default(uuid())
+  investorId   String           @map("investor_id")
+  type         FeedbackType     @default(general)
+  subject      String
+  message      String           @db.Text
+  screenshots  String[]         @default([]) // URLs of attached images
+  status       FeedbackStatus   @default(pending)
+  priority     FeedbackPriority @default(medium)
+
+  // Admin response tracking
+  adminResponses FeedbackResponse[]
+
+  // Metadata
+  appVersion   String?          @map("app_version")
+  deviceInfo   String?          @map("device_info")
+
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  resolvedAt   DateTime?        @map("resolved_at")
+
+  // Relations
+  investor     Investor         @relation(fields: [investorId], references: [id], onDelete: Cascade)
+
+  @@index([investorId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+  @@map("feedback")
+}
+
+model FeedbackResponse {
+  id          String   @id @default(uuid())
+  feedbackId  String   @map("feedback_id")
+  responderId String   @map("responder_id") // Admin user ID
+  message     String   @db.Text
+  isInternal  Boolean  @default(false) @map("is_internal") // Internal notes vs visible to investor
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  feedback    Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+  @@index([createdAt])
+  @@map("feedback_responses")
 }

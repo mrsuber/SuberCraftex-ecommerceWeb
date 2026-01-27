@@ -18,7 +18,7 @@ export function Header() {
         <Link href="/" className="flex items-center space-x-2">
           <div className="flex items-center gap-2">
             <Image
-              src="/logos/subercraftex_goldfullLogo.svg"
+              src="/logos/subercraftex_full_pink_logo.png"
               alt="SuberCraftex"
               width={180}
               height={40}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Facebook, Twitter, Instagram, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -10,9 +11,13 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center space-x-2">
-              <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                SuberCraftex
-              </span>
+              <Image
+                src="/logos/subercraftex_full_pink_logo.png"
+                alt="SuberCraftex"
+                width={150}
+                height={35}
+                className="h-8 w-auto"
+              />
             </Link>
             <p className="text-sm text-muted-foreground">
               Premium e-commerce platform for luxury products. Quality you can trust.

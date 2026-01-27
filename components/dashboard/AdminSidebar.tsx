@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Clock,
   Wallet,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -105,6 +106,11 @@ const adminNavigation = [
     name: "Pending Deposits",
     href: "/dashboard/pending-deposits",
     icon: Wallet,
+  },
+  {
+    name: "Investor Feedback",
+    href: "/dashboard/feedback",
+    icon: MessageSquare,
   },
   {
     name: "Suppliers",

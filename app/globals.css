@@ -11,10 +11,10 @@
     --popover: 100% 0 0;
     --popover-foreground: 14.2% 0.006 285.9;
 
-    --primary: 72.7% 0.078 71.7; /* #D4AF76 Champagne Gold */
+    --primary: 52% 0.22 12; /* #E11D48 Rose Pink */
     --primary-foreground: 100% 0 0;
 
-    --secondary: 66.1% 0.048 71.2; /* #9d8860 */
+    --secondary: 40% 0.18 360; /* #8B1538 Burgundy */
     --secondary-foreground: 100% 0 0;
 
     --muted: 97.8% 0.003 285.9;
@@ -28,10 +28,10 @@
 
     --border: 90.4% 0.004 285.9;
     --input: 90.4% 0.004 285.9;
-    --ring: 72.7% 0.078 71.7;
+    --ring: 52% 0.22 12;
 
-    --chart-1: 72.7% 0.078 71.7;
-    --chart-2: 66.1% 0.048 71.2;
+    --chart-1: 52% 0.22 12;
+    --chart-2: 40% 0.18 360;
     --chart-3: 67.6% 0.157 152.4;
     --chart-4: 82.2% 0.109 99.4;
     --chart-5: 66.1% 0.196 354.4;
@@ -50,30 +50,30 @@
     --popover: 14% 0.025 252;
     --popover-foreground: 90% 0.008 264;
 
-    --primary: 72.7% 0.078 71.7; /* #D4AF76 Champagne Gold */
-    --primary-foreground: 14% 0.025 252;
+    --primary: 52% 0.22 12; /* #E11D48 Rose Pink */
+    --primary-foreground: 100% 0 0;
 
-    --secondary: 66.1% 0.048 71.2; /* #9d8860 Darker Gold */
-    --secondary-foreground: 14% 0.025 252;
+    --secondary: 40% 0.18 360; /* #8B1538 Burgundy */
+    --secondary-foreground: 100% 0 0;
 
     --muted: 21% 0.027 252; /* #1e293b */
     --muted-foreground: 65% 0.026 252; /* #94a3b8 */
 
-    --accent: 72.7% 0.078 71.7; /* Gold accent */
-    --accent-foreground: 14% 0.025 252;
+    --accent: 52% 0.22 12; /* Rose accent */
+    --accent-foreground: 100% 0 0;
 
     --destructive: 58.2% 0.227 25.3; /* #ef4444 */
     --destructive-foreground: 100% 0 0;
 
-    --border: 72.7% 0.078 71.7 / 0.15; /* Gold border with transparency */
+    --border: 52% 0.22 12 / 0.15; /* Rose border with transparency */
     --input: 65% 0.026 252 / 0.2;
-    --ring: 72.7% 0.078 71.7; /* Gold ring */
+    --ring: 52% 0.22 12; /* Rose ring */
 
-    --chart-1: 72.7% 0.078 71.7; /* Gold */
-    --chart-2: 66.1% 0.048 71.2; /* Darker Gold */
-    --chart-3: 82.2% 0.109 99.4; /* Light Gold */
-    --chart-4: 59.8% 0.09 99.1; /* Warm tone */
-    --chart-5: 50.4% 0.074 82.7; /* Bronze */
+    --chart-1: 52% 0.22 12; /* Rose */
+    --chart-2: 40% 0.18 360; /* Burgundy */
+    --chart-3: 70% 0.15 12; /* Light Rose */
+    --chart-4: 60% 0.12 350; /* Warm Rose */
+    --chart-5: 45% 0.16 5; /* Deep Rose */
   }
 }
 
@@ -192,6 +192,30 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
+  .rose-gradient {
+    background: linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--secondary)) 100%);
+  }
+
+  .rose-text {
+    background: linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--secondary)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .rose-border {
+    border-color: oklch(var(--primary) / 0.3);
+  }
+
+  .rose-glow {
+    box-shadow: 0 0 20px oklch(var(--primary) / 0.3);
+  }
+
+  .dark .rose-glow {
+    box-shadow: 0 0 30px oklch(var(--primary) / 0.4);
+  }
+
+  /* Keep gold classes as aliases for backward compatibility */
   .gold-gradient {
     background: linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--secondary)) 100%);
   }

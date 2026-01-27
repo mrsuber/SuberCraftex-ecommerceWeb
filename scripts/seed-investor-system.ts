@@ -345,10 +345,12 @@ async function main() {
   const deposit1 = await db.investorDeposit.create({
     data: {
       investorId: investor1.id,
+      grossAmount: 300000,
       amount: 300000,
       paymentMethod: 'bank_transfer',
       referenceNumber: 'BT-2024-001',
       notes: 'Initial investment',
+      confirmationStatus: 'confirmed',
       depositedAt: new Date('2024-01-15'),
     },
   })
@@ -369,9 +371,11 @@ async function main() {
   const deposit2 = await db.investorDeposit.create({
     data: {
       investorId: investor1.id,
+      grossAmount: 200000,
       amount: 200000,
       paymentMethod: 'cash',
       notes: 'Second deposit',
+      confirmationStatus: 'confirmed',
       depositedAt: new Date('2024-02-01'),
     },
   })
@@ -395,10 +399,12 @@ async function main() {
   const deposit3 = await db.investorDeposit.create({
     data: {
       investorId: investor2.id,
+      grossAmount: 300000,
       amount: 300000,
       paymentMethod: 'mobile_payment',
       referenceNumber: 'MP-2024-001',
       notes: 'Mobile money transfer',
+      confirmationStatus: 'confirmed',
       depositedAt: new Date('2024-01-20'),
     },
   })
