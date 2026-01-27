@@ -1,10 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, AlertTriangle, Mail, Clock, Shield } from "lucide-react";
+import { Trash2, AlertTriangle, Mail, Clock, Shield, FileX } from "lucide-react";
 
 export const metadata = {
-  title: "Delete Account | SuberCraftex",
+  title: "Delete Data & Account | SuberCraftex",
   description:
-    "Request deletion of your SuberCraftex account and associated data",
+    "Request deletion of your data or SuberCraftex account",
 };
 
 export default function DeleteAccountPage() {
@@ -14,15 +14,84 @@ export default function DeleteAccountPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Delete{" "}
+            Data{" "}
             <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Account
+              Deletion
             </span>
           </h1>
           <p className="text-lg text-muted-foreground">
-            Request deletion of your account and personal data
+            Request deletion of specific data or your entire account
           </p>
         </div>
+
+        {/* Two Options */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          <Card className="border-primary/50">
+            <CardContent className="p-6 text-center">
+              <FileX className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">Delete Specific Data</h3>
+              <p className="text-sm text-muted-foreground">
+                Remove specific data while keeping your account active
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-red-500/50">
+            <CardContent className="p-6 text-center">
+              <Trash2 className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">Delete Entire Account</h3>
+              <p className="text-sm text-muted-foreground">
+                Permanently delete your account and all associated data
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Partial Data Deletion Section */}
+        <Card className="mb-8">
+          <CardContent className="p-8">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <FileX className="h-5 w-5 text-primary" />
+              Delete Specific Data
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              You can request deletion of specific data while keeping your
+              account active. This includes:
+            </p>
+            <ul className="list-disc list-inside text-muted-foreground mb-6 space-y-2">
+              <li>Saved addresses</li>
+              <li>Body measurements</li>
+              <li>Order history</li>
+              <li>Reviews you have submitted</li>
+              <li>Wishlist items</li>
+              <li>Profile photos</li>
+              <li>Browsing preferences</li>
+            </ul>
+            <a
+              href="mailto:support@subercraftex.com?subject=Data%20Deletion%20Request&body=I%20would%20like%20to%20request%20deletion%20of%20the%20following%20data%20from%20my%20SuberCraftex%20account%3A%0A%0ARegistered%20Email%3A%20%0A%0AData%20to%20delete%20(check%20all%20that%20apply)%3A%0A%5B%20%5D%20Saved%20addresses%0A%5B%20%5D%20Body%20measurements%0A%5B%20%5D%20Order%20history%0A%5B%20%5D%20Reviews%0A%5B%20%5D%20Wishlist%20items%0A%5B%20%5D%20Profile%20photos%0A%5B%20%5D%20Other%3A%20"
+              className="inline-flex items-center justify-center w-full px-6 py-3 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Mail className="h-5 w-5 mr-2" />
+              Request Data Deletion
+            </a>
+          </CardContent>
+        </Card>
+
+        <div className="relative my-12">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-muted"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or delete everything
+            </span>
+          </div>
+        </div>
+
+        {/* Full Account Deletion Section */}
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          <Trash2 className="h-6 w-6 text-red-500" />
+          Delete Entire Account
+        </h2>
 
         {/* Warning */}
         <Card className="mb-8 border-amber-500/50">
@@ -30,7 +99,7 @@ export default function DeleteAccountPage() {
             <div className="flex items-start gap-4">
               <AlertTriangle className="h-6 w-6 text-amber-500 flex-shrink-0 mt-1" />
               <div>
-                <h2 className="font-semibold mb-2">Before You Continue</h2>
+                <h3 className="font-semibold mb-2">Before You Continue</h3>
                 <p className="text-muted-foreground text-sm">
                   Deleting your account is permanent and cannot be undone. You
                   will lose access to:
