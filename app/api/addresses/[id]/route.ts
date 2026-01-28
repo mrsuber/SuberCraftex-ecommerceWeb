@@ -10,7 +10,7 @@ const addressSchema = z.object({
   addressLine2: z.string().optional(),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
-  postalCode: z.string().min(1, 'Postal code is required'),
+  postalCode: z.string().optional(), // Made optional - not all regions use postal codes
   country: z.string().min(1, 'Country is required'),
   label: z.string().optional(),
   isDefault: z.boolean().optional(),
