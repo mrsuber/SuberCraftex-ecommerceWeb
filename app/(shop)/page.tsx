@@ -6,6 +6,10 @@ import { UpcomingServices } from "@/components/landing/UpcomingServices";
 import { CTA } from "@/components/landing/CTA";
 import { db } from "@/lib/db";
 
+// Disable caching to always show fresh data (banners, services, etc.)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function Home() {
   // Fetch active hero banners
   const now = new Date();
