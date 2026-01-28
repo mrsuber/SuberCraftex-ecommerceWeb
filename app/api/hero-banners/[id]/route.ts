@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth/verify-auth'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
+
+// Helper to convert relative URLs to absolute URLs
+function toAbsoluteUrl(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${APP_URL}${url}`
+}
+
 // GET /api/hero-banners/[id] - Get single banner
 export async function GET(
   request: NextRequest,
@@ -24,8 +33,8 @@ export async function GET(
       subtitle: banner.subtitle,
       description: banner.description,
       type: banner.type,
-      image_url: banner.imageUrl,
-      mobile_image_url: banner.mobileImageUrl,
+      image_url: toAbsoluteUrl(banner.imageUrl),
+      mobile_image_url: toAbsoluteUrl(banner.mobileImageUrl),
       cta_text: banner.ctaText,
       cta_link: banner.ctaLink,
       cta_style: banner.ctaStyle,
@@ -114,8 +123,8 @@ export async function PATCH(
       subtitle: banner.subtitle,
       description: banner.description,
       type: banner.type,
-      image_url: banner.imageUrl,
-      mobile_image_url: banner.mobileImageUrl,
+      image_url: toAbsoluteUrl(banner.imageUrl),
+      mobile_image_url: toAbsoluteUrl(banner.mobileImageUrl),
       cta_text: banner.ctaText,
       cta_link: banner.ctaLink,
       cta_style: banner.ctaStyle,
