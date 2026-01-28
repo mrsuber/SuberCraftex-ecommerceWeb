@@ -49,12 +49,21 @@ interface Feedback {
   createdAt: string
   updatedAt: string
   resolvedAt: string | null
+  userId: string | null
+  userEmail: string | null
+  userName: string | null
   investor: {
     id: string
     fullName: string
     email: string
     investorNumber: string
-  }
+  } | null
+  user: {
+    id: string
+    fullName: string | null
+    email: string
+    role: string
+  } | null
   adminResponses: FeedbackResponse[]
 }
 
@@ -383,7 +392,10 @@ export default function FeedbackDashboardClient({
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            {item.investor.fullName} ({item.investor.investorNumber})
+                            {item.investor
+                              ? `${item.investor.fullName} (${item.investor.investorNumber})`
+                              : item.userName || item.userEmail || 'Unknown User'
+                            }
                           </span>
                           <span>{formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}</span>
                           {item.adminResponses.length > 0 && (
@@ -428,14 +440,26 @@ export default function FeedbackDashboardClient({
               </DialogHeader>
 
               <div className="space-y-4">
-                {/* Investor Info */}
+                {/* User Info */}
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{selectedFeedback.investor.fullName}</p>
-                        <p className="text-sm text-muted-foreground">{selectedFeedback.investor.email}</p>
-                        <p className="text-xs text-muted-foreground">{selectedFeedback.investor.investorNumber}</p>
+                        {selectedFeedback.investor ? (
+                          <>
+                            <p className="font-medium">{selectedFeedback.investor.fullName}</p>
+                            <p className="text-sm text-muted-foreground">{selectedFeedback.investor.email}</p>
+                            <p className="text-xs text-muted-foreground">Investor: {selectedFeedback.investor.investorNumber}</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium">{selectedFeedback.userName || 'Unknown User'}</p>
+                            <p className="text-sm text-muted-foreground">{selectedFeedback.userEmail || selectedFeedback.user?.email || 'No email'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {selectedFeedback.user?.role ? `Role: ${selectedFeedback.user.role}` : 'Customer'}
+                            </p>
+                          </>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Badge variant={getTypeBadgeVariant(selectedFeedback.type) as any}>

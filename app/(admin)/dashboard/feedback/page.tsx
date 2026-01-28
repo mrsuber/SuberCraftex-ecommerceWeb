@@ -10,7 +10,7 @@ export default async function FeedbackPage() {
     redirect('/login')
   }
 
-  // Fetch all feedback with investor info and responses
+  // Fetch all feedback with user/investor info and responses
   const feedback = await db.feedback.findMany({
     include: {
       investor: {
@@ -19,6 +19,14 @@ export default async function FeedbackPage() {
           fullName: true,
           email: true,
           investorNumber: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          role: true,
         },
       },
       adminResponses: {
