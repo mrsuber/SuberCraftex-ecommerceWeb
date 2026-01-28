@@ -410,7 +410,7 @@ model Address {
   addressLine2 String?  @map("address_line2")
   city         String
   state        String
-  postalCode   String   @map("postal_code")
+  postalCode   String?  @map("postal_code")
   country      String
   isDefault    Boolean  @default(false) @map("is_default")
   label        String?
