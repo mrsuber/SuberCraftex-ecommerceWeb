@@ -73,7 +73,7 @@ export function AddressList({ initialAddresses }: AddressListProps) {
       addressLine2: address.addressLine2 || "",
       city: address.city,
       state: address.state,
-      postalCode: address.postalCode,
+      postalCode: address.postalCode || "",
       country: address.country,
       label: address.label || "",
       isDefault: address.isDefault,
