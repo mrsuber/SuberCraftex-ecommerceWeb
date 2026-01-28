@@ -385,25 +385,37 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       {/* Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Settings</CardTitle>
+          <CardTitle>Product Status</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+            <div className="space-y-1">
+              <Label htmlFor="isActive" className="text-base font-medium">Active Status</Label>
+              <p className="text-sm text-muted-foreground">
+                When inactive, this product will be hidden from customers
+              </p>
+            </div>
             <Switch
               id="isActive"
               name="isActive"
               defaultChecked={product?.isActive ?? true}
+              className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-red-400"
             />
-            <Label htmlFor="isActive">Active (visible to customers)</Label>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+            <div className="space-y-1">
+              <Label htmlFor="isFeatured" className="text-base font-medium">Featured Product</Label>
+              <p className="text-sm text-muted-foreground">
+                Featured products appear on the homepage
+              </p>
+            </div>
             <Switch
               id="isFeatured"
               name="isFeatured"
               defaultChecked={product?.isFeatured ?? false}
+              className="data-[state=checked]:bg-green-500"
             />
-            <Label htmlFor="isFeatured">Featured product</Label>
           </div>
         </CardContent>
       </Card>
