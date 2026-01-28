@@ -18,7 +18,7 @@ type Address = {
   addressLine2?: string | null;
   city: string;
   state: string;
-  postalCode: string;
+  postalCode?: string | null;
   country: string;
   label?: string | null;
   isDefault: boolean;
