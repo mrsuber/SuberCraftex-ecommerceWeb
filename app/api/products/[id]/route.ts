@@ -177,6 +177,10 @@ export async function DELETE(
           select: {
             orderItems: true,
             cartItems: true,
+            wishlists: true,
+            reviews: true,
+            inventoryLogs: true,
+            variants: true,
           },
         },
       },
@@ -186,21 +190,58 @@ export async function DELETE(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    // Check if product has been ordered
+    // Check if product has been ordered - cannot delete products with order history
     if (product._count.orderItems > 0) {
       return NextResponse.json(
-        { error: `Cannot delete product that has been ordered. Set it as inactive instead.` },
+        { error: `Cannot delete product that has been ordered (${product._count.orderItems} orders). Set it as inactive instead to preserve order history.` },
         { status: 400 }
       );
     }
 
-    // Delete cart items first if any
-    if (product._count.cartItems > 0) {
-      await db.cartItem.deleteMany({ where: { productId: id } });
-    }
+    // Delete all related records in a transaction
+    await db.$transaction(async (tx) => {
+      // Delete cart items
+      await tx.cartItem.deleteMany({ where: { productId: id } });
 
-    // Delete product
-    await db.product.delete({ where: { id } });
+      // Delete wishlist items
+      await tx.wishlist.deleteMany({ where: { productId: id } });
+
+      // Delete reviews
+      await tx.review.deleteMany({ where: { productId: id } });
+
+      // Delete inventory logs
+      await tx.inventoryLog.deleteMany({ where: { productId: id } });
+
+      // Delete investor allocations (for variants and product)
+      await tx.investorProductAllocation.deleteMany({
+        where: {
+          OR: [
+            { productId: id },
+            { variant: { productId: id } }
+          ]
+        }
+      });
+
+      // Delete purchase order items
+      await tx.purchaseOrderItem.deleteMany({ where: { productId: id } });
+
+      // Delete variant-related records first
+      const variantIds = await tx.productVariant.findMany({
+        where: { productId: id },
+        select: { id: true }
+      });
+
+      if (variantIds.length > 0) {
+        const ids = variantIds.map(v => v.id);
+        await tx.cartItem.deleteMany({ where: { variantId: { in: ids } } });
+        await tx.inventoryLog.deleteMany({ where: { variantId: { in: ids } } });
+      }
+
+      // Variants will be cascade deleted with the product
+
+      // Finally delete the product
+      await tx.product.delete({ where: { id } });
+    });
 
     console.log(`✅ Product deleted: ${product.name}`);
 
