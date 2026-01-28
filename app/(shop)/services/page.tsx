@@ -2,6 +2,19 @@ import { Metadata } from 'next'
 import { ServiceGrid } from '@/components/services/ServiceGrid'
 import { db } from '@/lib/db'
 
+// Disable caching to always show fresh data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
+
+// Helper to convert relative URLs to absolute URLs
+function toAbsoluteUrl(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${APP_URL}${url}`
+}
+
 export const metadata: Metadata = {
   title: 'Our Services | SuberCraftex',
   description: 'Browse our professional craft and repair services including woodworking, dress making, shoe making, and more.',
@@ -42,8 +55,9 @@ export default async function ServicesPage() {
     categoryId: service.categoryId,
     short_description: service.shortDescription,
     shortDescription: service.shortDescription,
-    featured_image: service.featuredImage,
-    featuredImage: service.featuredImage,
+    featured_image: toAbsoluteUrl(service.featuredImage),
+    featuredImage: toAbsoluteUrl(service.featuredImage),
+    images: service.images?.map(img => toAbsoluteUrl(img)).filter(Boolean) || [],
     is_active: service.isActive,
     isActive: service.isActive,
     is_featured: service.isFeatured,
@@ -58,8 +72,8 @@ export default async function ServicesPage() {
     updatedAt: service.updatedAt.toISOString(),
     category: service.category ? {
       ...service.category,
-      image_url: service.category.imageUrl,
-      imageUrl: service.category.imageUrl,
+      image_url: toAbsoluteUrl(service.category.imageUrl),
+      imageUrl: toAbsoluteUrl(service.category.imageUrl),
       sort_order: service.category.sortOrder,
       sortOrder: service.category.sortOrder,
       is_active: service.category.isActive,
@@ -73,8 +87,8 @@ export default async function ServicesPage() {
 
   const serializedCategories = categories.map((cat) => ({
     ...cat,
-    image_url: cat.imageUrl,
-    imageUrl: cat.imageUrl,
+    image_url: toAbsoluteUrl(cat.imageUrl),
+    imageUrl: toAbsoluteUrl(cat.imageUrl),
     sort_order: cat.sortOrder,
     sortOrder: cat.sortOrder,
     is_active: cat.isActive,

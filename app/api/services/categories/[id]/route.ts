@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
+
+// Helper to convert relative URLs to absolute URLs
+function toAbsoluteUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${APP_URL}${url}`
+}
+
+// Transform category for API response with absolute URLs
+function transformCategory(category: any) {
+  return {
+    ...category,
+    imageUrl: toAbsoluteUrl(category.imageUrl),
+    image_url: toAbsoluteUrl(category.imageUrl),
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -53,7 +71,7 @@ export async function PATCH(
       },
     })
 
-    return NextResponse.json(updatedCategory)
+    return NextResponse.json(transformCategory(updatedCategory))
   } catch (error) {
     console.error('Error updating service category:', error)
     return NextResponse.json(

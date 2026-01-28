@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyAuth } from '@/lib/auth/verify-auth'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
+
+// Helper to convert relative URLs to absolute URLs
+function toAbsoluteUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${APP_URL}${url}`
+}
+
+// Transform category for API response with absolute URLs
+function transformCategory(category: any) {
+  return {
+    ...category,
+    imageUrl: toAbsoluteUrl(category.imageUrl),
+    image_url: toAbsoluteUrl(category.imageUrl),
+  }
+}
+
 // GET /api/services/categories - List all service categories
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +49,7 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(categories)
+    return NextResponse.json(categories.map(transformCategory))
   } catch (error) {
     console.error('Error fetching service categories:', error)
     return NextResponse.json(
@@ -98,7 +116,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(category, { status: 201 })
+    return NextResponse.json(transformCategory(category), { status: 201 })
   } catch (error) {
     console.error('Error creating service category:', error)
     return NextResponse.json(

@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyAuth } from '@/lib/auth/verify-auth'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
+
+// Helper to convert relative URLs to absolute URLs
+function toAbsoluteUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${APP_URL}${url}`
+}
+
+// Transform service for API response with absolute URLs
+function transformService(service: any) {
+  return {
+    ...service,
+    featuredImage: toAbsoluteUrl(service.featuredImage),
+    featured_image: toAbsoluteUrl(service.featuredImage),
+    images: service.images?.map((img: string) => toAbsoluteUrl(img)).filter(Boolean) || [],
+    price: Number(service.price),
+    compareAtPrice: service.compareAtPrice ? Number(service.compareAtPrice) : null,
+    compare_at_price: service.compareAtPrice ? Number(service.compareAtPrice) : null,
+    category: service.category ? {
+      ...service.category,
+      imageUrl: toAbsoluteUrl(service.category.imageUrl),
+      image_url: toAbsoluteUrl(service.category.imageUrl),
+    } : null,
+  }
+}
+
 // GET /api/services/[id] - Get service details
 export async function GET(
   request: NextRequest,
@@ -50,7 +77,7 @@ export async function GET(
       }
     }
 
-    return NextResponse.json(service)
+    return NextResponse.json(transformService(service))
   } catch (error) {
     console.error('Error fetching service:', error)
     return NextResponse.json(
@@ -153,7 +180,7 @@ export async function PATCH(
       },
     })
 
-    return NextResponse.json(service)
+    return NextResponse.json(transformService(service))
   } catch (error) {
     console.error('Error updating service:', error)
     return NextResponse.json(
