@@ -54,6 +54,7 @@ model User {
   serviceBookings     ServiceBooking[]
   cartItemServices    CartItemService[]
   bookingReviews      BookingReview[]
+  feedback            Feedback[]
 
   @@map("users")
 }
@@ -1936,7 +1937,10 @@ enum FeedbackPriority {
 
 model Feedback {
   id           String           @id @default(uuid())
-  investorId   String           @map("investor_id")
+  investorId   String?          @map("investor_id")
+  userId       String?          @map("user_id")
+  userEmail    String?          @map("user_email")
+  userName     String?          @map("user_name")
   type         FeedbackType     @default(general)
   subject      String
   message      String           @db.Text
@@ -1956,9 +1960,11 @@ model Feedback {
   resolvedAt   DateTime?        @map("resolved_at")
 
   // Relations
-  investor     Investor         @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  investor     Investor?        @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([investorId])
+  @@index([userId])
   @@index([status])
   @@index([type])
   @@index([priority])

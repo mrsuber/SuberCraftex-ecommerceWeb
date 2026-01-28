@@ -44,6 +44,14 @@ export async function GET(request: NextRequest) {
             investorNumber: true,
           },
         },
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            role: true,
+          },
+        },
         adminResponses: {
           orderBy: { createdAt: 'asc' },
         },

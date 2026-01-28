@@ -2,34 +2,44 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth/session'
 
-// GET /api/investors/feedback - Get investor's feedback history
+// GET /api/investors/feedback - Get user's feedback history (open to all authenticated users)
 export async function GET(request: NextRequest) {
   try {
     const user = await getSession()
 
-    if (!user || user.role !== 'investor') {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Unauthorized. Investor access required.' },
+        { error: 'Unauthorized. Please log in to view your feedback.' },
         { status: 401 }
       )
     }
 
-    const investor = await db.investor.findUnique({
-      where: { userId: user.id },
-    })
+    // Build where clause based on user type
+    const whereClause: any = {}
 
-    if (!investor) {
-      return NextResponse.json(
-        { error: 'Investor profile not found' },
-        { status: 404 }
-      )
+    // Check if user is an investor
+    if (user.role === 'investor') {
+      const investor = await db.investor.findUnique({
+        where: { userId: user.id },
+      })
+      if (investor) {
+        whereClause.OR = [
+          { investorId: investor.id },
+          { userId: user.id }
+        ]
+      } else {
+        whereClause.userId = user.id
+      }
+    } else {
+      // For non-investors, just get by userId
+      whereClause.userId = user.id
     }
 
     const feedback = await db.feedback.findMany({
-      where: { investorId: investor.id },
+      where: whereClause,
       include: {
         adminResponses: {
-          where: { isInternal: false }, // Only show non-internal responses to investor
+          where: { isInternal: false }, // Only show non-internal responses
           orderBy: { createdAt: 'asc' },
         },
       },
@@ -46,26 +56,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/investors/feedback - Submit new feedback
+// POST /api/investors/feedback - Submit new feedback (open to all authenticated users)
 export async function POST(request: NextRequest) {
   try {
     const user = await getSession()
 
-    if (!user || user.role !== 'investor') {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Unauthorized. Investor access required.' },
+        { error: 'Unauthorized. Please log in to submit feedback.' },
         { status: 401 }
-      )
-    }
-
-    const investor = await db.investor.findUnique({
-      where: { userId: user.id },
-    })
-
-    if (!investor) {
-      return NextResponse.json(
-        { error: 'Investor profile not found' },
-        { status: 404 }
       )
     }
 
@@ -89,16 +88,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Prepare feedback data
+    const feedbackData: any = {
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.fullName || user.email,
+      type: type || 'general',
+      subject: subject.trim(),
+      message: message.trim(),
+      screenshots: screenshots || [],
+      appVersion: appVersion || null,
+      deviceInfo: deviceInfo || null,
+    }
+
+    // If user is an investor, also link to investor record
+    if (user.role === 'investor') {
+      const investor = await db.investor.findUnique({
+        where: { userId: user.id },
+      })
+      if (investor) {
+        feedbackData.investorId = investor.id
+      }
+    }
+
     const feedback = await db.feedback.create({
-      data: {
-        investorId: investor.id,
-        type: type || 'general',
-        subject: subject.trim(),
-        message: message.trim(),
-        screenshots: screenshots || [],
-        appVersion: appVersion || null,
-        deviceInfo: deviceInfo || null,
-      },
+      data: feedbackData,
       include: {
         adminResponses: true,
       },
