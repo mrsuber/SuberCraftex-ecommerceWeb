@@ -38,14 +38,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   MoreHorizontal,
   Eye,
-  Edit,
   CheckCircle,
   Clock,
   AlertCircle,
   Star,
   Image as ImageIcon,
   ClipboardList,
+  Play,
+  Send,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AssignmentReview } from "./AssignmentReview";
 
 interface Assignment {
@@ -97,18 +102,74 @@ export function AssignmentsTable({
   canReview = false,
   onRefresh,
 }: AssignmentsTableProps) {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   const filteredAssignments = assignments.filter((assignment) => {
     return statusFilter === "all" || assignment.status === statusFilter;
   });
 
+  const handleStatusChange = async (assignmentId: string, newStatus: string) => {
+    setLoadingAction(assignmentId);
+    try {
+      const response = await fetch(
+        `/api/apprentices/${apprenticeId}/assignments/${assignmentId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update status");
+      }
+
+      toast.success(`Assignment marked as ${newStatus.replace("_", " ")}`);
+      router.refresh();
+      onRefresh?.();
+    } catch (error) {
+      console.error("Error updating assignment status:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update status");
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleDelete = async (assignmentId: string) => {
+    if (!confirm("Are you sure you want to delete this assignment?")) return;
+
+    setLoadingAction(assignmentId);
+    try {
+      const response = await fetch(
+        `/api/apprentices/${apprenticeId}/assignments/${assignmentId}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete assignment");
+      }
+
+      toast.success("Assignment deleted");
+      router.refresh();
+      onRefresh?.();
+    } catch (error) {
+      console.error("Error deleting assignment:", error);
+      toast.error("Failed to delete assignment");
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   const handleReviewSuccess = () => {
     setShowReviewDialog(false);
     setSelectedAssignment(null);
+    router.refresh();
     onRefresh?.();
   };
 
@@ -210,7 +271,11 @@ export function AssignmentsTable({
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={loadingAction === assignment.id}
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -226,6 +291,29 @@ export function AssignmentsTable({
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
+
+                          {/* Status transitions */}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs">Change Status</DropdownMenuLabel>
+
+                          {assignment.status === "pending" && (
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(assignment.id, "in_progress")}
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              Start (In Progress)
+                            </DropdownMenuItem>
+                          )}
+
+                          {["in_progress", "needs_revision", "overdue"].includes(assignment.status) && (
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(assignment.id, "submitted")}
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              Mark as Submitted
+                            </DropdownMenuItem>
+                          )}
+
                           {canReview && assignment.status === "submitted" && (
                             <DropdownMenuItem
                               onClick={() => {
@@ -234,9 +322,46 @@ export function AssignmentsTable({
                               }}
                             >
                               <CheckCircle className="mr-2 h-4 w-4" />
-                              Review
+                              Review & Rate
                             </DropdownMenuItem>
                           )}
+
+                          {canReview && !["completed", "pending"].includes(assignment.status) && (
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(assignment.id, "completed")}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                              Mark Completed
+                            </DropdownMenuItem>
+                          )}
+
+                          {canReview && ["completed", "submitted"].includes(assignment.status) && (
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(assignment.id, "needs_revision")}
+                            >
+                              <RotateCcw className="mr-2 h-4 w-4 text-orange-500" />
+                              Send Back for Revision
+                            </DropdownMenuItem>
+                          )}
+
+                          {canReview && !["pending"].includes(assignment.status) && (
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(assignment.id, "pending")}
+                            >
+                              <Clock className="mr-2 h-4 w-4" />
+                              Reset to Pending
+                            </DropdownMenuItem>
+                          )}
+
+                          {/* Delete */}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDelete(assignment.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
