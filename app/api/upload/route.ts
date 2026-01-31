@@ -119,6 +119,28 @@ export async function POST(request: NextRequest) {
       // Banner upload: /public/uploads/banners/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'banners');
       url = `/api/uploads/banners/${filename}`;
+    } else if (type === 'apprentice-photo') {
+      // Apprentice profile photo: /public/uploads/apprentices/
+      uploadsDir = join(process.cwd(), 'public', 'uploads', 'apprentices');
+      url = `/api/uploads/apprentices/${filename}`;
+    } else if (type === 'assignment' || type === 'submission') {
+      // Assignment/submission photos
+      const apprenticeId = formData.get('apprenticeId') as string | null;
+      const assignmentId = formData.get('assignmentId') as string | null;
+
+      if (type === 'assignment' && apprenticeId) {
+        // Assignment instruction photos
+        uploadsDir = join(process.cwd(), 'public', 'uploads', 'apprentices', apprenticeId, 'assignments');
+        url = `/api/uploads/apprentices/${apprenticeId}/assignments/${filename}`;
+      } else if (type === 'submission' && assignmentId) {
+        // Submission photos for completed work
+        uploadsDir = join(process.cwd(), 'public', 'uploads', 'assignments', assignmentId, 'submissions');
+        url = `/api/uploads/assignments/${assignmentId}/submissions/${filename}`;
+      } else {
+        return NextResponse.json({
+          error: 'Missing apprenticeId or assignmentId for upload type'
+        }, { status: 400 });
+      }
     } else {
       // Product upload: /public/uploads/products/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'products');

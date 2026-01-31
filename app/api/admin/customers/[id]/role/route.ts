@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 
 const roleSchema = z.object({
-  role: z.enum(['customer', 'admin', 'driver', 'cashier', 'tailor', 'investor']),
+  role: z.enum(['customer', 'admin', 'driver', 'cashier', 'tailor', 'investor', 'apprentice']),
 });
 
 // PATCH - Update user role
@@ -109,6 +109,35 @@ export async function PATCH(
             },
           });
           console.log(`✅ Created Investor profile for user ${user.email}`);
+        }
+      }
+
+      // Create Apprentice profile if role is changed to apprentice and profile doesn't exist
+      if (role === 'apprentice') {
+        const existingApprentice = await tx.apprentice.findUnique({
+          where: { userId: id },
+        });
+
+        if (!existingApprentice) {
+          // Generate apprentice number
+          const year = new Date().getFullYear();
+          const count = await tx.apprentice.count();
+          const apprenticeNumber = `APP-${year}-${String(count + 1).padStart(3, '0')}`;
+
+          await tx.apprentice.create({
+            data: {
+              userId: id,
+              apprenticeNumber,
+              fullName: user.fullName || 'Apprentice',
+              email: user.email,
+              phone: user.phone || 'Not provided',
+              department: 'operations', // Default department
+              mentorId: '', // Must be set later from apprentice edit page
+              mentorType: 'admin',
+              startDate: new Date(),
+            },
+          });
+          console.log(`✅ Created Apprentice profile for user ${user.email}`);
         }
       }
 

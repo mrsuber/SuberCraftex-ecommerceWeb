@@ -28,6 +28,7 @@ import {
   Clock,
   Wallet,
   MessageSquare,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -111,6 +112,11 @@ const adminNavigation = [
     name: "Investor Feedback",
     href: "/dashboard/feedback",
     icon: MessageSquare,
+  },
+  {
+    name: "Apprentices",
+    href: "/dashboard/apprentices",
+    icon: GraduationCap,
   },
   {
     name: "Suppliers",

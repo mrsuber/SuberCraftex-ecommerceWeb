@@ -22,6 +22,7 @@ enum UserRole {
   cashier
   tailor
   investor
+  apprentice
 }
 
 model User {
@@ -47,6 +48,7 @@ model User {
   cashier             Cashier?
   tailor              Tailor?
   investor            Investor?
+  apprentice          Apprentice?
   inventoryLogs       InventoryLog[]
   emailVerifications  EmailVerification[]
   passwordResets      PasswordReset[]
@@ -2002,4 +2004,132 @@ model FeedbackResponse {
   @@index([feedbackId])
   @@index([createdAt])
   @@map("feedback_responses")
+}
+
+// ============================================================================
+// APPRENTICE MANAGEMENT SYSTEM
+// ============================================================================
+
+enum ApprenticeStatus {
+  pending      // Awaiting start
+  active       // Currently training
+  on_hold      // Paused training
+  completed    // Finished program
+  terminated   // Left early
+}
+
+enum Department {
+  tailoring
+  sales
+  delivery
+  operations
+}
+
+enum AssignmentStatus {
+  pending       // Not started
+  in_progress   // Being worked on
+  submitted     // Submitted for review
+  needs_revision // Needs more work
+  completed     // Successfully completed
+  overdue       // Past deadline
+}
+
+model Apprentice {
+  id                    String            @id @default(uuid())
+  userId                String            @unique @map("user_id")
+  apprenticeNumber      String            @unique @map("apprentice_number") // APP-2025-001
+  fullName              String            @map("full_name")
+  email                 String
+  phone                 String
+  photoUrl              String?           @map("photo_url")
+
+  // Department & Mentorship
+  department            Department
+  mentorId              String            @map("mentor_id")
+  mentorType            String            @map("mentor_type") // 'tailor', 'cashier', 'driver', 'admin'
+
+  // Program Details
+  startDate             DateTime          @map("start_date")
+  expectedEndDate       DateTime?         @map("expected_end_date")
+  actualEndDate         DateTime?         @map("actual_end_date")
+  status                ApprenticeStatus  @default(pending)
+
+  // Emergency Contact
+  emergencyContactName  String?           @map("emergency_contact_name")
+  emergencyContactPhone String?           @map("emergency_contact_phone")
+
+  // Notes
+  notes                 String?
+  isActive              Boolean           @default(true) @map("is_active")
+
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments           ApprenticeAssignment[]
+  certificates          ApprenticeCertificate[]
+
+  @@index([mentorId])
+  @@index([department])
+  @@index([status])
+  @@map("apprentices")
+}
+
+model ApprenticeAssignment {
+  id                String            @id @default(uuid())
+  apprenticeId      String            @map("apprentice_id")
+  title             String
+  description       String            @db.Text
+  instructions      String?           @db.Text
+
+  // Timeline
+  assignedDate      DateTime          @default(now()) @map("assigned_date")
+  dueDate           DateTime?         @map("due_date")
+  completedDate     DateTime?         @map("completed_date")
+
+  // Status & Evaluation
+  status            AssignmentStatus  @default(pending)
+  rating            Int?              // 1-5 stars
+  feedback          String?           @db.Text
+
+  // Photos
+  assignmentPhotos  String[]          @default([]) @map("assignment_photos")  // Photos of what to do
+  submissionPhotos  String[]          @default([]) @map("submission_photos")  // Photos of completed work
+
+  // Mentor Info
+  assignedBy        String            @map("assigned_by") // User ID of mentor/admin
+  reviewedBy        String?           @map("reviewed_by")
+  reviewedAt        DateTime?         @map("reviewed_at")
+
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  apprentice        Apprentice        @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([apprenticeId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("apprentice_assignments")
+}
+
+model ApprenticeCertificate {
+  id                String    @id @default(uuid())
+  apprenticeId      String    @map("apprentice_id")
+  certificateNumber String    @unique @map("certificate_number") // CERT-2025-001
+  title             String
+  description       String?
+  skills            String[]  @default([])
+
+  issuedDate        DateTime  @default(now()) @map("issued_date")
+  issuedBy          String    @map("issued_by") // Admin user ID
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  apprentice        Apprentice @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([apprenticeId])
+  @@map("apprentice_certificates")
 }
