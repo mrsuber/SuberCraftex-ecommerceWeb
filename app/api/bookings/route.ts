@@ -38,6 +38,7 @@ function transformBookingToSnakeCase(booking: any) {
     created_at: booking.createdAt,
     updated_at: booking.updatedAt,
     customer_provided_materials: booking.customerProvidedMaterials,
+    design_selections: booking.designSelections,
     // Transform nested service
     service: booking.service ? {
       id: booking.service.id,
@@ -333,6 +334,7 @@ export async function POST(request: NextRequest) {
       desiredOutcome,
       customerProvidedMaterials = false,
       materials = [], // Array of { materialId, quantity }
+      designSelections, // Array of { categoryId, categoryName, optionIds: [{optionId, optionName, imageUrl}] }
     } = body
 
     // Validate required fields
@@ -481,6 +483,7 @@ export async function POST(request: NextRequest) {
           requirementPhotos,
           desiredOutcome: desiredOutcome || null,
           customerProvidedMaterials,
+          designSelections: designSelections || undefined,
         },
         include: {
           service: {

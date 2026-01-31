@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Calendar, Clock, User, Mail, Phone, Tag, FileText, Ruler, CalendarPlus, Camera } from 'lucide-react'
+import { Calendar, Clock, User, Mail, Phone, Tag, FileText, Ruler, CalendarPlus, Camera, Palette } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/currency'
 import Link from 'next/link'
@@ -336,6 +336,43 @@ export default async function BookingPage({ params }: BookingPageProps) {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Design Selections */}
+      {booking.designSelections && Array.isArray(booking.designSelections) && (booking.designSelections as any[]).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Design Selections
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {(booking.designSelections as any[]).map((selection: any, catIndex: number) => (
+              <div key={catIndex}>
+                <div className="text-sm font-medium text-muted-foreground mb-2">
+                  {selection.categoryName}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {selection.optionIds?.map((opt: any, optIndex: number) => (
+                    <div key={optIndex} className="border rounded-lg overflow-hidden">
+                      <div className="aspect-square bg-muted">
+                        <img
+                          src={opt.imageUrl}
+                          alt={opt.optionName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="p-2">
+                        <p className="text-sm font-medium">{opt.optionName}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}

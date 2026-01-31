@@ -45,6 +45,15 @@ export async function GET(
           where: { isActive: true },
           orderBy: { dayOfWeek: 'asc' },
         },
+        designCategories: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            options: {
+              where: { isActive: true },
+              orderBy: { sortOrder: 'asc' },
+            },
+          },
+        },
         _count: {
           select: {
             bookings: {

@@ -90,6 +90,7 @@ export function EnhancedServiceBookingForm({ service }: EnhancedServiceBookingFo
           desiredOutcome: data.customizationNotes,
           customerNotes: data.customizationNotes,
           materials: data.selectedMaterials,
+          designSelections: data.designSelections,
           // TODO: Get from session
           customerName: 'Current User',
           customerEmail: 'user@example.com',

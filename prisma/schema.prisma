@@ -920,6 +920,7 @@ model Service {
   materials         ServiceMaterial[]    // Link to materials
   upcomingServices  UpcomingService[]    // Link to upcoming services
   bookingReviews    BookingReview[]      // Reviews from completed bookings
+  designCategories  ServiceDesignCategory[] // Design option categories
 
   @@index([categoryId])
   @@index([slug])
@@ -996,6 +997,9 @@ model ServiceBooking {
   desiredOutcome           String?   @map("desired_outcome")
   customerProvidedMaterials Boolean  @default(false) @map("customer_provided_materials")
 
+  // Design selections (customer's chosen design options)
+  designSelections         Json?     @map("design_selections") // [{categoryId, categoryName, optionIds: [{optionId, optionName, imageUrl}]}]
+
   // Pricing
   price              Decimal           @db.Decimal(10, 2)
   finalPrice         Decimal?          @map("final_price") @db.Decimal(10, 2) // Locked price after quote approval
@@ -1036,6 +1040,43 @@ model ServiceBooking {
   @@index([scheduledDate])
   @@index([bookingNumber])
   @@map("service_bookings")
+}
+
+// ============================================================================
+// SERVICE DESIGN OPTIONS (Gallery System)
+// ============================================================================
+
+model ServiceDesignCategory {
+  id          String   @id @default(uuid())
+  serviceId   String   @map("service_id")
+  name        String   // "Collar", "Pocket", "Cuff"
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isRequired  Boolean  @default(true) @map("is_required")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  options     ServiceDesignOption[]
+
+  @@index([serviceId])
+  @@map("service_design_categories")
+}
+
+model ServiceDesignOption {
+  id          String   @id @default(uuid())
+  categoryId  String   @map("category_id")
+  name        String   // "Mandarin Collar"
+  imageUrl    String   @map("image_url")
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  category    ServiceDesignCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@map("service_design_options")
 }
 
 // ============================================================================

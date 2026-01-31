@@ -119,6 +119,10 @@ export async function POST(request: NextRequest) {
       // Banner upload: /public/uploads/banners/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'banners');
       url = `/api/uploads/banners/${filename}`;
+    } else if (type === 'design-option') {
+      // Design option image: /public/uploads/design-options/
+      uploadsDir = join(process.cwd(), 'public', 'uploads', 'design-options');
+      url = `/api/uploads/design-options/${filename}`;
     } else if (type === 'apprentice-photo') {
       // Apprentice profile photo: /public/uploads/apprentices/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'apprentices');

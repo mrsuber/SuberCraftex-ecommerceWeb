@@ -2,6 +2,9 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db'
 import { ServiceForm } from '@/components/dashboard/ServiceForm'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Palette } from 'lucide-react'
 
 interface EditServicePageProps {
   params: Promise<{ id: string }>
@@ -94,11 +97,19 @@ export default async function EditServicePage({ params }: EditServicePageProps) 
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold">Edit Service</h1>
-        <p className="text-muted-foreground mt-1">
-          Update service details and settings
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Edit Service</h1>
+          <p className="text-muted-foreground mt-1">
+            Update service details and settings
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href={`/dashboard/services/${id}/design`}>
+            <Palette className="w-4 h-4 mr-2" />
+            Manage Design Options
+          </Link>
+        </Button>
       </div>
 
       <ServiceForm
