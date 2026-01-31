@@ -7,6 +7,7 @@ import { ServiceTypeSelector } from './ServiceTypeSelector'
 import { OnsiteBookingForm, OnsiteBookingData } from './onsite/OnsiteBookingForm'
 import { CustomProductionForm, CustomProductionData } from './custom/CustomProductionForm'
 import { CollectRepairForm, CollectRepairData } from './collect/CollectRepairForm'
+import { DesignOptionsPicker, DesignSelection } from './DesignOptionsPicker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, CheckCircle } from 'lucide-react'
@@ -22,6 +23,7 @@ export function EnhancedServiceBookingForm({ service }: EnhancedServiceBookingFo
   const [selectedServiceType, setSelectedServiceType] = useState<ServiceType | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [bookingCreated, setBookingCreated] = useState(false)
+  const [designSelections, setDesignSelections] = useState<DesignSelection[]>([])
 
   const handleOnsiteSubmit = async (data: OnsiteBookingData) => {
     setIsSubmitting(true)
@@ -37,6 +39,7 @@ export function EnhancedServiceBookingForm({ service }: EnhancedServiceBookingFo
           customerNotes: data.notes,
           serviceType: 'onsite',
           requirementPhotos: data.requirementPhotos,
+          designSelections: designSelections.length > 0 ? designSelections : undefined,
           // These would come from user profile or be collected separately
           customerName: 'Current User', // TODO: Get from session
           customerEmail: 'user@example.com', // TODO: Get from session
@@ -90,7 +93,7 @@ export function EnhancedServiceBookingForm({ service }: EnhancedServiceBookingFo
           desiredOutcome: data.customizationNotes,
           customerNotes: data.customizationNotes,
           materials: data.selectedMaterials,
-          designSelections: data.designSelections,
+          designSelections: designSelections.length > 0 ? designSelections : undefined,
           // TODO: Get from session
           customerName: 'Current User',
           customerEmail: 'user@example.com',
@@ -150,6 +153,7 @@ export function EnhancedServiceBookingForm({ service }: EnhancedServiceBookingFo
           requirementPhotos: data.itemPhotos,
           desiredOutcome: data.desiredOutcome,
           customerNotes: data.additionalNotes,
+          designSelections: designSelections.length > 0 ? designSelections : undefined,
           // TODO: Get from session
           customerName: 'Current User',
           customerEmail: 'user@example.com',
@@ -241,6 +245,15 @@ export function EnhancedServiceBookingForm({ service }: EnhancedServiceBookingFo
             )}
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Design Options - shown for all service types */}
+      {selectedServiceType && (
+        <DesignOptionsPicker
+          serviceId={service.id}
+          value={designSelections}
+          onChange={setDesignSelections}
+        />
       )}
 
       {/* Booking Forms */}

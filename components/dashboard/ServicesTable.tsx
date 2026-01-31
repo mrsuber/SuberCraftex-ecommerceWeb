@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Edit, MoreHorizontal, Trash2, Eye, Clock, Search } from 'lucide-react'
+import { Edit, MoreHorizontal, Trash2, Eye, Clock, Search, Palette } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/currency'
 import { useRouter } from 'next/navigation'
@@ -213,6 +213,12 @@ export function ServicesTable({ initialServices, categories }: ServicesTableProp
                           <Link href={`/dashboard/services/${service.id}/edit`}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/services/${service.id}/design`}>
+                            <Palette className="mr-2 h-4 w-4" />
+                            Design Options
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />

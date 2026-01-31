@@ -11,7 +11,7 @@ import { MaterialGrid } from '@/components/materials/MaterialGrid'
 import { MaterialQuantitySelector } from '@/components/materials/MaterialQuantitySelector'
 import { AlertCircle, Package, Image as ImageIcon, FileText, Link as LinkIcon } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { DesignOptionsPicker, DesignSelection } from '@/components/services/DesignOptionsPicker'
+import type { DesignSelection } from '@/components/services/DesignOptionsPicker'
 import type { Service, Material } from '@/types'
 
 interface CustomProductionFormProps {
@@ -55,7 +55,6 @@ export function CustomProductionForm({
 
   const [desiredProductPhotos, setDesiredProductPhotos] = useState<string[]>([])
   const [customizationNotes, setCustomizationNotes] = useState('')
-  const [designSelections, setDesignSelections] = useState<DesignSelection[]>([])
 
   // Fetch materials linked to this service
   useEffect(() => {
@@ -152,7 +151,7 @@ export function CustomProductionForm({
       materialRequests,
       desiredProductPhotos,
       customizationNotes,
-      designSelections: designSelections.length > 0 ? designSelections : undefined,
+      designSelections: undefined, // Passed from parent EnhancedServiceBookingForm
     })
   }
 
@@ -171,13 +170,6 @@ export function CustomProductionForm({
           After submitting, we'll create a custom quote based on materials and estimated labor.
         </AlertDescription>
       </Alert>
-
-      {/* Design Options Picker */}
-      <DesignOptionsPicker
-        serviceId={service.id}
-        value={designSelections}
-        onChange={setDesignSelections}
-      />
 
       {/* Material Selection */}
       <Card>
