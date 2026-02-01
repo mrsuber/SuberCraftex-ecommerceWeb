@@ -844,6 +844,36 @@ export default function InvestorDetailClient({
     }
   }
 
+  const [removingAllocationId, setRemovingAllocationId] = useState<string | null>(null)
+
+  const handleRemoveAllocation = async (allocationId: string, productName: string) => {
+    if (!confirm(`Are you sure you want to remove the allocation for "${productName}"?\n\nThis will:\n- Return the units to stock\n- Refund the investment to the investor's cash balance\n\nThis action cannot be undone.`)) {
+      return
+    }
+
+    setRemovingAllocationId(allocationId)
+    setError('')
+
+    try {
+      const res = await fetch(`/api/admin/investors/${investor.id}/remove-allocation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allocationId }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to remove allocation')
+
+      alert(data.message)
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message)
+      alert(`Error: ${err.message}`)
+    } finally {
+      setRemovingAllocationId(null)
+    }
+  }
+
   const selectedProduct = products.find(p => p.id === productForm.productId)
 
   return (
@@ -2131,8 +2161,28 @@ export default function InvestorDetailClient({
                           />
                         )}
                         <div className="flex-1">
-                          <h4 className="font-semibold">{alloc.product.name}</h4>
-                          <p className="text-sm text-gray-600">SKU: {alloc.product.sku}</p>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-semibold">{alloc.product.name}</h4>
+                              <p className="text-sm text-gray-600">SKU: {alloc.product.sku}</p>
+                            </div>
+                            {alloc.quantitySold === 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={removingAllocationId === alloc.id}
+                                onClick={() => handleRemoveAllocation(alloc.id, alloc.product.name)}
+                              >
+                                {removingAllocationId === alloc.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                                <span className="ml-1">Remove</span>
+                              </Button>
+                            )}
+                          </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
                             <div>
                               <p className="text-xs text-gray-500">Quantity</p>
@@ -2159,6 +2209,11 @@ export default function InvestorDetailClient({
                               </p>
                             </div>
                           </div>
+                          {alloc.quantitySold > 0 && (
+                            <p className="text-xs text-amber-600 mt-2">
+                              {alloc.quantitySold} units sold — cannot remove this allocation
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
