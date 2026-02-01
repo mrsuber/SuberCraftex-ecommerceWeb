@@ -144,26 +144,9 @@ export async function POST(
         },
       })
 
-      // Decrement inventory - allocated products are reserved for the investor
-      if (variantId) {
-        await tx.productVariant.update({
-          where: { id: variantId },
-          data: {
-            inventoryCount: {
-              decrement: quantity,
-            },
-          },
-        })
-      } else if (product.trackInventory) {
-        await tx.product.update({
-          where: { id: productId },
-          data: {
-            inventoryCount: {
-              decrement: quantity,
-            },
-          },
-        })
-      }
+      // NOTE: Inventory is NOT decremented here. Allocating to an investor means
+      // they own the units, but the product stays in the store for customers to buy.
+      // Inventory only decreases when an actual customer order is placed.
 
       // Update investor cash balance
       const updatedInvestor = await tx.investor.update({

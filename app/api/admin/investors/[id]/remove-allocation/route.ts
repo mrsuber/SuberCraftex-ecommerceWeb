@@ -78,22 +78,8 @@ export async function POST(
         where: { id: allocationId },
       })
 
-      // Restore inventory
-      if (allocation.variantId) {
-        await tx.productVariant.update({
-          where: { id: allocation.variantId },
-          data: {
-            inventoryCount: { increment: allocation.quantity },
-          },
-        })
-      } else if (allocation.product.trackInventory) {
-        await tx.product.update({
-          where: { id: allocation.productId },
-          data: {
-            inventoryCount: { increment: allocation.quantity },
-          },
-        })
-      }
+      // NOTE: Inventory is NOT restored here because allocation never decremented it.
+      // Allocating to an investor is ownership tracking — the product stays in the store.
 
       // Refund investor cash balance
       const updatedInvestor = await tx.investor.update({
@@ -125,7 +111,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Allocation removed. ${allocation.quantity} units returned to stock and ${allocation.totalInvestment.toString()} FCFA refunded.`,
+      message: `Allocation removed. ${allocation.totalInvestment.toString()} FCFA refunded to investor cash balance.`,
       investor: result.updatedInvestor,
     })
   } catch (error: any) {
