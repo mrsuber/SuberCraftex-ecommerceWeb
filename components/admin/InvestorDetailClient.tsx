@@ -1204,11 +1204,13 @@ export default function InvestorDetailClient({
                       value={productForm.productId}
                       onValueChange={(value) => {
                         const product = products.find(p => p.id === value)
+                        // Default to cost price if available, otherwise selling price
+                        const defaultPrice = product?.costPerItem || product?.price || ''
                         setProductForm({
                           ...productForm,
                           productId: value,
                           variantId: '',
-                          purchasePrice: product?.price.toString() || '',
+                          purchasePrice: defaultPrice.toString(),
                         })
                       }}
                     >
@@ -1218,7 +1220,7 @@ export default function InvestorDetailClient({
                       <SelectContent>
                         {products.map(product => (
                           <SelectItem key={product.id} value={product.id}>
-                            {product.name} ({product.sku}) - {formatCurrency(parseFloat(product.price))}
+                            {product.name} ({product.sku})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1232,10 +1234,12 @@ export default function InvestorDetailClient({
                         value={productForm.variantId}
                         onValueChange={(value) => {
                           const variant = selectedProduct.variants.find((v: any) => v.id === value)
+                          // For variants, use variant price or fallback to product cost/price
+                          const defaultPrice = variant?.price || selectedProduct.costPerItem || selectedProduct.price
                           setProductForm({
                             ...productForm,
                             variantId: value,
-                            purchasePrice: variant?.price.toString() || selectedProduct.price.toString(),
+                            purchasePrice: defaultPrice?.toString() || '',
                           })
                         }}
                       >
@@ -1246,11 +1250,44 @@ export default function InvestorDetailClient({
                           <SelectItem value="">No variant</SelectItem>
                           {selectedProduct.variants.map((variant: any) => (
                             <SelectItem key={variant.id} value={variant.id}>
-                              {variant.name} ({variant.sku}) - {formatCurrency(parseFloat(variant.price))}
+                              {variant.name} ({variant.sku})
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+
+                  {/* Pricing info */}
+                  {selectedProduct && (
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <div className="text-sm font-medium text-blue-900 mb-2">Price Information</div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-blue-700">Selling Price:</span>
+                          <span className="ml-2 font-semibold text-blue-900">
+                            {formatCurrency(parseFloat(
+                              productForm.variantId
+                                ? selectedProduct.variants.find((v: any) => v.id === productForm.variantId)?.price || selectedProduct.price
+                                : selectedProduct.price
+                            ))}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-blue-700">Cost Price:</span>
+                          <span className="ml-2 font-semibold text-blue-900">
+                            {selectedProduct.costPerItem
+                              ? formatCurrency(parseFloat(selectedProduct.costPerItem))
+                              : <span className="text-gray-400 font-normal">Not set</span>
+                            }
+                          </span>
+                        </div>
+                      </div>
+                      {selectedProduct.costPerItem && (
+                        <div className="mt-2 text-xs text-blue-600">
+                          Margin: {formatCurrency(parseFloat(selectedProduct.price) - parseFloat(selectedProduct.costPerItem))} per unit
+                        </div>
+                      )}
                     </div>
                   )}
 

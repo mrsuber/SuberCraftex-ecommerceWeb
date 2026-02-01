@@ -70,6 +70,7 @@ export default async function InvestorDetailPage({
       name: true,
       sku: true,
       price: true,
+      costPerItem: true,
       featuredImage: true,
       inventoryCount: true,
       investorAllocations: {
@@ -223,6 +224,7 @@ export default async function InvestorDetailPage({
     return {
       ...p,
       price: p.price.toString(),
+      costPerItem: p.costPerItem?.toString() || null,
       inventoryCount: p.inventoryCount,
       allocatedQuantity: productAllocatedQty,
       availableQuantity: Math.max(0, p.inventoryCount - productAllocatedQty),
