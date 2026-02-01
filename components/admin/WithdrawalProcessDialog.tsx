@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Clock, Phone, User, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
+import Image from 'next/image'
 
 interface WithdrawalProcessDialogProps {
   open: boolean
@@ -26,12 +27,46 @@ export default function WithdrawalProcessDialog({
   onSuccess,
 }: WithdrawalProcessDialogProps) {
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [action, setAction] = useState<'approve' | 'reject' | 'complete'>('approve')
   const [formData, setFormData] = useState({
     approvedAmount: request.amount || '0',
     adminNotes: '',
     rejectionReason: '',
+    adminReceiptUrl: '',
   })
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      uploadFormData.append('type', 'admin-withdrawal-receipt')
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload image')
+      }
+
+      setFormData({ ...formData, adminReceiptUrl: data.url })
+      toast.success('Receipt uploaded successfully')
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast.error(error.message || 'Failed to upload receipt')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,11 +76,20 @@ export default function WithdrawalProcessDialog({
       // Validation
       if (action === 'approve' && (!formData.approvedAmount || parseFloat(formData.approvedAmount) <= 0)) {
         toast.error('Please enter a valid approved amount')
+        setLoading(false)
         return
       }
 
       if (action === 'reject' && !formData.rejectionReason) {
         toast.error('Please provide a rejection reason')
+        setLoading(false)
+        return
+      }
+
+      // Require receipt for cash/profit withdrawals when completing
+      if (action === 'complete' && ['cash', 'profit'].includes(request.type) && !formData.adminReceiptUrl) {
+        toast.error('Please upload a payment receipt')
+        setLoading(false)
         return
       }
 
@@ -57,6 +101,7 @@ export default function WithdrawalProcessDialog({
           adminNotes: formData.adminNotes || undefined,
           approvedAmount: action === 'approve' ? parseFloat(formData.approvedAmount) : undefined,
           rejectionReason: action === 'reject' ? formData.rejectionReason : undefined,
+          adminReceiptUrl: action === 'complete' ? formData.adminReceiptUrl : undefined,
         }),
       })
 
@@ -71,7 +116,7 @@ export default function WithdrawalProcessDialog({
           ? 'Withdrawal request approved'
           : action === 'reject'
           ? 'Withdrawal request rejected'
-          : 'Withdrawal completed'
+          : 'Payment sent - awaiting investor confirmation'
       )
 
       onOpenChange(false)
@@ -98,16 +143,43 @@ export default function WithdrawalProcessDialog({
   }
 
   const getStatusIcon = (status: string) => {
-    if (status === 'completed') return <CheckCircle2 className="h-4 w-4 text-green-600" />
+    if (status === 'completed' || status === 'confirmed') return <CheckCircle2 className="h-4 w-4 text-green-600" />
     if (status === 'rejected') return <XCircle className="h-4 w-4 text-red-600" />
-    if (status === 'approved') return <CheckCircle2 className="h-4 w-4 text-blue-600" />
+    if (status === 'approved' || status === 'awaiting_investor_confirmation') return <CheckCircle2 className="h-4 w-4 text-blue-600" />
+    if (status === 'disputed') return <AlertCircle className="h-4 w-4 text-orange-600" />
     return <Clock className="h-4 w-4 text-yellow-600" />
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'PENDING',
+      approved: 'APPROVED',
+      awaiting_investor_confirmation: 'AWAITING CONFIRMATION',
+      processing: 'PROCESSING',
+      completed: 'COMPLETED',
+      confirmed: 'CONFIRMED',
+      rejected: 'REJECTED',
+      cancelled: 'CANCELLED',
+      disputed: 'DISPUTED',
+    }
+    return labels[status] || status.toUpperCase()
+  }
+
+  const getStatusVariant = (status: string) => {
+    if (status === 'completed' || status === 'confirmed') return 'default'
+    if (status === 'rejected') return 'destructive'
+    if (status === 'approved' || status === 'awaiting_investor_confirmation') return 'default'
+    if (status === 'disputed') return 'destructive'
+    return 'secondary'
   }
 
   // Determine available actions based on current status
   const canApprove = request.status === 'pending'
-  const canReject = request.status === 'pending' || request.status === 'approved'
-  const canComplete = request.status === 'approved' || request.status === 'pending'
+  const canReject = request.status === 'pending' || request.status === 'approved' || request.status === 'disputed'
+  const canComplete = request.status === 'approved' || request.status === 'pending' || request.status === 'disputed'
+
+  // Check if request has momo details
+  const hasMomoDetails = request.momoNumber || request.momoName || request.momoProvider
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,18 +201,8 @@ export default function WithdrawalProcessDialog({
               </div>
               <div className="flex items-center gap-2">
                 {getStatusIcon(request.status)}
-                <Badge
-                  variant={
-                    request.status === 'completed'
-                      ? 'default'
-                      : request.status === 'rejected'
-                      ? 'destructive'
-                      : request.status === 'approved'
-                      ? 'default'
-                      : 'secondary'
-                  }
-                >
-                  {request.status.toUpperCase()}
+                <Badge variant={getStatusVariant(request.status)}>
+                  {getStatusLabel(request.status)}
                 </Badge>
               </div>
             </div>
@@ -173,6 +235,33 @@ export default function WithdrawalProcessDialog({
               )}
             </div>
 
+            {/* Mobile Money Details - Prominently displayed */}
+            {hasMomoDetails && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                <p className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Send Payment To:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs text-blue-600">Provider</p>
+                    <p className="font-semibold text-blue-900">{request.momoProvider || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-600">Phone Number</p>
+                    <p className="font-semibold text-blue-900 text-lg">{request.momoNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-600">Account Name</p>
+                    <p className="font-semibold text-blue-900 flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      {request.momoName || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {request.requestReason && (
               <div>
                 <p className="text-sm text-gray-500">Reason</p>
@@ -200,6 +289,29 @@ export default function WithdrawalProcessDialog({
                 <p className="text-sm text-red-700">{request.rejectionReason}</p>
               </div>
             )}
+
+            {/* Show investor feedback for disputed requests */}
+            {request.investorFeedback && (
+              <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                <p className="text-sm text-orange-800 font-medium">Investor Dispute Feedback</p>
+                <p className="text-sm text-orange-700">{request.investorFeedback}</p>
+              </div>
+            )}
+
+            {/* Show existing admin receipt if any */}
+            {request.adminReceiptUrl && (
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Previous Payment Receipt</p>
+                <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                  <Image
+                    src={request.adminReceiptUrl}
+                    alt="Payment Receipt"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Form */}
@@ -216,7 +328,7 @@ export default function WithdrawalProcessDialog({
                       <SelectItem value="approve">Approve Request</SelectItem>
                     )}
                     {canComplete && (
-                      <SelectItem value="complete">Complete Withdrawal</SelectItem>
+                      <SelectItem value="complete">Send Payment & Upload Receipt</SelectItem>
                     )}
                     {canReject && (
                       <SelectItem value="reject">Reject Request</SelectItem>
@@ -225,7 +337,7 @@ export default function WithdrawalProcessDialog({
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
                   {action === 'approve' && 'Approve the request for processing'}
-                  {action === 'complete' && 'Complete and finalize the withdrawal (deducts balance)'}
+                  {action === 'complete' && 'Send payment to investor and upload proof. Investor will confirm receipt.'}
                   {action === 'reject' && 'Reject and decline the request'}
                 </p>
               </div>
@@ -267,18 +379,84 @@ export default function WithdrawalProcessDialog({
               )}
 
               {action === 'complete' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                  <p className="text-sm text-amber-800 font-medium">⚠️ Important</p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    Completing this withdrawal will immediately deduct from the investor's balance.
-                    Make sure you have transferred the funds before completing.
-                  </p>
-                  {request.type === 'equipment_share' && (
-                    <p className="text-sm text-amber-700 mt-2">
-                      Equipment exit will be calculated based on current equipment value and ownership percentage.
+                <>
+                  {/* Payment Instructions */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                    <p className="text-sm text-amber-800 font-medium flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Payment Instructions
                     </p>
-                  )}
-                </div>
+                    <ol className="text-sm text-amber-700 mt-2 list-decimal list-inside space-y-1">
+                      <li>Send <strong>{formatCurrency(parseFloat(request.approvedAmount || request.amount))}</strong> to the investor's mobile money</li>
+                      {hasMomoDetails && (
+                        <li>
+                          Provider: <strong>{request.momoProvider}</strong>, Number: <strong>{request.momoNumber}</strong>
+                        </li>
+                      )}
+                      <li>Take a screenshot of your payment confirmation</li>
+                      <li>Upload the receipt below</li>
+                      <li>Investor will confirm receipt before their balance is updated</li>
+                    </ol>
+                  </div>
+
+                  {/* Receipt Upload */}
+                  <div>
+                    <Label>
+                      Payment Receipt <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="mt-2">
+                      {formData.adminReceiptUrl ? (
+                        <div className="space-y-2">
+                          <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                            <Image
+                              src={formData.adminReceiptUrl}
+                              alt="Uploaded Receipt"
+                              fill
+                              className="object-contain"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setFormData({ ...formData, adminReceiptUrl: '' })}
+                          >
+                            Remove & Upload Different Image
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          {uploading ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                              <span className="text-sm text-gray-600">Uploading...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                              <p className="text-sm text-gray-600 mt-2">
+                                Click to upload payment receipt
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                PNG, JPG up to 10MB
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               <div>
@@ -293,17 +471,17 @@ export default function WithdrawalProcessDialog({
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading || uploading}>
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || uploading}
                   variant={action === 'reject' ? 'destructive' : 'default'}
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {action === 'approve' && 'Approve Request'}
-                  {action === 'complete' && 'Complete Withdrawal'}
+                  {action === 'complete' && 'Send Payment'}
                   {action === 'reject' && 'Reject Request'}
                 </Button>
               </DialogFooter>
@@ -312,7 +490,25 @@ export default function WithdrawalProcessDialog({
 
           {!canApprove && !canReject && !canComplete && (
             <div className="text-center py-4 text-sm text-gray-500">
-              This withdrawal request has been {request.status} and cannot be modified.
+              {request.status === 'awaiting_investor_confirmation' && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                  <p className="text-blue-800 font-medium">Waiting for Investor Confirmation</p>
+                  <p className="text-blue-700 mt-1">
+                    Payment has been sent. Waiting for the investor to confirm receipt.
+                  </p>
+                </div>
+              )}
+              {request.status === 'confirmed' && (
+                <div className="bg-green-50 border border-green-200 rounded p-3">
+                  <p className="text-green-800 font-medium">Withdrawal Confirmed</p>
+                  <p className="text-green-700 mt-1">
+                    The investor has confirmed receipt of payment. Balance has been updated.
+                  </p>
+                </div>
+              )}
+              {!['awaiting_investor_confirmation', 'confirmed', 'pending', 'approved', 'disputed'].includes(request.status) && (
+                <p>This withdrawal request has been {request.status} and cannot be modified.</p>
+              )}
             </div>
           )}
         </div>

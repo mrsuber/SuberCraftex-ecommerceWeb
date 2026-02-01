@@ -31,7 +31,40 @@ export async function GET(request: NextRequest) {
       orderBy: { requestedAt: 'desc' },
     })
 
-    return NextResponse.json(withdrawals)
+    // Serialize to snake_case
+    const serialized = withdrawals.map(w => ({
+      id: w.id,
+      investor_id: w.investorId,
+      request_number: w.requestNumber,
+      type: w.type,
+      status: w.status,
+      amount: w.amount.toString(),
+      approved_amount: w.approvedAmount?.toString() || null,
+      product_id: w.productId,
+      variant_id: w.variantId,
+      equipment_id: w.equipmentId,
+      quantity: w.quantity,
+      request_reason: w.requestReason,
+      investor_notes: w.investorNotes,
+      admin_notes: w.adminNotes,
+      rejection_reason: w.rejectionReason,
+      momo_number: w.momoNumber,
+      momo_name: w.momoName,
+      momo_provider: w.momoProvider,
+      admin_receipt_url: w.adminReceiptUrl,
+      investor_confirmed_at: w.investorConfirmedAt?.toISOString() || null,
+      investor_feedback: w.investorFeedback,
+      requested_by: w.requestedBy,
+      reviewed_by: w.reviewedBy,
+      processed_by: w.processedBy,
+      requested_at: w.requestedAt.toISOString(),
+      reviewed_at: w.reviewedAt?.toISOString() || null,
+      processed_at: w.processedAt?.toISOString() || null,
+      created_at: w.createdAt.toISOString(),
+      updated_at: w.updatedAt.toISOString(),
+    }))
+
+    return NextResponse.json(serialized)
   } catch (error) {
     console.error('Error fetching withdrawals:', error)
     return NextResponse.json(
@@ -81,6 +114,9 @@ export async function POST(request: NextRequest) {
       quantity,
       requestReason,
       investorNotes,
+      momoNumber,
+      momoName,
+      momoProvider,
     } = body
 
     if (!type) {
@@ -105,6 +141,14 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+
+      // Require mobile money details for cash withdrawals
+      if (!momoNumber || !momoName || !momoProvider) {
+        return NextResponse.json(
+          { error: 'Mobile money details (number, name, provider) are required for cash withdrawal' },
+          { status: 400 }
+        )
+      }
     } else if (type === 'profit') {
       if (!amount || amount <= 0) {
         return NextResponse.json(
@@ -116,6 +160,14 @@ export async function POST(request: NextRequest) {
       if (new Decimal(investor.profitBalance).lt(amount)) {
         return NextResponse.json(
           { error: 'Insufficient profit balance' },
+          { status: 400 }
+        )
+      }
+
+      // Require mobile money details for profit withdrawals
+      if (!momoNumber || !momoName || !momoProvider) {
+        return NextResponse.json(
+          { error: 'Mobile money details (number, name, provider) are required for profit withdrawal' },
           { status: 400 }
         )
       }
@@ -185,6 +237,9 @@ export async function POST(request: NextRequest) {
         quantity: quantity || null,
         requestReason: requestReason || null,
         investorNotes: investorNotes || null,
+        momoNumber: momoNumber || null,
+        momoName: momoName || null,
+        momoProvider: momoProvider || null,
         requestedBy: user.id,
         status: 'pending',
       },
@@ -207,7 +262,40 @@ export async function POST(request: NextRequest) {
       console.error('⚠️  Failed to create admin notification:', notifError)
     }
 
-    return NextResponse.json(withdrawal, { status: 201 })
+    // Serialize to snake_case
+    const serialized = {
+      id: withdrawal.id,
+      investor_id: withdrawal.investorId,
+      request_number: withdrawal.requestNumber,
+      type: withdrawal.type,
+      status: withdrawal.status,
+      amount: withdrawal.amount.toString(),
+      approved_amount: withdrawal.approvedAmount?.toString() || null,
+      product_id: withdrawal.productId,
+      variant_id: withdrawal.variantId,
+      equipment_id: withdrawal.equipmentId,
+      quantity: withdrawal.quantity,
+      request_reason: withdrawal.requestReason,
+      investor_notes: withdrawal.investorNotes,
+      admin_notes: withdrawal.adminNotes,
+      rejection_reason: withdrawal.rejectionReason,
+      momo_number: withdrawal.momoNumber,
+      momo_name: withdrawal.momoName,
+      momo_provider: withdrawal.momoProvider,
+      admin_receipt_url: withdrawal.adminReceiptUrl,
+      investor_confirmed_at: withdrawal.investorConfirmedAt?.toISOString() || null,
+      investor_feedback: withdrawal.investorFeedback,
+      requested_by: withdrawal.requestedBy,
+      reviewed_by: withdrawal.reviewedBy,
+      processed_by: withdrawal.processedBy,
+      requested_at: withdrawal.requestedAt.toISOString(),
+      reviewed_at: withdrawal.reviewedAt?.toISOString() || null,
+      processed_at: withdrawal.processedAt?.toISOString() || null,
+      created_at: withdrawal.createdAt.toISOString(),
+      updated_at: withdrawal.updatedAt.toISOString(),
+    }
+
+    return NextResponse.json(serialized, { status: 201 })
   } catch (error) {
     console.error('Error creating withdrawal:', error)
     return NextResponse.json(

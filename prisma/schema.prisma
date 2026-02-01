@@ -1527,12 +1527,15 @@ enum WithdrawalType {
 }
 
 enum WithdrawalStatus {
-  pending               // Awaiting admin approval
-  approved              // Approved by admin
-  processing            // Being processed
-  completed             // Completed
-  rejected              // Rejected
-  cancelled             // Cancelled by investor
+  pending                          // Awaiting admin approval
+  approved                         // Approved by admin
+  awaiting_investor_confirmation   // Admin sent money, awaiting investor confirmation
+  processing                       // Being processed
+  completed                        // Completed (legacy)
+  confirmed                        // Investor confirmed receipt
+  rejected                         // Rejected
+  cancelled                        // Cancelled by investor
+  disputed                         // Investor disputed the payment
 }
 
 enum EquipmentStatus {
@@ -1869,6 +1872,18 @@ model WithdrawalRequest {
   investorNotes     String?          @map("investor_notes")
   adminNotes        String?          @map("admin_notes")
   rejectionReason   String?          @map("rejection_reason")
+
+  // Investor payment details (where to send money)
+  momoNumber        String?          @map("momo_number")
+  momoName          String?          @map("momo_name")
+  momoProvider      String?          @map("momo_provider")
+
+  // Admin payment proof
+  adminReceiptUrl   String?          @map("admin_receipt_url")
+
+  // Investor confirmation
+  investorConfirmedAt DateTime?      @map("investor_confirmed_at")
+  investorFeedback    String?        @map("investor_feedback")
 
   // Tracking
   requestedBy       String           @map("requested_by") // Investor user ID
