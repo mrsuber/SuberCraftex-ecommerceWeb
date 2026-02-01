@@ -62,7 +62,7 @@ export default async function InvestorDetailPage({
     redirect('/dashboard/investors')
   }
 
-  // Get available products for allocation
+  // Get available products for allocation with inventory and allocation info
   const products = await db.product.findMany({
     where: { isActive: true },
     select: {
@@ -71,6 +71,15 @@ export default async function InvestorDetailPage({
       sku: true,
       price: true,
       featuredImage: true,
+      inventoryCount: true,
+      investorAllocations: {
+        where: { status: 'active' },
+        select: {
+          quantity: true,
+          quantityRemaining: true,
+          variantId: true,
+        },
+      },
       variants: {
         where: { isActive: true },
         select: {
@@ -78,6 +87,7 @@ export default async function InvestorDetailPage({
           name: true,
           sku: true,
           price: true,
+          inventoryCount: true,
         },
       },
     },
@@ -204,14 +214,35 @@ export default async function InvestorDetailPage({
   }
 
   // Also serialize products and equipment
-  const serializedProducts = products.map(p => ({
-    ...p,
-    price: p.price.toString(),
-    variants: p.variants.map(v => ({
-      ...v,
-      price: v.price?.toString() || null,
-    })),
-  }))
+  const serializedProducts = products.map(p => {
+    // Calculate total allocated quantity for this product (excluding variants)
+    const productAllocatedQty = p.investorAllocations
+      .filter(a => !a.variantId)
+      .reduce((sum, a) => sum + a.quantityRemaining, 0);
+
+    return {
+      ...p,
+      price: p.price.toString(),
+      inventoryCount: p.inventoryCount,
+      allocatedQuantity: productAllocatedQty,
+      availableQuantity: Math.max(0, p.inventoryCount - productAllocatedQty),
+      variants: p.variants.map(v => {
+        // Calculate allocated quantity for this variant
+        const variantAllocatedQty = p.investorAllocations
+          .filter(a => a.variantId === v.id)
+          .reduce((sum, a) => sum + a.quantityRemaining, 0);
+
+        return {
+          ...v,
+          price: v.price?.toString() || null,
+          inventoryCount: v.inventoryCount,
+          allocatedQuantity: variantAllocatedQty,
+          availableQuantity: Math.max(0, v.inventoryCount - variantAllocatedQty),
+        };
+      }),
+      investorAllocations: undefined, // Don't pass raw allocations to client
+    };
+  })
 
   const serializedEquipment = equipment.map(e => ({
     ...e,

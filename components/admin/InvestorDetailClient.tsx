@@ -1254,17 +1254,82 @@ export default function InvestorDetailClient({
                     </div>
                   )}
 
+                  {/* Available quantity info */}
+                  {selectedProduct && (
+                    <div className="bg-gray-50 p-3 rounded-lg border">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Available to allocate:</span>
+                        <span className="font-semibold text-gray-900">
+                          {(() => {
+                            if (productForm.variantId) {
+                              const variant = selectedProduct.variants.find((v: any) => v.id === productForm.variantId);
+                              return variant?.availableQuantity ?? 0;
+                            }
+                            return selectedProduct.availableQuantity ?? 0;
+                          })()} units
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                        <span>Total stock: {productForm.variantId
+                          ? selectedProduct.variants.find((v: any) => v.id === productForm.variantId)?.inventoryCount ?? 0
+                          : selectedProduct.inventoryCount ?? 0
+                        }</span>
+                        <span>Already allocated: {productForm.variantId
+                          ? selectedProduct.variants.find((v: any) => v.id === productForm.variantId)?.allocatedQuantity ?? 0
+                          : selectedProduct.allocatedQuantity ?? 0
+                        }</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="quantity">Quantity</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        min="1"
-                        value={productForm.quantity}
-                        onChange={(e) => setProductForm({ ...productForm, quantity: e.target.value })}
-                        required
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min="1"
+                          max={(() => {
+                            if (!selectedProduct) return undefined;
+                            if (productForm.variantId) {
+                              const variant = selectedProduct.variants.find((v: any) => v.id === productForm.variantId);
+                              return variant?.availableQuantity ?? 0;
+                            }
+                            return selectedProduct.availableQuantity ?? 0;
+                          })()}
+                          value={productForm.quantity}
+                          onChange={(e) => {
+                            const maxQty = (() => {
+                              if (!selectedProduct) return Infinity;
+                              if (productForm.variantId) {
+                                const variant = selectedProduct.variants.find((v: any) => v.id === productForm.variantId);
+                                return variant?.availableQuantity ?? 0;
+                              }
+                              return selectedProduct.availableQuantity ?? 0;
+                            })();
+                            const value = Math.min(parseInt(e.target.value) || 0, maxQty);
+                            setProductForm({ ...productForm, quantity: value > 0 ? value.toString() : '' });
+                          }}
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="whitespace-nowrap"
+                          disabled={!selectedProduct}
+                          onClick={() => {
+                            if (!selectedProduct) return;
+                            const maxQty = productForm.variantId
+                              ? selectedProduct.variants.find((v: any) => v.id === productForm.variantId)?.availableQuantity ?? 0
+                              : selectedProduct.availableQuantity ?? 0;
+                            setProductForm({ ...productForm, quantity: maxQty.toString() });
+                          }}
+                        >
+                          All
+                        </Button>
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="purchasePrice">Purchase Price per Unit</Label>
