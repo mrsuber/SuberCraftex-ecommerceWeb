@@ -34,19 +34,30 @@ export async function POST(
     const {
       productId,
       variantId,
-      quantity,
-      purchasePrice,
+      quantity: quantityRaw,
+      purchasePrice: purchasePriceRaw,
       notes,
     } = body
 
-    if (!productId || !quantity || !purchasePrice) {
+    if (!productId || !quantityRaw || !purchasePriceRaw) {
       return NextResponse.json(
         { error: 'Missing required fields: productId, quantity, purchasePrice' },
         { status: 400 }
       )
     }
 
-    const totalInvestment = new Decimal(purchasePrice).mul(quantity)
+    // Parse quantity as integer and purchasePrice as Decimal
+    const quantity = parseInt(quantityRaw, 10)
+    const purchasePrice = new Decimal(purchasePriceRaw)
+
+    if (isNaN(quantity) || quantity <= 0) {
+      return NextResponse.json(
+        { error: 'Quantity must be a positive integer' },
+        { status: 400 }
+      )
+    }
+
+    const totalInvestment = purchasePrice.mul(quantity)
 
     // Check if investor has sufficient cash balance
     if (new Decimal(investor.cashBalance).lt(totalInvestment)) {
@@ -110,9 +121,9 @@ export async function POST(
           productId,
           variantId: variantId || null,
           amountAllocated: totalInvestment,
-          quantity,
-          purchasePrice,
-          totalInvestment,
+          quantity: quantity,
+          purchasePrice: purchasePrice,
+          totalInvestment: totalInvestment,
           quantityRemaining: quantity,
           notes: notes || null,
         },
@@ -173,7 +184,7 @@ export async function POST(
           balanceAfter: updatedInvestor.cashBalance,
           profitAfter: updatedInvestor.profitBalance,
           productId,
-          description: `Allocated to ${product.name}${variant ? ` - ${variant.name}` : ''} (${quantity} units @ ${purchasePrice} each)`,
+          description: `Allocated to ${product.name}${variant ? ` - ${variant.name}` : ''} (${quantity} units @ ${purchasePrice.toString()} each)`,
           notes: notes || null,
           createdBy: user.id,
         },

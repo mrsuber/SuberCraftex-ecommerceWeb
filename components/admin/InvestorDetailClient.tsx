@@ -1218,11 +1218,18 @@ export default function InvestorDetailClient({
                         <SelectValue placeholder="Select product" />
                       </SelectTrigger>
                       <SelectContent>
-                        {products.map(product => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} ({product.sku})
-                          </SelectItem>
-                        ))}
+                        {products
+                          .filter(product => product.availableQuantity > 0)
+                          .map(product => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} ({product.sku}) - {product.availableQuantity} available
+                            </SelectItem>
+                          ))}
+                        {products.filter(p => p.availableQuantity > 0).length === 0 && (
+                          <div className="p-2 text-sm text-gray-500 text-center">
+                            No products available for allocation
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1247,12 +1254,14 @@ export default function InvestorDetailClient({
                           <SelectValue placeholder="Select variant or skip" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No variant</SelectItem>
-                          {selectedProduct.variants.map((variant: any) => (
-                            <SelectItem key={variant.id} value={variant.id}>
-                              {variant.name} ({variant.sku})
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="">No variant (use main product stock)</SelectItem>
+                          {selectedProduct.variants
+                            .filter((v: any) => v.availableQuantity > 0)
+                            .map((variant: any) => (
+                              <SelectItem key={variant.id} value={variant.id}>
+                                {variant.name} ({variant.sku}) - {variant.availableQuantity} available
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
