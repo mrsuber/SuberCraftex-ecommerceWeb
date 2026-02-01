@@ -73,7 +73,7 @@ export default async function InvestorDetailPage({
       featuredImage: true,
       inventoryCount: true,
       investorAllocations: {
-        where: { status: 'active' },
+        where: { quantityRemaining: { gt: 0 } },
         select: {
           quantity: true,
           quantityRemaining: true,
