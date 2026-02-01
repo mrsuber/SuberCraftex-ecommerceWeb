@@ -26,10 +26,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (investor.agreementAccepted) {
-      return NextResponse.json(
-        { error: 'Agreement already accepted' },
-        { status: 400 }
-      )
+      // Already accepted — return success so the app can proceed to dashboard
+      return NextResponse.json({ success: true, alreadyAccepted: true })
     }
 
     const updatedInvestor = await db.investor.update({
