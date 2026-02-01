@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!shippingAddress || !billingAddress) {
+    if (shippingMethod !== 'in_store' && (!shippingAddress || !billingAddress)) {
       console.error('Order creation failed: Missing addresses');
       return NextResponse.json(
         { error: "Shipping and billing addresses are required" },
@@ -52,39 +52,110 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create order with order items in a transaction
-    console.log('Creating order...');
-    const order = await db.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        userId: user?.id || null,
-        guestEmail: user?.email || shippingAddress.email,
-        orderStatus: paymentMethod === "cash" ? "pending" : "processing",
-        paymentStatus: paymentMethod === "cash" ? "pending" : "paid",
-        paymentMethod,
-        shippingMethod,
-        subtotal,
-        shippingCost,
-        taxAmount,
-        totalAmount,
-        shippingAddress,
-        billingAddress,
-        stripePaymentIntentId: stripePaymentIntentId || null,
-        orderItems: {
-          create: items.map((item: any) => ({
-            productId: item.id,
-            productName: item.name,
-            productSku: item.sku || "N/A",
-            productImage: item.image,
-            quantity: item.quantity,
-            price: item.price,
-            total: item.price * item.quantity,
-          })),
+    // Validate inventory availability before creating order
+    const productIds = items.map((item: any) => item.id);
+    const products = await db.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, name: true, inventoryCount: true, trackInventory: true },
+    });
+
+    const outOfStockItems: { name: string; available: number; requested: number }[] = [];
+    for (const item of items) {
+      const product = products.find((p) => p.id === item.id);
+      if (!product) {
+        outOfStockItems.push({ name: item.name, available: 0, requested: item.quantity });
+        continue;
+      }
+      if (product.trackInventory && product.inventoryCount < item.quantity) {
+        outOfStockItems.push({
+          name: product.name,
+          available: product.inventoryCount,
+          requested: item.quantity,
+        });
+      }
+    }
+
+    if (outOfStockItems.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Insufficient stock for some items",
+          outOfStockItems,
         },
-      },
-      include: {
-        orderItems: true,
-      },
+        { status: 400 }
+      );
+    }
+
+    // Create order with inventory reservation in a transaction
+    console.log('Creating order...');
+    const isPickup = shippingMethod === 'in_store';
+    const pickupDeadline = isPickup ? new Date(Date.now() + 12 * 60 * 60 * 1000) : null;
+
+    const order = await db.$transaction(async (tx) => {
+      // Create the order
+      const newOrder = await tx.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          userId: user?.id || null,
+          guestEmail: user?.email || shippingAddress?.email,
+          orderStatus: paymentMethod === "cash" ? "pending" : "processing",
+          paymentStatus: paymentMethod === "cash" ? "pending" : "paid",
+          paymentMethod,
+          shippingMethod,
+          subtotal,
+          shippingCost: isPickup ? 0 : shippingCost,
+          taxAmount,
+          totalAmount: isPickup ? subtotal + taxAmount : totalAmount,
+          shippingAddress: shippingAddress || null,
+          billingAddress: billingAddress || null,
+          stripePaymentIntentId: stripePaymentIntentId || null,
+          pickupDeadline,
+          orderItems: {
+            create: items.map((item: any) => ({
+              productId: item.id,
+              variantId: item.variantId || null,
+              productName: item.name,
+              productSku: item.sku || "N/A",
+              productImage: item.image,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.price * item.quantity,
+            })),
+          },
+        },
+        include: {
+          orderItems: true,
+        },
+      });
+
+      // Reserve inventory for each order item
+      for (const orderItem of newOrder.orderItems) {
+        const updatedProduct = await tx.product.update({
+          where: { id: orderItem.productId },
+          data: { inventoryCount: { decrement: orderItem.quantity } },
+        });
+
+        if (orderItem.variantId) {
+          await tx.productVariant.update({
+            where: { id: orderItem.variantId },
+            data: { inventoryCount: { decrement: orderItem.quantity } },
+          });
+        }
+
+        await tx.inventoryLog.create({
+          data: {
+            productId: orderItem.productId,
+            variantId: orderItem.variantId,
+            action: 'reserved',
+            quantityChange: -orderItem.quantity,
+            quantityAfter: updatedProduct.inventoryCount,
+            orderId: newOrder.id,
+            userId: user?.id || null,
+            notes: `Reserved for order ${newOrder.orderNumber}`,
+          },
+        });
+      }
+
+      return newOrder;
     });
 
     console.log('Order created successfully:', order.orderNumber);
@@ -157,8 +228,6 @@ export async function POST(request: NextRequest) {
       // Don't fail the order if email fails
       console.error('⚠️  Failed to send order confirmation email:', emailError);
     }
-
-    // TODO: Update inventory
 
     return NextResponse.json({
       success: true,

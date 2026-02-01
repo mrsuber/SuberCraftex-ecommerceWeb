@@ -13,7 +13,7 @@ export async function GET(
     // Try to get the current user (optional - won't fail if not authenticated)
     const currentUser = await requireApiAuth();
 
-    // Fetch product with category information
+    // Fetch product with category and investor allocations
     const product = await db.product.findFirst({
       where: {
         id,
@@ -25,6 +25,15 @@ export async function GET(
             id: true,
             name: true,
             slug: true,
+          },
+        },
+        investorAllocations: {
+          include: {
+            investor: {
+              select: {
+                fullName: true,
+              },
+            },
           },
         },
       },
@@ -71,12 +80,27 @@ export async function GET(
       userHasReviewed = !!existingReview;
     }
 
+    // Calculate ownership breakdown
+    const investorAllocatedCount = product.investorAllocations.reduce(
+      (sum, alloc) => sum + alloc.quantityRemaining, 0
+    );
+    const companyOwnedCount = Math.max(0, product.inventoryCount - investorAllocatedCount);
+    const allocations = product.investorAllocations.map((alloc) => ({
+      investor_name: alloc.investor.fullName,
+      quantity: alloc.quantity,
+      quantity_remaining: alloc.quantityRemaining,
+    }));
+
     return NextResponse.json({
       product: serializeProduct(product),
       reviews: reviews || [],
       avgRating: Number(avgRating.toFixed(1)),
       reviewCount: reviews?.length || 0,
       userHasReviewed,
+      inventory_count: product.inventoryCount,
+      investor_allocated_count: investorAllocatedCount,
+      company_owned_count: companyOwnedCount,
+      allocations,
     });
   } catch (error) {
     console.error("API Error:", error);

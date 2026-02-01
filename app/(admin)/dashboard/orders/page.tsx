@@ -52,6 +52,7 @@ export default async function OrdersPage() {
     shipped_at: order.shippedAt?.toISOString() || null,
     delivered_at: order.deliveredAt?.toISOString() || null,
     cancelled_at: order.cancelledAt?.toISOString() || null,
+    pickup_deadline: (order as any).pickupDeadline?.toISOString() || null,
   }));
 
   const pendingOrders = ordersRaw?.filter((o) => o.orderStatus === "pending") || [];
@@ -90,6 +91,7 @@ export default async function OrdersPage() {
     shipped_at: order.shippedAt?.toISOString() || null,
     delivered_at: order.deliveredAt?.toISOString() || null,
     cancelled_at: order.cancelledAt?.toISOString() || null,
+    pickup_deadline: (order as any).pickupDeadline?.toISOString() || null,
   }));
 
   const processingOrdersMapped = processingOrders.map((order) => ({
@@ -123,6 +125,7 @@ export default async function OrdersPage() {
     shipped_at: order.shippedAt?.toISOString() || null,
     delivered_at: order.deliveredAt?.toISOString() || null,
     cancelled_at: order.cancelledAt?.toISOString() || null,
+    pickup_deadline: (order as any).pickupDeadline?.toISOString() || null,
   }));
 
   const shippedOrdersMapped = shippedOrders.map((order) => ({
@@ -156,6 +159,7 @@ export default async function OrdersPage() {
     shipped_at: order.shippedAt?.toISOString() || null,
     delivered_at: order.deliveredAt?.toISOString() || null,
     cancelled_at: order.cancelledAt?.toISOString() || null,
+    pickup_deadline: (order as any).pickupDeadline?.toISOString() || null,
   }));
 
   const deliveredOrdersMapped = deliveredOrders.map((order) => ({
@@ -189,6 +193,7 @@ export default async function OrdersPage() {
     shipped_at: order.shippedAt?.toISOString() || null,
     delivered_at: order.deliveredAt?.toISOString() || null,
     cancelled_at: order.cancelledAt?.toISOString() || null,
+    pickup_deadline: (order as any).pickupDeadline?.toISOString() || null,
   }));
 
   return (

@@ -80,6 +80,7 @@ export interface Order {
   shipped_at: string | null;
   delivered_at: string | null;
   cancelled_at: string | null;
+  pickup_deadline?: string | null;
 }
 
 export interface OrderItem {
@@ -213,7 +214,7 @@ export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 
 export type PaymentMethod = "card" | "cash";
 
-export type ShippingMethod = "standard" | "express" | "overnight";
+export type ShippingMethod = "standard" | "express" | "overnight" | "in_store";
 
 export type TrackingStatus =
   | "assigned"

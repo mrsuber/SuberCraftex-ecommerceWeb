@@ -39,6 +39,7 @@ export async function PATCH(
       where: { id },
       include: {
         shippingTracking: true,
+        orderItems: true,
       },
     });
 
@@ -70,6 +71,8 @@ export async function PATCH(
       }
     } else if (orderStatus === 'shipped') {
       updateData.shippedAt = new Date();
+    } else if (orderStatus === 'cancelled') {
+      updateData.cancelledAt = new Date();
     }
 
     // Update admin notes if provided
@@ -77,7 +80,54 @@ export async function PATCH(
       updateData.adminNotes = notes;
     }
 
-    // Update the order
+    // If cancelling, release inventory in a transaction
+    if (orderStatus === 'cancelled' && existingOrder.orderStatus !== 'cancelled') {
+      const updatedOrder = await db.$transaction(async (tx) => {
+        const order = await tx.order.update({
+          where: { id },
+          data: updateData,
+        });
+
+        // Release inventory for each order item
+        for (const item of existingOrder.orderItems) {
+          const updatedProduct = await tx.product.update({
+            where: { id: item.productId },
+            data: { inventoryCount: { increment: item.quantity } },
+          });
+
+          if (item.variantId) {
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { inventoryCount: { increment: item.quantity } },
+            });
+          }
+
+          await tx.inventoryLog.create({
+            data: {
+              productId: item.productId,
+              variantId: item.variantId,
+              action: 'released',
+              quantityChange: item.quantity,
+              quantityAfter: updatedProduct.inventoryCount,
+              orderId: id,
+              userId: user.id,
+              notes: `Released from cancelled order ${existingOrder.orderNumber}`,
+            },
+          });
+        }
+
+        return order;
+      });
+
+      console.log(`✅ Order ${existingOrder.orderNumber} cancelled and inventory released by ${user.email}`);
+
+      return NextResponse.json({
+        success: true,
+        order: updatedOrder,
+      });
+    }
+
+    // Update the order (non-cancellation)
     const updatedOrder = await db.order.update({
       where: { id },
       data: updateData,

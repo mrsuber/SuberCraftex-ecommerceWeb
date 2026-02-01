@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent } from "@/components/ui/card";
-import { MoreHorizontal, Eye, Truck, X, Search } from "lucide-react";
+import { MoreHorizontal, Eye, Truck, X, Search, Clock, MapPin } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { Order } from "@/types";
 
@@ -96,6 +96,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 <TableHead>Items</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Payment</TableHead>
+                <TableHead>Shipping</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
@@ -140,6 +141,35 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                     >
                       {order.payment_status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {order.shipping_method === 'in_store' ? (
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1 text-xs">
+                          <MapPin className="h-3 w-3" />
+                          <span>Pickup</span>
+                        </div>
+                        {order.pickup_deadline && order.status === 'pending' && (
+                          <div className={`flex items-center gap-1 text-[10px] ${
+                            new Date(order.pickup_deadline) < new Date()
+                              ? 'text-red-600 font-medium'
+                              : new Date(order.pickup_deadline).getTime() - Date.now() < 2 * 60 * 60 * 1000
+                              ? 'text-amber-600 font-medium'
+                              : 'text-muted-foreground'
+                          }`}>
+                            <Clock className="h-2.5 w-2.5" />
+                            {new Date(order.pickup_deadline) < new Date()
+                              ? 'Expired'
+                              : `Due ${new Date(order.pickup_deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                            }
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs capitalize text-muted-foreground">
+                        {order.shipping_method?.replace('_', ' ') || 'Standard'}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge

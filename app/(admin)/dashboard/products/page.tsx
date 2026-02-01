@@ -20,17 +20,32 @@ export default async function ProductsPage() {
         category: {
           select: { name: true },
         },
+        investorAllocations: {
+          select: {
+            quantityRemaining: true,
+            investor: { select: { fullName: true } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
     db.product.count(),
   ]);
 
-  // Serialize products to convert Decimal to number
-  const products = (rawProducts || []).map((p) => ({
-    ...serializeProduct(p),
-    category: p.category,
-  })) as (Product & { category?: { name: string } })[];
+  // Serialize products to convert Decimal to number + add ownership info
+  const products = (rawProducts || []).map((p) => {
+    const investorAllocatedCount = p.investorAllocations.reduce(
+      (sum, alloc) => sum + alloc.quantityRemaining, 0
+    );
+    const companyOwnedCount = Math.max(0, p.inventoryCount - investorAllocatedCount);
+    return {
+      ...serializeProduct(p),
+      category: p.category,
+      investor_allocated_count: investorAllocatedCount,
+      company_owned_count: companyOwnedCount,
+      unassigned_stock: companyOwnedCount > 0,
+    };
+  }) as (Product & { category?: { name: string }; investor_allocated_count: number; company_owned_count: number; unassigned_stock: boolean })[];
 
   return (
     <div className="space-y-6">

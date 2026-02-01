@@ -29,7 +29,7 @@ import { InventoryAdjustment } from "@/components/products/InventoryAdjustment";
 import type { Product } from "@/types";
 
 interface ProductsTableProps {
-  products: (Product & { category?: { name: string } })[];
+  products: (Product & { category?: { name: string }; investor_allocated_count?: number; company_owned_count?: number; unassigned_stock?: boolean })[];
 }
 
 export function ProductsTable({ products }: ProductsTableProps) {
@@ -75,6 +75,7 @@ export function ProductsTable({ products }: ProductsTableProps) {
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
+                <TableHead>Ownership</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
@@ -126,6 +127,21 @@ export function ProductsTable({ products }: ProductsTableProps) {
                           Low
                         </Badge>
                       )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-xs space-y-0.5">
+                      <div className="text-muted-foreground">
+                        Investor: {product.investor_allocated_count ?? '-'}
+                      </div>
+                      <div className={product.unassigned_stock ? 'text-amber-600 font-medium' : 'text-muted-foreground'}>
+                        Company: {product.company_owned_count ?? '-'}
+                        {product.unassigned_stock && (
+                          <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded">
+                            Unassigned
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
