@@ -33,6 +33,7 @@ export function Header() {
           <Link href="/upcoming-services" className="text-sm font-medium transition-colors hover:text-primary">Coming Soon</Link>
           <Link href="/bookings" className="text-sm font-medium transition-colors hover:text-primary">Bookings</Link>
           <Link href="/categories" className="text-sm font-medium transition-colors hover:text-primary">Categories</Link>
+          <Link href="/blog" className="text-sm font-medium transition-colors hover:text-primary">Blog</Link>
           <Link href="/about" className="text-sm font-medium transition-colors hover:text-primary">About</Link>
           <Link href="/contact" className="text-sm font-medium transition-colors hover:text-primary">Contact</Link>
         </nav>
@@ -63,6 +64,7 @@ export function Header() {
             <Link href="/upcoming-services" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Coming Soon</Link>
             <Link href="/bookings" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Bookings</Link>
             <Link href="/categories" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
+            <Link href="/blog" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Blog</Link>
             <Link href="/about" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>About</Link>
             <Link href="/contact" className="text-sm font-medium transition-colors hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Contact</Link>
           </nav>

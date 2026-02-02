@@ -745,6 +745,29 @@ export interface HeroBanner {
   updated_at: string;
 }
 
+// Blog Types
+export type BlogStatus = 'draft' | 'published' | 'archived';
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  featured_image: string | null;
+  youtube_url: string | null;
+  status: BlogStatus;
+  published_at: string | null;
+  author_id: string;
+  author?: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
 // Upcoming Services Types
 export interface UpcomingService {
   id: string;

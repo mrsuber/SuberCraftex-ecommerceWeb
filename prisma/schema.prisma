@@ -58,6 +58,7 @@ model User {
   cartItemServices    CartItemService[]
   bookingReviews      BookingReview[]
   feedback            Feedback[]
+  blogPosts           BlogPost[]
 
   @@map("users")
 }
@@ -2192,4 +2193,35 @@ model ApprenticeCertificate {
 
   @@index([apprenticeId])
   @@map("apprentice_certificates")
+}
+
+// ============================================================================
+// BLOG SYSTEM
+// ============================================================================
+
+enum BlogStatus {
+  draft
+  published
+  archived
+}
+
+model BlogPost {
+  id             String     @id @default(uuid())
+  title          String
+  slug           String     @unique
+  excerpt        String?
+  content        String     @db.Text
+  featuredImage  String?    @map("featured_image")
+  youtubeUrl     String?    @map("youtube_url")
+  status         BlogStatus @default(draft)
+  publishedAt    DateTime?  @map("published_at")
+  authorId       String     @map("author_id")
+  author         User       @relation(fields: [authorId], references: [id])
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("blog_posts")
 }

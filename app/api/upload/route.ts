@@ -123,6 +123,10 @@ export async function POST(request: NextRequest) {
       // Design option image: /public/uploads/design-options/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'design-options');
       url = `/api/uploads/design-options/${filename}`;
+    } else if (type === 'blog-image') {
+      // Blog featured image: /public/uploads/blog/
+      uploadsDir = join(process.cwd(), 'public', 'uploads', 'blog');
+      url = `/api/uploads/blog/${filename}`;
     } else if (type === 'apprentice-photo') {
       // Apprentice profile photo: /public/uploads/apprentices/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'apprentices');
