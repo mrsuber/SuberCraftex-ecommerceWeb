@@ -2,11 +2,19 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   GraduationCap,
   ClipboardList,
@@ -18,19 +26,34 @@ import {
   Calendar,
   User,
   ArrowLeft,
+  Eye,
+  Send,
+  Image as ImageIcon,
+  Video,
+  FileText,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { AssignmentSubmissionForm } from './AssignmentSubmissionForm'
+import { AssignmentComments } from '@/components/dashboard/AssignmentComments'
 
 interface Assignment {
   id: string
   title: string
   description: string | null
+  instructions: string | null
   status: string
   dueDate: string | null
   assignedDate: string
   completedDate: string | null
+  submittedAt: string | null
   rating: number | null
   feedback: string | null
+  assignmentPhotos: string[]
+  submissionNotes: string | null
+  submissionPhotos: string[]
+  submissionVideos: string[]
 }
 
 interface Certificate {
@@ -75,7 +98,12 @@ interface ApprenticeDashboardClientProps {
 }
 
 export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDashboardClientProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
+  const [showSubmitForm, setShowSubmitForm] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -279,15 +307,17 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                         className="border rounded-lg p-4 hover:border-primary transition-colors"
                       >
                         <div className="flex items-start justify-between mb-2">
-                          <div>
+                          <div className="flex-1">
                             <h3 className="font-semibold">{assignment.title}</h3>
                             {assignment.description && (
-                              <p className="text-sm text-muted-foreground mt-1">
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {assignment.description}
                               </p>
                             )}
                           </div>
-                          {getStatusBadge(assignment.status)}
+                          <div className="flex items-center gap-2 ml-4">
+                            {getStatusBadge(assignment.status)}
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-3">
                           <span className="flex items-center gap-1">
@@ -313,6 +343,34 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                             <p className="text-sm text-muted-foreground">{assignment.feedback}</p>
                           </div>
                         )}
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 mt-4 pt-3 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedAssignment(assignment)
+                              setShowDetailsDialog(true)
+                              setShowSubmitForm(false)
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                          {['pending', 'in_progress', 'needs_revision'].includes(assignment.status) && (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAssignment(assignment)
+                                setShowDetailsDialog(true)
+                                setShowSubmitForm(true)
+                              }}
+                            >
+                              <Send className="h-4 w-4 mr-1" />
+                              Submit Work
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -378,6 +436,243 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Assignment Details Dialog */}
+        <Dialog open={showDetailsDialog} onOpenChange={(open) => {
+          setShowDetailsDialog(open)
+          if (!open) {
+            setShowSubmitForm(false)
+            setSelectedAssignment(null)
+          }
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {selectedAssignment?.title}
+              </DialogTitle>
+              <DialogDescription>
+                Assignment details, submission, and discussion
+              </DialogDescription>
+            </DialogHeader>
+            {selectedAssignment && (
+              <div className="space-y-6">
+                {/* Status and Dates */}
+                <div className="flex flex-wrap gap-3 items-center">
+                  {getStatusBadge(selectedAssignment.status)}
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Assigned: {format(new Date(selectedAssignment.assignedDate), 'MMM d, yyyy')}
+                  </span>
+                  {selectedAssignment.dueDate && (
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      Due: {format(new Date(selectedAssignment.dueDate), 'MMM d, yyyy')}
+                    </span>
+                  )}
+                  {selectedAssignment.submittedAt && (
+                    <span className="text-sm text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      Submitted: {format(new Date(selectedAssignment.submittedAt), 'MMM d, yyyy')}
+                    </span>
+                  )}
+                  {selectedAssignment.rating && (
+                    <span className="text-sm text-yellow-600 flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-current" />
+                      Rating: {selectedAssignment.rating}/5
+                    </span>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <h4 className="font-medium mb-2">Description</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {selectedAssignment.description || 'No description provided'}
+                  </p>
+                </div>
+
+                {/* Instructions */}
+                {selectedAssignment.instructions && (
+                  <div>
+                    <h4 className="font-medium mb-2">Instructions</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-3 rounded-lg">
+                      {selectedAssignment.instructions}
+                    </p>
+                  </div>
+                )}
+
+                {/* Assignment Reference Photos */}
+                {selectedAssignment.assignmentPhotos.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2 flex items-center gap-1">
+                      <ImageIcon className="h-4 w-4" />
+                      Reference Photos ({selectedAssignment.assignmentPhotos.length})
+                    </h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {selectedAssignment.assignmentPhotos.map((photo, idx) => (
+                        <img
+                          key={idx}
+                          src={photo}
+                          alt={`Reference ${idx + 1}`}
+                          className="rounded-lg object-cover aspect-square cursor-pointer hover:opacity-80 transition-opacity border"
+                          onClick={() => setSelectedImage(photo)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Your Submission (if exists) */}
+                {(selectedAssignment.submissionNotes ||
+                  selectedAssignment.submissionPhotos.length > 0 ||
+                  selectedAssignment.submissionVideos.length > 0) && !showSubmitForm && (
+                  <Card className="border-green-200 bg-green-50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Your Submission
+                      </CardTitle>
+                      {selectedAssignment.submittedAt && (
+                        <CardDescription>
+                          Submitted on {format(new Date(selectedAssignment.submittedAt), "MMMM d, yyyy 'at' h:mm a")}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {selectedAssignment.submissionNotes && (
+                        <div>
+                          <h5 className="font-medium text-sm mb-1">Your Notes</h5>
+                          <p className="text-sm whitespace-pre-wrap bg-white p-3 rounded-lg border">
+                            {selectedAssignment.submissionNotes}
+                          </p>
+                        </div>
+                      )}
+                      {selectedAssignment.submissionPhotos.length > 0 && (
+                        <div>
+                          <h5 className="font-medium text-sm mb-2 flex items-center gap-1">
+                            <ImageIcon className="h-4 w-4" />
+                            Your Photos ({selectedAssignment.submissionPhotos.length})
+                          </h5>
+                          <div className="grid grid-cols-4 gap-2">
+                            {selectedAssignment.submissionPhotos.map((photo, idx) => (
+                              <img
+                                key={idx}
+                                src={photo}
+                                alt={`Submission ${idx + 1}`}
+                                className="rounded-lg object-cover aspect-square cursor-pointer hover:opacity-80 transition-opacity border"
+                                onClick={() => setSelectedImage(photo)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {selectedAssignment.submissionVideos.length > 0 && (
+                        <div>
+                          <h5 className="font-medium text-sm mb-2 flex items-center gap-1">
+                            <Video className="h-4 w-4" />
+                            Your Videos ({selectedAssignment.submissionVideos.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {selectedAssignment.submissionVideos.map((video, idx) => (
+                              <a
+                                key={idx}
+                                href={video}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors text-sm border"
+                              >
+                                <Video className="h-4 w-4 text-red-500" />
+                                <span className="truncate flex-1">{video}</span>
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Mentor Feedback */}
+                {selectedAssignment.feedback && (
+                  <Card className="border-yellow-200 bg-yellow-50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Star className="h-4 w-4 text-yellow-500" />
+                        Mentor Feedback
+                        {selectedAssignment.rating && (
+                          <Badge className="bg-yellow-100 text-yellow-800 ml-2">
+                            {selectedAssignment.rating}/5 stars
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm whitespace-pre-wrap">{selectedAssignment.feedback}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Submit Form */}
+                {showSubmitForm && ['pending', 'in_progress', 'needs_revision'].includes(selectedAssignment.status) && (
+                  <AssignmentSubmissionForm
+                    apprenticeId={apprentice.id}
+                    assignmentId={selectedAssignment.id}
+                    assignmentTitle={selectedAssignment.title}
+                    existingSubmission={{
+                      submissionNotes: selectedAssignment.submissionNotes,
+                      submissionPhotos: selectedAssignment.submissionPhotos,
+                      submissionVideos: selectedAssignment.submissionVideos,
+                    }}
+                    onSuccess={() => {
+                      setShowSubmitForm(false)
+                      setShowDetailsDialog(false)
+                      router.refresh()
+                    }}
+                    onCancel={() => setShowSubmitForm(false)}
+                  />
+                )}
+
+                {/* Submit Button when not showing form */}
+                {!showSubmitForm && ['pending', 'in_progress', 'needs_revision'].includes(selectedAssignment.status) && (
+                  <div className="flex justify-center pt-4 border-t">
+                    <Button size="lg" onClick={() => setShowSubmitForm(true)}>
+                      <Send className="mr-2 h-4 w-4" />
+                      {selectedAssignment.submissionNotes ? 'Update Submission' : 'Submit Your Work'}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Comments Section */}
+                <div className="pt-4 border-t">
+                  <AssignmentComments
+                    apprenticeId={apprentice.id}
+                    assignmentId={selectedAssignment.id}
+                    currentUserRole="apprentice"
+                  />
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Image Lightbox */}
+        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+          <DialogContent className="max-w-4xl p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Image Preview</DialogTitle>
+              <DialogDescription>Full size image preview</DialogDescription>
+            </DialogHeader>
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="Full size"
+                className="w-full h-auto rounded-lg"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
