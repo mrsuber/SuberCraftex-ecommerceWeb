@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
+import { PhotoGallery } from '@/components/shared/PhotoGallery'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
 
@@ -36,6 +37,7 @@ async function getPost(slug: string) {
     slug: post.slug,
     content: post.content,
     featured_image: toAbsoluteUrl(post.featuredImage),
+    images: (post.images || []).map((img) => toAbsoluteUrl(img)).filter((img): img is string => img !== null),
     youtube_url: post.youtubeUrl,
     published_at: post.publishedAt?.toISOString() || null,
     author_name: post.author.fullName || post.author.email,
@@ -93,6 +95,13 @@ export default async function BlogPostPage({
               allowFullScreen
               title="Video"
             />
+          </div>
+        )}
+
+        {post.images.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Gallery</h2>
+            <PhotoGallery photos={post.images} columns={3} />
           </div>
         )}
 

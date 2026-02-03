@@ -18,6 +18,7 @@ function serializePost(post: any) {
     excerpt: post.excerpt,
     content: post.content,
     featured_image: toAbsoluteUrl(post.featuredImage),
+    images: (post.images || []).map((img: string) => toAbsoluteUrl(img)),
     youtube_url: post.youtubeUrl,
     status: post.status,
     published_at: post.publishedAt?.toISOString() || null,
@@ -34,7 +35,13 @@ function serializePost(post: any) {
   }
 }
 
-// GET /api/blog/[id]
+// Helper to check if string is a valid UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
+// GET /api/blog/[id] - supports both ID and slug
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -44,14 +51,30 @@ export async function GET(
     const auth = await verifyAuth(request)
     const isAdmin = auth.user?.role === 'admin'
 
-    const post = await db.blogPost.findUnique({
-      where: { id },
-      include: {
-        author: {
-          select: { id: true, fullName: true, email: true },
+    // Try to find by ID if it looks like a UUID, otherwise try slug
+    let post = null
+    if (isUUID(id)) {
+      post = await db.blogPost.findUnique({
+        where: { id },
+        include: {
+          author: {
+            select: { id: true, fullName: true, email: true },
+          },
         },
-      },
-    })
+      })
+    }
+
+    // If not found by ID, try by slug
+    if (!post) {
+      post = await db.blogPost.findUnique({
+        where: { slug: id },
+        include: {
+          author: {
+            select: { id: true, fullName: true, email: true },
+          },
+        },
+      })
+    }
 
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 })
@@ -86,7 +109,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
-    const { title, slug, content, excerpt, featuredImage, youtubeUrl, status, publishedAt } = body
+    const { title, slug, content, excerpt, featuredImage, images, youtubeUrl, status, publishedAt } = body
 
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
@@ -94,6 +117,7 @@ export async function PATCH(
     if (content !== undefined) updateData.content = content
     if (excerpt !== undefined) updateData.excerpt = excerpt || null
     if (featuredImage !== undefined) updateData.featuredImage = featuredImage || null
+    if (images !== undefined) updateData.images = images || []
     if (youtubeUrl !== undefined) updateData.youtubeUrl = youtubeUrl || null
     if (status !== undefined) {
       updateData.status = status
