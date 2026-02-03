@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { db } from '@/lib/db'
 import { BlogPostsTable } from '@/components/dashboard/BlogPostsTable'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, BarChart2 } from 'lucide-react'
 import Link from 'next/link'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
@@ -57,12 +57,20 @@ export default async function BlogPostsPage() {
             Manage blog posts and articles
           </p>
         </div>
-        <Link href="/dashboard/blog/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Post
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/blog/engagement">
+            <Button variant="outline">
+              <BarChart2 className="mr-2 h-4 w-4" />
+              Engagement
+            </Button>
+          </Link>
+          <Link href="/dashboard/blog/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Post
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Suspense fallback={<div>Loading...</div>}>

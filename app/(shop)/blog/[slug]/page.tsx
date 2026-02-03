@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { PhotoGallery } from '@/components/shared/PhotoGallery'
+import { BlogEngagement } from '@/components/blog'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
 
@@ -108,6 +109,12 @@ export default async function BlogPostPage({
         <div
           className="prose prose-lg dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: post.content }}
+        />
+
+        <BlogEngagement
+          postId={post.id}
+          postTitle={post.title}
+          postSlug={post.slug}
         />
       </article>
     </div>

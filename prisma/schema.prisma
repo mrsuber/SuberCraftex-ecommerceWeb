@@ -59,6 +59,8 @@ model User {
   bookingReviews      BookingReview[]
   feedback            Feedback[]
   blogPosts           BlogPost[]
+  blogLikes           BlogLike[]
+  blogComments        BlogComment[]
 
   @@map("users")
 }
@@ -2221,8 +2223,54 @@ model BlogPost {
   createdAt      DateTime   @default(now()) @map("created_at")
   updatedAt      DateTime   @updatedAt @map("updated_at")
 
+  // Engagement relations
+  likes          BlogLike[]
+  comments       BlogComment[]
+  shareStats     BlogShareStats?
+
   @@index([slug])
   @@index([status])
   @@index([publishedAt])
   @@map("blog_posts")
+}
+
+model BlogLike {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("blog_likes")
+}
+
+model BlogComment {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("blog_comments")
+}
+
+model BlogShareStats {
+  id         String   @id @default(uuid())
+  postId     String   @unique @map("post_id")
+  post       BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  clickCount Int      @default(0) @map("click_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("blog_share_stats")
 }
