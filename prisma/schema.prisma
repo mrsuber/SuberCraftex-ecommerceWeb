@@ -2212,6 +2212,7 @@ model BlogPost {
   excerpt        String?
   content        String     @db.Text
   featuredImage  String?    @map("featured_image")
+  images         String[]   @default([])
   youtubeUrl     String?    @map("youtube_url")
   status         BlogStatus @default(draft)
   publishedAt    DateTime?  @map("published_at")
