@@ -48,6 +48,8 @@ import {
   Send,
   RotateCcw,
   Trash2,
+  GraduationCap,
+  Plus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -178,10 +180,24 @@ export function AssignmentsTable({
       <Card>
         <CardContent className="py-12 text-center">
           <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">No assignments found.</p>
-          <Link href={`/dashboard/apprentices/${apprenticeId}/assignments/new`}>
-            <Button className="mt-4">Create First Assignment</Button>
-          </Link>
+          <h3 className="text-lg font-semibold mb-2">No Assignments Yet</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Start the learning journey by assigning tasks from the tailoring curriculum or create a custom assignment.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href={`/dashboard/apprentices/${apprenticeId}/assignments/curriculum`}>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <GraduationCap className="mr-2 h-4 w-4" />
+                Assign from Curriculum
+              </Button>
+            </Link>
+            <Link href={`/dashboard/apprentices/${apprenticeId}/assignments/new`}>
+              <Button variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Custom Assignment
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     );
@@ -190,8 +206,8 @@ export function AssignmentsTable({
   return (
     <>
       <div className="space-y-4">
-        {/* Filters */}
-        <div className="flex justify-between items-center">
+        {/* Filters and Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
@@ -207,9 +223,20 @@ export function AssignmentsTable({
             </SelectContent>
           </Select>
 
-          <Link href={`/dashboard/apprentices/${apprenticeId}/assignments/new`}>
-            <Button>Create Assignment</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href={`/dashboard/apprentices/${apprenticeId}/assignments/curriculum`}>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <GraduationCap className="mr-2 h-4 w-4" />
+                Assign from Curriculum
+              </Button>
+            </Link>
+            <Link href={`/dashboard/apprentices/${apprenticeId}/assignments/new`}>
+              <Button variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Custom
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Table */}

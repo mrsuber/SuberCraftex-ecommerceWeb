@@ -18,6 +18,10 @@ import {
   AlertCircle,
   Camera,
   CalendarPlus,
+  Users,
+  GraduationCap,
+  Star,
+  ClipboardList,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -61,11 +65,25 @@ interface Booking {
   }[]
 }
 
+interface Apprentice {
+  id: string
+  apprenticeNumber: string
+  fullName: string
+  photoUrl: string | null
+  department: string
+  status: string
+  startDate: string
+  totalAssignments: number
+  completedAssignments: number
+  certificatesCount: number
+}
+
 interface TailorDashboardClientProps {
   tailorName: string
   todaysFittings: Fitting[]
   upcomingFittings: Fitting[]
   activeBookings: Booking[]
+  apprentices?: Apprentice[]
   stats: {
     totalFittings: number
     completedFittings: number
@@ -98,9 +116,10 @@ export function TailorDashboardClient({
   todaysFittings,
   upcomingFittings,
   activeBookings,
+  apprentices = [],
   stats,
 }: TailorDashboardClientProps) {
-  const [selectedTab, setSelectedTab] = useState<'today' | 'upcoming' | 'bookings'>('today')
+  const [selectedTab, setSelectedTab] = useState<'today' | 'upcoming' | 'bookings' | 'apprentices'>('today')
 
   const getBookingPriority = (booking: Booking) => {
     if (!booking.measurement) {
@@ -195,7 +214,7 @@ export function TailorDashboardClient({
           <CardDescription>Common tasks to get you started</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <Link href="/dashboard/tailor/measurements">
               <Button variant="outline" className="w-full justify-start">
                 <Ruler className="mr-2 h-4 w-4" />
@@ -214,6 +233,14 @@ export function TailorDashboardClient({
                 View All Bookings
               </Button>
             </Link>
+            {apprentices.length > 0 && (
+              <Link href="/dashboard/tailor/apprentices">
+                <Button variant="outline" className="w-full justify-start">
+                  <GraduationCap className="mr-2 h-4 w-4" />
+                  Manage Apprentices
+                </Button>
+              </Link>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -251,6 +278,18 @@ export function TailorDashboardClient({
           >
             Active Bookings ({activeBookings.length})
           </button>
+          {apprentices.length > 0 && (
+            <button
+              onClick={() => setSelectedTab('apprentices')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                selectedTab === 'apprentices'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              My Apprentices ({apprentices.length})
+            </button>
+          )}
         </div>
 
         {/* Today's Fittings */}
@@ -475,6 +514,89 @@ export function TailorDashboardClient({
                   </Link>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Apprentices Tab */}
+        {selectedTab === 'apprentices' && apprentices.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                My Apprentices
+              </CardTitle>
+              <CardDescription>
+                Apprentices you are mentoring
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {apprentices.map((apprentice) => (
+                  <div
+                    key={apprentice.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                        {apprentice.photoUrl ? (
+                          <img
+                            src={apprentice.photoUrl}
+                            alt={apprentice.fullName}
+                            className="h-12 w-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <Users className="h-6 w-6 text-primary" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{apprentice.fullName}</span>
+                          <Badge
+                            variant={apprentice.status === 'active' ? 'default' : 'secondary'}
+                            className={apprentice.status === 'active' ? 'bg-green-500' : ''}
+                          >
+                            {apprentice.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          #{apprentice.apprenticeNumber} • Started {format(new Date(apprentice.startDate), 'MMM d, yyyy')}
+                        </p>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <ClipboardList className="h-3 w-3" />
+                            {apprentice.completedAssignments}/{apprentice.totalAssignments} assignments
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500" />
+                            {apprentice.certificatesCount} certificates
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/dashboard/apprentices/${apprentice.id}/assignments/new`}>
+                        <Button size="sm" variant="outline">
+                          <ClipboardList className="mr-2 h-4 w-4" />
+                          Assign Task
+                        </Button>
+                      </Link>
+                      <Link href={`/dashboard/apprentices/${apprentice.id}`}>
+                        <Button size="sm" variant="ghost">
+                          View
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                <Link href="/dashboard/tailor/apprentices">
+                  <Button variant="outline" className="w-full">
+                    Manage All Apprentices
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         )}

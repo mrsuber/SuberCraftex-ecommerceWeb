@@ -142,6 +142,30 @@ export default async function TailorDashboardPage() {
     take: 10,
   })
 
+  // Fetch apprentices mentored by this tailor
+  const apprentices = await db.apprentice.findMany({
+    where: {
+      mentorId: user.id,
+      isActive: true,
+    },
+    include: {
+      assignments: {
+        select: {
+          id: true,
+          status: true,
+        },
+      },
+      certificates: {
+        select: {
+          id: true,
+        },
+      },
+    },
+    orderBy: {
+      startDate: 'desc',
+    },
+  })
+
   // Fetch overall statistics
   const stats = {
     totalFittings: await db.fittingAppointment.count({
@@ -203,12 +227,26 @@ export default async function TailorDashboardPage() {
       : null,
   }))
 
+  const serializedApprentices = apprentices.map((apprentice) => ({
+    id: apprentice.id,
+    apprenticeNumber: apprentice.apprenticeNumber,
+    fullName: apprentice.fullName,
+    photoUrl: apprentice.photoUrl,
+    department: apprentice.department,
+    status: apprentice.status,
+    startDate: apprentice.startDate.toISOString(),
+    totalAssignments: apprentice.assignments.length,
+    completedAssignments: apprentice.assignments.filter((a) => a.status === 'completed').length,
+    certificatesCount: apprentice.certificates.length,
+  }))
+
   return (
     <TailorDashboardClient
       tailorName={tailor.fullName}
       todaysFittings={serializedTodaysFittings as any}
       upcomingFittings={serializedUpcomingFittings as any}
       activeBookings={serializedActiveBookings as any}
+      apprentices={serializedApprentices}
       stats={stats}
     />
   )

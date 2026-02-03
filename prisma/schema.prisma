@@ -2139,9 +2139,64 @@ model Apprentice {
   @@map("apprentices")
 }
 
+// Assignment Templates (Default Curriculum)
+model AssignmentTemplate {
+  id                String            @id @default(uuid())
+
+  // Curriculum Organization
+  level             Int               // 1-5
+  moduleNumber      String            @map("module_number") // e.g., "1.1", "2.3"
+  assignmentNumber  String            @map("assignment_number") // e.g., "1.1.1", "2.3.2"
+  orderIndex        Int               @default(0) @map("order_index") // For sorting
+
+  // Content
+  title             String
+  description       String            @db.Text
+  instructions      String?           @db.Text
+  objectives        String[]          @default([])
+  skills            String[]          @default([])
+
+  // Expected Outcome
+  expectedOutcome   String?           @db.Text @map("expected_outcome")
+  passingCriteria   String?           @db.Text @map("passing_criteria")
+
+  // Visual References
+  referencePhotos   String[]          @default([]) @map("reference_photos")
+  videoUrl          String?           @map("video_url")
+
+  // Duration & Difficulty
+  estimatedHours    Int?              @map("estimated_hours")
+  difficulty        String            @default("beginner") // beginner, intermediate, advanced, expert
+
+  // Prerequisites
+  prerequisiteIds   String[]          @default([]) @map("prerequisite_ids")
+
+  // Category
+  category          String            // tools, fabric, stitching, measurement, construction, finishing
+  subcategory       String?
+
+  isActive          Boolean           @default(true) @map("is_active")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  assignments       ApprenticeAssignment[]
+
+  @@unique([assignmentNumber])
+  @@index([level])
+  @@index([category])
+  @@index([orderIndex])
+  @@map("assignment_templates")
+}
+
 model ApprenticeAssignment {
   id                String            @id @default(uuid())
   apprenticeId      String            @map("apprentice_id")
+
+  // Template Reference (null for custom assignments)
+  templateId        String?           @map("template_id")
+  isCustom          Boolean           @default(false) @map("is_custom")
+
   title             String
   description       String            @db.Text
   instructions      String?           @db.Text
@@ -2170,6 +2225,7 @@ model ApprenticeAssignment {
 
   // Relations
   apprentice        Apprentice        @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  template          AssignmentTemplate? @relation(fields: [templateId], references: [id])
 
   @@index([apprenticeId])
   @@index([status])

@@ -20,6 +20,9 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  BookOpen,
+  Plus,
+  GraduationCap,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -136,9 +139,15 @@ export default async function ApprenticeDetailsPage({ params }: PageProps) {
             </Button>
           </Link>
           <Link href={`/dashboard/apprentices/${id}/certificates`}>
-            <Button>
+            <Button variant="outline">
               <Award className="mr-2 h-4 w-4" />
               Certificates
+            </Button>
+          </Link>
+          <Link href={`/dashboard/apprentices/${id}/assignments/curriculum`}>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <GraduationCap className="mr-2 h-4 w-4" />
+              Assign from Curriculum
             </Button>
           </Link>
         </div>
@@ -308,9 +317,19 @@ export default async function ApprenticeDetailsPage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               {apprentice.assignments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  No assignments yet
-                </p>
+                <div className="text-center py-8">
+                  <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-semibold mb-2">No Assignments Yet</h3>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Start assigning tasks from the tailoring curriculum to track progress.
+                  </p>
+                  <Link href={`/dashboard/apprentices/${id}/assignments/curriculum`}>
+                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                      <GraduationCap className="mr-2 h-4 w-4" />
+                      Assign from Curriculum
+                    </Button>
+                  </Link>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {apprentice.assignments.map((assignment) => (
