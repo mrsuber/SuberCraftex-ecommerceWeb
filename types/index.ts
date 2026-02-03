@@ -755,6 +755,7 @@ export interface BlogPost {
   excerpt: string | null;
   content: string;
   featured_image: string | null;
+  images: string[];
   youtube_url: string | null;
   status: BlogStatus;
   published_at: string | null;

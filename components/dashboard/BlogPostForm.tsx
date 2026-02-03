@@ -15,9 +15,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, Upload, X, ImageIcon } from 'lucide-react'
+import { Loader2, Upload, X, ImageIcon, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import Image from 'next/image'
+import { RichTextEditor } from '@/components/shared/RichTextEditor'
 
 interface BlogPostFormProps {
   post?: BlogPost
@@ -44,8 +45,10 @@ export function BlogPostForm({ post }: BlogPostFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploadingFeatured, setUploadingFeatured] = useState(false)
+  const [uploadingGallery, setUploadingGallery] = useState(false)
+  const featuredFileRef = useRef<HTMLInputElement>(null)
+  const galleryFileRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
     title: post?.title || '',
@@ -53,6 +56,7 @@ export function BlogPostForm({ post }: BlogPostFormProps) {
     excerpt: post?.excerpt || '',
     content: post?.content || '',
     featuredImage: post?.featured_image || '',
+    images: post?.images || [] as string[],
     youtubeUrl: post?.youtube_url || '',
     status: (post?.status || 'draft') as BlogStatus,
     publishedAt: post?.published_at ? post.published_at.split('T')[0] : '',
@@ -60,38 +64,39 @@ export function BlogPostForm({ post }: BlogPostFormProps) {
 
   const handleTitleChange = (value: string) => {
     const updates: any = { title: value }
-    // Auto-generate slug only if slug hasn't been manually edited or is empty
     if (!post || formData.slug === slugify(formData.title) || formData.slug === '') {
       updates.slug = slugify(value)
     }
     setFormData((prev) => ({ ...prev, ...updates }))
   }
 
-  const handleImageUpload = async (file: File) => {
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const uploadFormData = new FormData()
+    uploadFormData.append('file', file)
+    uploadFormData.append('type', 'blog-image')
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: uploadFormData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to upload image')
+    }
+
+    const data = await response.json()
+    return data.url
+  }
+
+  const handleFeaturedImageUpload = async (file: File) => {
     try {
-      setUploading(true)
-
-      const uploadFormData = new FormData()
-      uploadFormData.append('file', file)
-      uploadFormData.append('type', 'blog-image')
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: uploadFormData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to upload image')
+      setUploadingFeatured(true)
+      const url = await uploadImage(file)
+      if (url) {
+        setFormData((prev) => ({ ...prev, featuredImage: url }))
+        toast({ title: 'Success', description: 'Featured image uploaded' })
       }
-
-      const data = await response.json()
-      setFormData((prev) => ({ ...prev, featuredImage: data.url }))
-
-      toast({
-        title: 'Success',
-        description: 'Image uploaded successfully',
-      })
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -99,15 +104,47 @@ export function BlogPostForm({ post }: BlogPostFormProps) {
         variant: 'destructive',
       })
     } finally {
-      setUploading(false)
+      setUploadingFeatured(false)
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      handleImageUpload(file)
+  const handleGalleryImageUpload = async (files: FileList) => {
+    try {
+      setUploadingGallery(true)
+      const uploadPromises = Array.from(files).map(uploadImage)
+      const urls = await Promise.all(uploadPromises)
+      const validUrls = urls.filter((url): url is string => url !== null)
+
+      if (validUrls.length > 0) {
+        setFormData((prev) => ({ ...prev, images: [...prev.images, ...validUrls] }))
+        toast({ title: 'Success', description: `${validUrls.length} image(s) uploaded` })
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to upload images',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingGallery(false)
     }
+  }
+
+  const handleFeaturedFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFeaturedImageUpload(file)
+  }
+
+  const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) handleGalleryImageUpload(files)
+  }
+
+  const removeGalleryImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,14 +229,11 @@ export function BlogPostForm({ post }: BlogPostFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Content *</Label>
-            <Textarea
-              id="content"
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Write your blog post content (HTML supported)..."
-              rows={12}
-              required
+            <Label>Content *</Label>
+            <RichTextEditor
+              content={formData.content}
+              onChange={(content) => setFormData({ ...formData, content })}
+              placeholder="Write your blog post content..."
             />
           </div>
         </CardContent>
@@ -218,19 +252,19 @@ export function BlogPostForm({ post }: BlogPostFormProps) {
               className="flex-1"
             />
             <input
-              ref={fileRef}
+              ref={featuredFileRef}
               type="file"
               accept="image/*"
-              onChange={handleFileChange}
+              onChange={handleFeaturedFileChange}
               className="hidden"
             />
             <Button
               type="button"
               variant="outline"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
+              onClick={() => featuredFileRef.current?.click()}
+              disabled={uploadingFeatured}
             >
-              {uploading ? (
+              {uploadingFeatured ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Upload className="h-4 w-4" />
@@ -263,12 +297,68 @@ export function BlogPostForm({ post }: BlogPostFormProps) {
           {!formData.featuredImage && (
             <div
               className="flex flex-col items-center justify-center w-full max-w-md h-40 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => fileRef.current?.click()}
+              onClick={() => featuredFileRef.current?.click()}
             >
               <ImageIcon className="h-10 w-10 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">Click to upload featured image</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gallery Images</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <input
+            ref={galleryFileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleGalleryFileChange}
+            className="hidden"
+          />
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {formData.images.map((img, index) => (
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                <Image
+                  src={img}
+                  alt={`Gallery image ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6"
+                  onClick={() => removeGalleryImage(index)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+
+            <div
+              className="flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => galleryFileRef.current?.click()}
+            >
+              {uploadingGallery ? (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <Plus className="h-8 w-8 text-muted-foreground mb-1" />
+                  <p className="text-xs text-muted-foreground">Add images</p>
+                </>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Upload multiple images to display in the blog post. You can select multiple files at once.
+          </p>
         </CardContent>
       </Card>
 

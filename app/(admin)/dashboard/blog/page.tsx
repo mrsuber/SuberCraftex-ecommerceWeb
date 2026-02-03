@@ -30,6 +30,7 @@ async function getBlogPosts() {
     excerpt: post.excerpt,
     content: post.content,
     featured_image: toAbsoluteUrl(post.featuredImage),
+    images: (post.images || []).map((img: string) => toAbsoluteUrl(img) as string),
     youtube_url: post.youtubeUrl,
     status: post.status,
     published_at: post.publishedAt?.toISOString() || null,

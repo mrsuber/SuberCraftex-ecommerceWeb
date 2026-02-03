@@ -18,6 +18,7 @@ function serializePost(post: any) {
     excerpt: post.excerpt,
     content: post.content,
     featured_image: toAbsoluteUrl(post.featuredImage),
+    images: (post.images || []).map((img: string) => toAbsoluteUrl(img)),
     youtube_url: post.youtubeUrl,
     status: post.status,
     published_at: post.publishedAt?.toISOString() || null,
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     const { user } = await requireAdmin(request)
     const body = await request.json()
 
-    const { title, content, excerpt, featuredImage, youtubeUrl, status, publishedAt } = body
+    const { title, content, excerpt, featuredImage, images, youtubeUrl, status, publishedAt } = body
 
     if (!title || !content) {
       return NextResponse.json(
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
         excerpt: excerpt || null,
         content,
         featuredImage: featuredImage || null,
+        images: images || [],
         youtubeUrl: youtubeUrl || null,
         status: postStatus,
         publishedAt: postStatus === 'published'
