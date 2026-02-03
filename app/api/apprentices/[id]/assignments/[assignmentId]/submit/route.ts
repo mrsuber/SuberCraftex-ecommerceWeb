@@ -4,8 +4,9 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 
 const submitAssignmentSchema = z.object({
-  submissionPhotos: z.array(z.string()).min(1, 'At least one photo is required'),
-  notes: z.string().optional(),
+  submissionNotes: z.string().min(1, 'Please describe what you did'),
+  submissionPhotos: z.array(z.string()).default([]),
+  submissionVideos: z.array(z.string()).default([]), // YouTube/video links
 });
 
 // POST - Submit assignment
@@ -47,20 +48,27 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Check if assignment can be submitted
-    if (['completed', 'submitted'].includes(existingAssignment.status)) {
-      return NextResponse.json({ error: 'Assignment already submitted or completed' }, { status: 400 });
+    // Check if assignment can be submitted (allow resubmission if needs_revision)
+    if (['completed'].includes(existingAssignment.status)) {
+      return NextResponse.json({ error: 'Assignment already completed' }, { status: 400 });
     }
 
     const body = await request.json();
     const data = submitAssignmentSchema.parse(body);
 
+    // Validate that at least photos or videos are provided
+    if (data.submissionPhotos.length === 0 && data.submissionVideos.length === 0) {
+      return NextResponse.json({ error: 'Please provide at least one photo or video' }, { status: 400 });
+    }
+
     const assignment = await db.apprenticeAssignment.update({
       where: { id: assignmentId },
       data: {
+        submissionNotes: data.submissionNotes,
         submissionPhotos: data.submissionPhotos,
+        submissionVideos: data.submissionVideos,
         status: 'submitted',
-        // If there's additional feedback from the apprentice, we could add it here
+        submittedAt: new Date(),
       },
     });
 

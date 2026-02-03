@@ -52,6 +52,7 @@ export default async function AssignmentsPage({ params }: PageProps) {
     assignedDate: a.assignedDate.toISOString(),
     dueDate: a.dueDate?.toISOString() || null,
     completedDate: a.completedDate?.toISOString() || null,
+    submittedAt: a.submittedAt?.toISOString() || null,
     reviewedAt: a.reviewedAt?.toISOString() || null,
   }));
 

@@ -63,11 +63,14 @@ interface Assignment {
   assignedDate: string;
   dueDate: string | null;
   completedDate: string | null;
+  submittedAt: string | null;
   status: string;
   rating: number | null;
   feedback: string | null;
   assignmentPhotos: string[];
+  submissionNotes: string | null;
   submissionPhotos: string[];
+  submissionVideos: string[];
   assignedBy: string;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -448,19 +451,61 @@ export function AssignmentsTable({
                 </div>
               )}
 
-              {selectedAssignment.submissionPhotos.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Submission Photos</h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {selectedAssignment.submissionPhotos.map((photo, idx) => (
-                      <img
-                        key={idx}
-                        src={photo}
-                        alt={`Submission ${idx + 1}`}
-                        className="rounded-lg object-cover aspect-square"
-                      />
-                    ))}
-                  </div>
+              {/* Submission Section */}
+              {(selectedAssignment.submissionNotes ||
+                selectedAssignment.submissionPhotos.length > 0 ||
+                selectedAssignment.submissionVideos.length > 0) && (
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    Apprentice Submission
+                  </h4>
+
+                  {selectedAssignment.submissionNotes && (
+                    <div className="mb-3">
+                      <p className="text-sm font-medium mb-1">Notes:</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-3 rounded-lg">
+                        {selectedAssignment.submissionNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedAssignment.submissionPhotos.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-sm font-medium mb-2">Photos ({selectedAssignment.submissionPhotos.length}):</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {selectedAssignment.submissionPhotos.map((photo, idx) => (
+                          <a key={idx} href={photo} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={photo}
+                              alt={`Submission ${idx + 1}`}
+                              className="rounded-lg object-cover aspect-square hover:opacity-80 transition-opacity"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAssignment.submissionVideos.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Videos ({selectedAssignment.submissionVideos.length}):</p>
+                      <div className="space-y-2">
+                        {selectedAssignment.submissionVideos.map((video, idx) => (
+                          <a
+                            key={idx}
+                            href={video}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-sm"
+                          >
+                            <Play className="h-4 w-4 text-red-500" />
+                            <span className="truncate">{video}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

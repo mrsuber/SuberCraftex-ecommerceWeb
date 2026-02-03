@@ -39,6 +39,9 @@ export async function GET(
             mentorId: true,
           },
         },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 
