@@ -54,6 +54,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AssignmentReview } from "./AssignmentReview";
+import { AssignmentComments } from "./AssignmentComments";
 
 interface Assignment {
   id: string;
@@ -79,6 +80,8 @@ interface Assignment {
 interface AssignmentsTableProps {
   assignments: Assignment[];
   apprenticeId: string;
+  apprenticeName?: string;
+  currentUserRole?: string;
   canReview?: boolean;
   onRefresh?: () => void;
 }
@@ -104,6 +107,8 @@ const statusIcons: Record<string, React.ReactNode> = {
 export function AssignmentsTable({
   assignments,
   apprenticeId,
+  apprenticeName = "Apprentice",
+  currentUserRole = "admin",
   canReview = false,
   onRefresh,
 }: AssignmentsTableProps) {
@@ -528,6 +533,15 @@ export function AssignmentsTable({
                     <span>{selectedAssignment.rating}/5</span>
                   </div>
                 )}
+              </div>
+
+              {/* Comments Section */}
+              <div className="border-t pt-4 mt-4">
+                <AssignmentComments
+                  apprenticeId={apprenticeId}
+                  assignmentId={selectedAssignment.id}
+                  currentUserRole={currentUserRole}
+                />
               </div>
             </div>
           )}

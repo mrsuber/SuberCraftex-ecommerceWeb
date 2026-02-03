@@ -75,6 +75,8 @@ export default async function AssignmentsPage({ params }: PageProps) {
       <AssignmentsTable
         assignments={formattedAssignments}
         apprenticeId={id}
+        apprenticeName={apprentice.fullName}
+        currentUserRole={user.role}
         canReview={canReview}
       />
     </div>
