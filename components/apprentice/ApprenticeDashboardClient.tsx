@@ -35,10 +35,12 @@ interface Assignment {
 
 interface Certificate {
   id: string
+  certificateNumber: string
   title: string
   description: string | null
+  skills: string[]
   issuedDate: string
-  certificateUrl: string | null
+  issuedBy: string
 }
 
 interface ApprenticeData {
@@ -344,26 +346,28 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                       >
                         <div className="flex items-start gap-3">
                           <Award className="h-8 w-8 text-yellow-500 flex-shrink-0" />
-                          <div>
+                          <div className="flex-1">
                             <h3 className="font-semibold">{certificate.title}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              #{certificate.certificateNumber}
+                            </p>
                             {certificate.description && (
                               <p className="text-sm text-muted-foreground mt-1">
                                 {certificate.description}
                               </p>
                             )}
+                            {certificate.skills.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {certificate.skills.map((skill, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
                             <p className="text-sm text-muted-foreground mt-2">
                               Issued: {format(new Date(certificate.issuedDate), 'MMM d, yyyy')}
                             </p>
-                            {certificate.certificateUrl && (
-                              <a
-                                href={certificate.certificateUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-primary hover:underline mt-2 inline-block"
-                              >
-                                View Certificate
-                              </a>
-                            )}
                           </div>
                         </div>
                       </div>

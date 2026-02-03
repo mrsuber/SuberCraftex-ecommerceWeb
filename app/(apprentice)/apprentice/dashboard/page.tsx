@@ -102,10 +102,12 @@ export default async function ApprenticeDashboardPage() {
     })),
     certificates: apprentice.certificates.map((c) => ({
       id: c.id,
+      certificateNumber: c.certificateNumber,
       title: c.title,
       description: c.description,
+      skills: c.skills,
       issuedDate: c.issuedDate.toISOString(),
-      certificateUrl: c.certificateUrl,
+      issuedBy: c.issuedBy,
     })),
   }
 
