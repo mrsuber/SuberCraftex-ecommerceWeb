@@ -3,6 +3,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { format } from 'date-fns'
 
+// Force dynamic rendering to always fetch fresh data
+export const dynamic = 'force-dynamic'
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
 
 function toAbsoluteUrl(url: string | null): string | null {
