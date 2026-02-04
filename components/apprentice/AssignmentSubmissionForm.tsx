@@ -16,6 +16,8 @@ import {
   Plus,
   Send,
   Camera,
+  FileText,
+  File,
 } from "lucide-react";
 
 interface AssignmentSubmissionFormProps {
@@ -26,6 +28,7 @@ interface AssignmentSubmissionFormProps {
     submissionNotes: string | null;
     submissionPhotos: string[];
     submissionVideos: string[];
+    submissionDocuments?: string[];
   };
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -42,11 +45,13 @@ export function AssignmentSubmissionForm({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
 
   const [formData, setFormData] = useState({
     submissionNotes: existingSubmission?.submissionNotes || "",
     submissionPhotos: existingSubmission?.submissionPhotos || [],
     submissionVideos: existingSubmission?.submissionVideos || [],
+    submissionDocuments: existingSubmission?.submissionDocuments || [],
   });
 
   const [newVideoUrl, setNewVideoUrl] = useState("");
@@ -123,6 +128,58 @@ export function AssignmentSubmissionForm({
     }));
   };
 
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploadingDocument(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        const formDataUpload = new FormData();
+        formDataUpload.append("file", file);
+        formDataUpload.append("type", "document");
+        formDataUpload.append("apprenticeId", apprenticeId);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formDataUpload,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to upload document");
+        }
+
+        const data = await response.json();
+        uploadedUrls.push(data.url);
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        submissionDocuments: [...prev.submissionDocuments, ...uploadedUrls],
+      }));
+      toast.success(`${uploadedUrls.length} document(s) uploaded`);
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+      toast.error("Failed to upload documents");
+    } finally {
+      setIsUploadingDocument(false);
+    }
+  };
+
+  const removeDocument = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      submissionDocuments: prev.submissionDocuments.filter((_, i) => i !== index),
+    }));
+  };
+
+  const getDocumentName = (url: string) => {
+    const parts = url.split("/");
+    return parts[parts.length - 1] || "Document";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -131,8 +188,8 @@ export function AssignmentSubmissionForm({
       return;
     }
 
-    if (formData.submissionPhotos.length === 0 && formData.submissionVideos.length === 0) {
-      toast.error("Please add at least one photo or video");
+    if (formData.submissionPhotos.length === 0 && formData.submissionVideos.length === 0 && formData.submissionDocuments.length === 0) {
+      toast.error("Please add at least one photo, video, or document");
       return;
     }
 
@@ -308,6 +365,73 @@ export function AssignmentSubmissionForm({
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
+            </div>
+          </div>
+
+          {/* Documents Upload */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Documents (PDF, Word, etc.)
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Upload supporting documents like pattern files, research notes, or design sketches.
+            </p>
+
+            {/* Document List */}
+            {formData.submissionDocuments.length > 0 && (
+              <div className="space-y-2">
+                {formData.submissionDocuments.map((doc, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 bg-muted rounded-lg"
+                  >
+                    <File className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                    <a
+                      href={doc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline truncate flex-1"
+                    >
+                      {getDocumentName(doc)}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(index)}
+                      className="p-1 hover:bg-destructive/10 rounded"
+                    >
+                      <X className="h-4 w-4 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload Button */}
+            <div>
+              <Label htmlFor="documents" className="cursor-pointer">
+                <div className="flex items-center justify-center gap-2 p-6 border-2 border-dashed rounded-lg hover:border-primary transition-colors">
+                  {isUploadingDocument ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <FileText className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Click to upload documents (PDF, DOC, DOCX)
+                      </span>
+                    </>
+                  )}
+                </div>
+              </Label>
+              <Input
+                id="documents"
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                multiple
+                className="hidden"
+                onChange={handleDocumentUpload}
+                disabled={isUploadingDocument}
+              />
             </div>
           </div>
         </CardContent>

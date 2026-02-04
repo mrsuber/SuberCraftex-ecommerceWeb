@@ -33,6 +33,7 @@ import {
   FileText,
   MessageSquare,
   ExternalLink,
+  File,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { AssignmentSubmissionForm } from './AssignmentSubmissionForm'
@@ -54,6 +55,7 @@ interface Assignment {
   submissionNotes: string | null
   submissionPhotos: string[]
   submissionVideos: string[]
+  submissionDocuments: string[]
 }
 
 interface Certificate {
@@ -127,6 +129,11 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
       .join('')
       .toUpperCase()
       .slice(0, 2)
+  }
+
+  const getDocumentName = (url: string) => {
+    const parts = url.split('/')
+    return decodeURIComponent(parts[parts.length - 1] || 'Document')
   }
 
   return (
@@ -526,7 +533,8 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                 {/* Your Submission (if exists) */}
                 {(selectedAssignment.submissionNotes ||
                   selectedAssignment.submissionPhotos.length > 0 ||
-                  selectedAssignment.submissionVideos.length > 0) && !showSubmitForm && (
+                  selectedAssignment.submissionVideos.length > 0 ||
+                  selectedAssignment.submissionDocuments.length > 0) && !showSubmitForm && (
                   <Card className="border-green-200 bg-green-50">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">
@@ -590,6 +598,29 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                           </div>
                         </div>
                       )}
+                      {selectedAssignment.submissionDocuments.length > 0 && (
+                        <div>
+                          <h5 className="font-medium text-sm mb-2 flex items-center gap-1">
+                            <File className="h-4 w-4" />
+                            Your Documents ({selectedAssignment.submissionDocuments.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {selectedAssignment.submissionDocuments.map((doc, idx) => (
+                              <a
+                                key={idx}
+                                href={doc}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors text-sm border"
+                              >
+                                <File className="h-4 w-4 text-blue-500" />
+                                <span className="truncate flex-1">{getDocumentName(doc)}</span>
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -624,6 +655,7 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                       submissionNotes: selectedAssignment.submissionNotes,
                       submissionPhotos: selectedAssignment.submissionPhotos,
                       submissionVideos: selectedAssignment.submissionVideos,
+                      submissionDocuments: selectedAssignment.submissionDocuments,
                     }}
                     onSuccess={() => {
                       setShowSubmitForm(false)

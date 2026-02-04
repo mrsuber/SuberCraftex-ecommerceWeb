@@ -7,6 +7,7 @@ const submitAssignmentSchema = z.object({
   submissionNotes: z.string().min(1, 'Please describe what you did'),
   submissionPhotos: z.array(z.string()).default([]),
   submissionVideos: z.array(z.string()).default([]), // YouTube/video links
+  submissionDocuments: z.array(z.string()).default([]), // PDF and other documents
 });
 
 // POST - Submit assignment
@@ -56,9 +57,9 @@ export async function POST(
     const body = await request.json();
     const data = submitAssignmentSchema.parse(body);
 
-    // Validate that at least photos or videos are provided
-    if (data.submissionPhotos.length === 0 && data.submissionVideos.length === 0) {
-      return NextResponse.json({ error: 'Please provide at least one photo or video' }, { status: 400 });
+    // Validate that at least photos, videos, or documents are provided
+    if (data.submissionPhotos.length === 0 && data.submissionVideos.length === 0 && data.submissionDocuments.length === 0) {
+      return NextResponse.json({ error: 'Please provide at least one photo, video, or document' }, { status: 400 });
     }
 
     const assignment = await db.apprenticeAssignment.update({
@@ -67,6 +68,7 @@ export async function POST(
         submissionNotes: data.submissionNotes,
         submissionPhotos: data.submissionPhotos,
         submissionVideos: data.submissionVideos,
+        submissionDocuments: data.submissionDocuments,
         status: 'submitted',
         submittedAt: new Date(),
       },

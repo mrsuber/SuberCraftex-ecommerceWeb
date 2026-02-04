@@ -105,6 +105,7 @@ export default async function ApprenticeDashboardPage() {
       submissionNotes: a.submissionNotes,
       submissionPhotos: a.submissionPhotos || [],
       submissionVideos: a.submissionVideos || [],
+      submissionDocuments: a.submissionDocuments || [],
     })),
     certificates: apprentice.certificates.map((c) => ({
       id: c.id,

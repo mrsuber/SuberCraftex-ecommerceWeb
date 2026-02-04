@@ -50,6 +50,7 @@ import {
   Trash2,
   GraduationCap,
   Plus,
+  File,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -72,6 +73,7 @@ interface Assignment {
   submissionNotes: string | null;
   submissionPhotos: string[];
   submissionVideos: string[];
+  submissionDocuments: string[];
   assignedBy: string;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -459,7 +461,8 @@ export function AssignmentsTable({
               {/* Submission Section */}
               {(selectedAssignment.submissionNotes ||
                 selectedAssignment.submissionPhotos.length > 0 ||
-                selectedAssignment.submissionVideos.length > 0) && (
+                selectedAssignment.submissionVideos.length > 0 ||
+                selectedAssignment.submissionDocuments.length > 0) && (
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-3 flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-500" />
@@ -506,6 +509,26 @@ export function AssignmentsTable({
                           >
                             <Play className="h-4 w-4 text-red-500" />
                             <span className="truncate">{video}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAssignment.submissionDocuments.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Documents ({selectedAssignment.submissionDocuments.length}):</p>
+                      <div className="space-y-2">
+                        {selectedAssignment.submissionDocuments.map((doc, idx) => (
+                          <a
+                            key={idx}
+                            href={doc}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-sm"
+                          >
+                            <File className="h-4 w-4 text-blue-500" />
+                            <span className="truncate">{doc.split('/').pop() || 'Document'}</span>
                           </a>
                         ))}
                       </div>

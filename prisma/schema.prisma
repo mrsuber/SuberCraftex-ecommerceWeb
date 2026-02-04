@@ -2216,9 +2216,10 @@ model ApprenticeAssignment {
   assignmentPhotos  String[]          @default([]) @map("assignment_photos")
 
   // Submission Data (filled by apprentice)
-  submissionNotes   String?           @db.Text @map("submission_notes")
-  submissionPhotos  String[]          @default([]) @map("submission_photos")
-  submissionVideos  String[]          @default([]) @map("submission_videos") // YouTube/video links
+  submissionNotes     String?           @db.Text @map("submission_notes")
+  submissionPhotos    String[]          @default([]) @map("submission_photos")
+  submissionVideos    String[]          @default([]) @map("submission_videos") // YouTube/video links
+  submissionDocuments String[]          @default([]) @map("submission_documents") // PDF and other documents
 
   // Mentor Info
   assignedBy        String            @map("assigned_by") // User ID of mentor/admin
