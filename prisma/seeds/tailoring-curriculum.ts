@@ -1658,6 +1658,476 @@ const tailoringCurriculum: AssignmentTemplateData[] = [
     category: 'construction',
     subcategory: 'project',
   },
+
+  // ============================================================================
+  // LEVEL 6: DIGITAL TAILORING TECHNOLOGY (Months 25-30)
+  // ============================================================================
+
+  // Module 6.1: Digital Pattern Making Fundamentals
+  {
+    level: 6,
+    moduleNumber: '6.1',
+    assignmentNumber: '6.1.1',
+    orderIndex: 59,
+    title: 'Introduction to CAD Pattern Software',
+    description: 'Learn the fundamentals of computer-aided design (CAD) software for pattern making. Understand digital pattern creation, editing, and management.',
+    instructions: `1. Install and set up pattern design software (Optitex, Gerber, or Lectra)
+2. Learn the interface navigation and tool palettes
+3. Understand digital measurement input
+4. Create basic pattern shapes using CAD tools
+5. Practice saving, organizing, and exporting patterns
+6. Compare digital vs traditional pattern creation`,
+    objectives: [
+      'Navigate CAD pattern software confidently',
+      'Create basic geometric pattern pieces',
+      'Understand file formats and export options',
+      'Set up proper measurement systems',
+    ],
+    skills: ['CAD software basics', 'Digital navigation', 'File management'],
+    expectedOutcome: 'Create a basic bodice block using CAD software.',
+    passingCriteria: 'Pattern is accurate to measurements within 2mm',
+    referencePhotos: ['/curriculum/digital/cad-interface.jpg', '/curriculum/digital/digital-pattern.jpg'],
+    estimatedHours: 16,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: 'cad-basics',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.1',
+    assignmentNumber: '6.1.2',
+    orderIndex: 60,
+    title: 'Pattern Digitization with Adobe Illustrator',
+    description: 'Master pattern digitization using Adobe Illustrator - converting physical patterns to digital format and creating patterns from scratch.',
+    instructions: `1. Scan or photograph existing patterns at correct scale
+2. Import into Adobe Illustrator and set up artboard
+3. Use pen tool to trace pattern pieces accurately
+4. Add seam allowances, notches, and grain lines
+5. Create proper layering system for pattern organization
+6. Export patterns in industry-standard formats (DXF, PDF)`,
+    objectives: [
+      'Digitize physical patterns accurately',
+      'Use Illustrator tools for pattern creation',
+      'Apply proper technical markings digitally',
+      'Export in multiple formats',
+    ],
+    skills: ['Adobe Illustrator', 'Pattern digitization', 'Vector graphics'],
+    expectedOutcome: 'Digitized shirt pattern with all markings.',
+    passingCriteria: 'Digital pattern matches physical within 1mm tolerance',
+    referencePhotos: ['/curriculum/digital/illustrator-pattern.jpg', '/curriculum/digital/digitization-process.jpg'],
+    estimatedHours: 20,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: 'digitization',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.1',
+    assignmentNumber: '6.1.3',
+    orderIndex: 61,
+    title: 'Advanced CAD Pattern Manipulation',
+    description: 'Learn advanced pattern manipulation techniques: grading, scaling, style modifications, and pattern nesting for production.',
+    instructions: `1. Master pattern grading for size ranges (XS-XXL)
+2. Create grade rules based on body measurements
+3. Practice dart manipulation digitally
+4. Learn pattern nesting for fabric efficiency
+5. Calculate fabric requirements automatically
+6. Generate production-ready cut markers`,
+    objectives: [
+      'Grade patterns across size ranges',
+      'Manipulate darts and style lines digitally',
+      'Create efficient marker layouts',
+      'Calculate material requirements',
+    ],
+    skills: ['Pattern grading', 'Marker making', 'Production planning'],
+    expectedOutcome: 'Complete graded pattern set with nested markers.',
+    passingCriteria: 'Grades maintain proper proportions, markers achieve 80%+ efficiency',
+    referencePhotos: ['/curriculum/digital/pattern-grading.jpg', '/curriculum/digital/marker-nesting.jpg'],
+    estimatedHours: 24,
+    difficulty: 'advanced',
+    category: 'digital',
+    subcategory: 'cad-advanced',
+  },
+
+  // Module 6.2: 3D Garment Design Introduction
+  {
+    level: 6,
+    moduleNumber: '6.2',
+    assignmentNumber: '6.2.1',
+    orderIndex: 62,
+    title: 'Introduction to CLO3D / Marvelous Designer',
+    description: 'Begin learning industry-standard 3D garment design software used by major fashion houses worldwide.',
+    instructions: `1. Install and configure CLO3D or Marvelous Designer
+2. Learn avatar creation and customization
+3. Understand 3D workspace navigation (rotate, pan, zoom)
+4. Import 2D patterns into 3D environment
+5. Learn arrangement points and sewing tool
+6. Practice basic draping and simulation`,
+    objectives: [
+      'Navigate 3D garment software confidently',
+      'Create and customize digital avatars',
+      'Import and arrange pattern pieces',
+      'Execute basic garment simulation',
+    ],
+    skills: ['3D software navigation', 'Digital avatar creation', '3D pattern arrangement'],
+    expectedOutcome: 'Simple 3D t-shirt created from 2D patterns.',
+    passingCriteria: 'Garment simulates correctly on avatar without errors',
+    referencePhotos: ['/curriculum/digital/clo3d-interface.jpg', '/curriculum/digital/3d-tshirt.jpg'],
+    estimatedHours: 20,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: '3d-basics',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.2',
+    assignmentNumber: '6.2.2',
+    orderIndex: 63,
+    title: 'Fabric Simulation and Material Properties',
+    description: 'Master digital fabric simulation - understanding how to replicate real fabric behavior in 3D software.',
+    instructions: `1. Study fabric property parameters (bend, stretch, weight)
+2. Create fabric presets for common materials (wool, cotton, silk, linen)
+3. Adjust physical properties to match real fabric behavior
+4. Apply textures and patterns to 3D fabrics
+5. Test simulation accuracy against physical samples
+6. Build personal fabric library`,
+    objectives: [
+      'Understand fabric physics parameters',
+      'Create accurate fabric simulations',
+      'Apply realistic textures and patterns',
+      'Build reusable fabric library',
+    ],
+    skills: ['Fabric simulation', 'Material properties', 'Texture mapping'],
+    expectedOutcome: 'Digital fabric library with 10 accurately simulated materials.',
+    passingCriteria: 'Simulated fabrics match physical drape behavior',
+    referencePhotos: ['/curriculum/digital/fabric-physics.jpg', '/curriculum/digital/texture-mapping.jpg'],
+    estimatedHours: 16,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: 'fabric-simulation',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.2',
+    assignmentNumber: '6.2.3',
+    orderIndex: 64,
+    title: '3D Jacket Prototype',
+    description: 'Create a complete 3D jacket prototype including canvas structure, lining, and construction details.',
+    instructions: `1. Import jacket pattern pieces to 3D software
+2. Set up proper layering (shell, canvas, lining)
+3. Apply appropriate fabrics to each layer
+4. Add construction details (buttons, pockets, topstitching)
+5. Simulate and adjust fit on avatar
+6. Create turntable renders and tech pack views`,
+    objectives: [
+      'Build complex multi-layer garments in 3D',
+      'Add realistic construction details',
+      'Adjust fit virtually before cutting fabric',
+      'Generate presentation-ready renders',
+    ],
+    skills: ['Complex 3D garment construction', 'Multi-layer assembly', '3D rendering'],
+    expectedOutcome: '3D jacket with accurate simulation and renders.',
+    passingCriteria: 'Jacket shows correct drape and construction details',
+    referencePhotos: ['/curriculum/digital/3d-jacket.jpg', '/curriculum/digital/jacket-layers.jpg'],
+    estimatedHours: 30,
+    difficulty: 'advanced',
+    category: 'digital',
+    subcategory: '3d-construction',
+  },
+
+  // Module 6.3: Blender for Garment Visualization
+  {
+    level: 6,
+    moduleNumber: '6.3',
+    assignmentNumber: '6.3.1',
+    orderIndex: 65,
+    title: 'Blender Fundamentals for Fashion',
+    description: 'Learn Blender 3D software for creating stunning garment visualizations, animations, and marketing materials.',
+    instructions: `1. Install Blender and configure workspace for fashion work
+2. Learn basic navigation and object manipulation
+3. Understand mesh modeling basics
+4. Import garments from CLO3D/Marvelous Designer
+5. Set up basic lighting and camera
+6. Practice simple render output`,
+    objectives: [
+      'Navigate Blender 3D environment',
+      'Import and manipulate 3D garments',
+      'Set up basic scene lighting',
+      'Create simple renders',
+    ],
+    skills: ['Blender navigation', '3D import/export', 'Basic rendering'],
+    expectedOutcome: 'Rendered 3D garment image from imported CLO3D file.',
+    passingCriteria: 'Clean render with proper lighting and composition',
+    referencePhotos: ['/curriculum/digital/blender-interface.jpg', '/curriculum/digital/blender-garment.jpg'],
+    estimatedHours: 20,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: 'blender-basics',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.3',
+    assignmentNumber: '6.3.2',
+    orderIndex: 66,
+    title: 'Advanced Blender: Materials and Texturing',
+    description: 'Master realistic material creation in Blender using shader nodes for photorealistic fabric rendering.',
+    instructions: `1. Study PBR (Physically Based Rendering) concepts
+2. Create fabric shaders using node editor
+3. Add realistic fabric textures (weave, grain)
+4. Create subsurface scattering for light fabrics
+5. Build shader library for different materials
+6. Practice with wool, silk, leather, and cotton`,
+    objectives: [
+      'Create photorealistic fabric materials',
+      'Use node-based shader creation',
+      'Apply proper texture mapping',
+      'Build reusable material library',
+    ],
+    skills: ['PBR materials', 'Shader node editing', 'Texture creation'],
+    expectedOutcome: 'Material library with 8 photorealistic fabric shaders.',
+    passingCriteria: 'Materials are photorealistic and physically accurate',
+    referencePhotos: ['/curriculum/digital/shader-nodes.jpg', '/curriculum/digital/fabric-materials.jpg'],
+    estimatedHours: 24,
+    difficulty: 'advanced',
+    category: 'digital',
+    subcategory: 'blender-materials',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.3',
+    assignmentNumber: '6.3.3',
+    orderIndex: 67,
+    title: 'Blender Animation: Virtual Fashion Show',
+    description: 'Create animated garment presentations including turntable views, fabric motion, and virtual runway walks.',
+    instructions: `1. Set up animated turntable for garment display
+2. Create walking cycle for virtual model
+3. Animate fabric simulation for movement
+4. Design multi-camera sequence
+5. Add music and timing
+6. Render complete fashion presentation video`,
+    objectives: [
+      'Create animated garment presentations',
+      'Simulate fabric in motion',
+      'Produce professional video output',
+      'Compose multi-shot sequences',
+    ],
+    skills: ['Animation', 'Video production', 'Fabric motion simulation'],
+    expectedOutcome: '30-second virtual fashion presentation video.',
+    passingCriteria: 'Smooth animation, realistic fabric motion, professional quality',
+    referencePhotos: ['/curriculum/digital/animation-timeline.jpg', '/curriculum/digital/virtual-runway.jpg'],
+    estimatedHours: 30,
+    difficulty: 'advanced',
+    category: 'digital',
+    subcategory: 'animation',
+  },
+
+  // Module 6.4: Digital Measurement & Body Scanning
+  {
+    level: 6,
+    moduleNumber: '6.4',
+    assignmentNumber: '6.4.1',
+    orderIndex: 68,
+    title: '3D Body Scanning Technology',
+    description: 'Learn to use 3D body scanning technology for accurate digital measurements and custom avatar creation.',
+    instructions: `1. Study 3D body scanning technologies (smartphone apps, booth scanners)
+2. Practice scanning with smartphone apps (3D Scanner App, Measure)
+3. Understand scanning best practices (lighting, posture, clothing)
+4. Process scan data for measurement extraction
+5. Create custom avatars from scan data
+6. Compare scan accuracy to manual measurements`,
+    objectives: [
+      'Operate 3D body scanning equipment/apps',
+      'Extract accurate measurements from scans',
+      'Create custom fit avatars',
+      'Validate scan accuracy',
+    ],
+    skills: ['3D scanning', 'Data processing', 'Digital measurement'],
+    expectedOutcome: 'Custom avatar created from 3D body scan with extracted measurements.',
+    passingCriteria: 'Measurements within 1cm of manual verification',
+    referencePhotos: ['/curriculum/digital/body-scanning.jpg', '/curriculum/digital/scan-measurements.jpg'],
+    estimatedHours: 12,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: 'body-scanning',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.4',
+    assignmentNumber: '6.4.2',
+    orderIndex: 69,
+    title: 'Virtual Fitting Technology',
+    description: 'Master virtual fitting techniques - using digital tools to predict fit before cutting fabric.',
+    instructions: `1. Import custom avatar into CLO3D
+2. Fit 3D garment to custom avatar
+3. Analyze fit using strain map and fit analysis tools
+4. Identify problem areas virtually
+5. Make pattern adjustments based on virtual fitting
+6. Document virtual fitting workflow for client presentations`,
+    objectives: [
+      'Conduct virtual fittings on custom avatars',
+      'Use fit analysis tools effectively',
+      'Predict fit problems before production',
+      'Communicate fit issues visually',
+    ],
+    skills: ['Virtual fitting', 'Fit analysis', 'Predictive adjustment'],
+    expectedOutcome: 'Virtual fitting report with recommended adjustments.',
+    passingCriteria: 'Virtual predictions match actual fitting results',
+    referencePhotos: ['/curriculum/digital/virtual-fitting.jpg', '/curriculum/digital/strain-map.jpg'],
+    estimatedHours: 16,
+    difficulty: 'advanced',
+    category: 'digital',
+    subcategory: 'virtual-fitting',
+  },
+
+  // Module 6.5: Production Technology
+  {
+    level: 6,
+    moduleNumber: '6.5',
+    assignmentNumber: '6.5.1',
+    orderIndex: 70,
+    title: 'CNC and Laser Cutting Systems',
+    description: 'Learn computer-controlled cutting technology used in modern production environments.',
+    instructions: `1. Study CNC cutting machine operation
+2. Understand file formats for automated cutting (PLT, DXF)
+3. Prepare markers for automated cutting
+4. Learn laser cutting for precision work
+5. Practice cutting simple patterns on CNC/laser
+6. Compare automated vs manual cutting efficiency`,
+    objectives: [
+      'Prepare files for automated cutting',
+      'Operate basic CNC/laser cutting equipment',
+      'Understand production efficiency gains',
+      'Troubleshoot common cutting issues',
+    ],
+    skills: ['CNC operation', 'Laser cutting', 'Digital production'],
+    expectedOutcome: 'Complete garment cut using automated cutting system.',
+    passingCriteria: 'Cuts are accurate with clean edges, minimal waste',
+    referencePhotos: ['/curriculum/digital/cnc-cutter.jpg', '/curriculum/digital/laser-cutting.jpg'],
+    estimatedHours: 16,
+    difficulty: 'advanced',
+    category: 'digital',
+    subcategory: 'production-tech',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.5',
+    assignmentNumber: '6.5.2',
+    orderIndex: 71,
+    title: 'Digital Print Integration',
+    description: 'Learn to work with digital fabric printing - from design to printed fabric for garment construction.',
+    instructions: `1. Study digital fabric printing technologies (sublimation, DTG, reactive)
+2. Create print-ready files with proper color management
+3. Design custom print for garment (engineered print)
+4. Position prints to align with pattern pieces
+5. Send files for digital printing
+6. Construct garment with custom printed fabric`,
+    objectives: [
+      'Prepare files for digital fabric printing',
+      'Understand color management for textile',
+      'Create engineered prints matching patterns',
+      'Work with digitally printed fabrics',
+    ],
+    skills: ['Digital printing', 'Color management', 'Engineered prints'],
+    expectedOutcome: 'Garment constructed from custom digitally printed fabric.',
+    passingCriteria: 'Print aligns correctly, colors match design intent',
+    referencePhotos: ['/curriculum/digital/digital-printing.jpg', '/curriculum/digital/engineered-print.jpg'],
+    estimatedHours: 20,
+    difficulty: 'advanced',
+    category: 'digital',
+    subcategory: 'digital-printing',
+  },
+
+  // Module 6.6: Business Technology
+  {
+    level: 6,
+    moduleNumber: '6.6',
+    assignmentNumber: '6.6.1',
+    orderIndex: 72,
+    title: 'Tailoring Business Software Systems',
+    description: 'Master essential business software for running a modern tailoring business.',
+    instructions: `1. Set up inventory management system for fabrics and supplies
+2. Learn CRM (Customer Relationship Management) basics
+3. Configure appointment scheduling software
+4. Set up order tracking and production pipeline
+5. Integrate measurement database with orders
+6. Practice generating reports and analytics`,
+    objectives: [
+      'Manage inventory digitally',
+      'Track customer information and history',
+      'Schedule and manage appointments',
+      'Monitor production workflow',
+    ],
+    skills: ['Business software', 'CRM', 'Inventory management'],
+    expectedOutcome: 'Functional business system setup with sample data.',
+    passingCriteria: 'System handles complete order lifecycle',
+    referencePhotos: ['/curriculum/digital/business-software.jpg', '/curriculum/digital/crm-dashboard.jpg'],
+    estimatedHours: 16,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: 'business-software',
+  },
+  {
+    level: 6,
+    moduleNumber: '6.6',
+    assignmentNumber: '6.6.2',
+    orderIndex: 73,
+    title: 'E-Commerce and Digital Presence',
+    description: 'Build digital presence for tailoring business including website, social media, and online ordering.',
+    instructions: `1. Study successful tailoring business websites
+2. Create professional portfolio website
+3. Set up online measurement submission system
+4. Configure e-commerce for fabric samples or gift cards
+5. Develop social media content strategy
+6. Practice creating visual content for marketing`,
+    objectives: [
+      'Build professional online presence',
+      'Enable online client interaction',
+      'Create marketing content',
+      'Understand digital marketing basics',
+    ],
+    skills: ['Web presence', 'Social media', 'Digital marketing'],
+    expectedOutcome: 'Live portfolio website with online inquiry system.',
+    passingCriteria: 'Website is professional and functional',
+    referencePhotos: ['/curriculum/digital/tailor-website.jpg', '/curriculum/digital/social-media.jpg'],
+    estimatedHours: 20,
+    difficulty: 'intermediate',
+    category: 'digital',
+    subcategory: 'e-commerce',
+  },
+
+  // Module 6.7: Digital Technology Final Project
+  {
+    level: 6,
+    moduleNumber: '6.7',
+    assignmentNumber: '6.7.1',
+    orderIndex: 74,
+    title: 'FINAL PROJECT: Complete Digital Workflow',
+    description: 'Execute a complete garment from concept to completion using fully digital workflow.',
+    instructions: `1. Take client measurements using 3D body scanning
+2. Create custom avatar from scan data
+3. Design garment in 3D software (CLO3D/Blender)
+4. Create patterns digitally with proper grading
+5. Conduct virtual fitting and adjustments
+6. Generate automated cutting files
+7. Produce marketing renders and animation
+8. Construct physical garment
+9. Compare virtual to actual fit
+10. Document complete digital workflow`,
+    objectives: [
+      'Execute complete digital production workflow',
+      'Integrate all digital tools learned',
+      'Compare digital predictions to reality',
+      'Demonstrate modern tailoring technology mastery',
+    ],
+    skills: ['Complete digital workflow', 'Technology integration', 'Modern production'],
+    expectedOutcome: 'Finished garment with complete digital documentation.',
+    passingCriteria: 'Virtual and physical garments match within acceptable tolerance',
+    referencePhotos: ['/curriculum/digital/digital-workflow.jpg', '/curriculum/digital/final-comparison.jpg'],
+    estimatedHours: 60,
+    difficulty: 'expert',
+    category: 'digital',
+    subcategory: 'project',
+  },
 ]
 
 export async function seedTailoringCurriculum() {
