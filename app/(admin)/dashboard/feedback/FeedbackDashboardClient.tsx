@@ -42,6 +42,7 @@ interface Feedback {
   subject: string
   message: string
   screenshots: string[]
+  videos: string[]
   status: string
   priority: string
   appVersion: string | null
@@ -533,12 +534,29 @@ export default function FeedbackDashboardClient({
                 {/* Screenshots */}
                 {selectedFeedback.screenshots.length > 0 && (
                   <div>
-                    <Label className="mb-2 block">Attachments</Label>
+                    <Label className="mb-2 block">Screenshots ({selectedFeedback.screenshots.length})</Label>
                     <div className="flex gap-2 flex-wrap">
                       {selectedFeedback.screenshots.map((url, index) => (
                         <a key={index} href={url} target="_blank" rel="noopener noreferrer">
                           <img src={url} alt={`Screenshot ${index + 1}`} className="h-20 w-20 object-cover rounded border" />
                         </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Videos */}
+                {selectedFeedback.videos && selectedFeedback.videos.length > 0 && (
+                  <div>
+                    <Label className="mb-2 block">Videos ({selectedFeedback.videos.length})</Label>
+                    <div className="space-y-2">
+                      {selectedFeedback.videos.map((url, index) => (
+                        <video
+                          key={index}
+                          src={url}
+                          controls
+                          className="w-full max-w-md rounded border"
+                        />
                       ))}
                     </div>
                   </div>

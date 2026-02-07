@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Package, MapPin, Heart, Settings, LayoutDashboard, Calendar, TrendingUp, GraduationCap } from "lucide-react";
+import { LogOut, Package, MapPin, Heart, Settings, LayoutDashboard, Calendar, TrendingUp, GraduationCap, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
@@ -99,6 +99,10 @@ export default async function AccountPage() {
                 <Link href="/account/wishlist" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
                   <Heart className="h-5 w-5" />
                   <span>Wishlist</span>
+                </Link>
+                <Link href="/account/feedback" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
+                  <MessageSquare className="h-5 w-5" />
+                  <span>Feedback</span>
                 </Link>
                 <Link href="/account/settings" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
                   <Settings className="h-5 w-5" />

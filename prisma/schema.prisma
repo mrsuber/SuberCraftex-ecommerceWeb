@@ -2041,6 +2041,7 @@ model Feedback {
   subject     String
   message     String           @db.Text
   screenshots String[]         @default([]) // URLs of attached images
+  videos      String[]         @default([]) // URLs of attached videos
   status      FeedbackStatus   @default(pending)
   priority    FeedbackPriority @default(medium)
 

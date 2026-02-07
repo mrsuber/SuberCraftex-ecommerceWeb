@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth/session'
 
-// GET /api/investors/feedback - Get user's feedback history (open to all authenticated users)
+// GET /api/feedback - Get user's feedback history
 export async function GET(request: NextRequest) {
   try {
     const user = await getSession()
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/investors/feedback - Submit new feedback (open to all authenticated users)
+// POST /api/feedback - Submit new feedback
 export async function POST(request: NextRequest) {
   try {
     const user = await getSession()
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { type, subject, message, screenshots, videos, appVersion, deviceInfo } = body
+    const { type, subject, message, screenshots, videos, appVersion, deviceInfo, userEmail, userName } = body
 
     // Validate required fields
     if (!subject || !message) {
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
     // Prepare feedback data
     const feedbackData: any = {
       userId: user.id,
-      userEmail: user.email,
-      userName: user.fullName || user.email,
+      userEmail: userEmail || user.email,
+      userName: userName || user.fullName || user.email,
       type: type || 'general',
       subject: subject.trim(),
       message: message.trim(),

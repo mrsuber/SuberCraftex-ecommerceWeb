@@ -29,7 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type - be more lenient with type detection
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    const allowedTypes = [...allowedImageTypes, ...allowedVideoTypes];
     let fileType = file.type;
 
     // If file.type is empty or generic, try to infer from filename
@@ -39,22 +41,31 @@ export async function POST(request: NextRequest) {
       else if (ext === 'png') fileType = 'image/png';
       else if (ext === 'gif') fileType = 'image/gif';
       else if (ext === 'webp') fileType = 'image/webp';
+      else if (ext === 'mp4') fileType = 'video/mp4';
+      else if (ext === 'webm') fileType = 'video/webm';
+      else if (ext === 'mov') fileType = 'video/quicktime';
       console.log(`📝 Inferred file type from extension: ${fileType}`);
     }
 
-    if (!allowedTypes.includes(fileType)) {
+    const isVideo = allowedVideoTypes.includes(fileType) || fileType.startsWith('video/');
+    const isImage = allowedImageTypes.includes(fileType);
+
+    if (!isImage && !isVideo) {
       console.error(`❌ Invalid file type: ${fileType}`);
       return NextResponse.json({
-        error: `Invalid file type: ${fileType}. Only JPEG, PNG, WebP, and GIF images are allowed`
+        error: `Invalid file type: ${fileType}. Only images (JPEG, PNG, WebP, GIF) and videos (MP4, WebM, MOV) are allowed`
       }, { status: 400 });
     }
 
-    // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024;
+    // Validate file size - 5MB for images, 50MB for videos
+    const maxImageSize = 5 * 1024 * 1024;
+    const maxVideoSize = 50 * 1024 * 1024;
+    const maxSize = isVideo ? maxVideoSize : maxImageSize;
+
     if (file.size > maxSize) {
       console.error(`❌ File too large: ${file.size} bytes`);
       return NextResponse.json({
-        error: 'File too large. Maximum size is 5MB'
+        error: `File too large. Maximum size is ${isVideo ? '50MB' : '5MB'}`
       }, { status: 400 });
     }
 
@@ -131,6 +142,10 @@ export async function POST(request: NextRequest) {
       // Apprentice profile photo: /public/uploads/apprentices/
       uploadsDir = join(process.cwd(), 'public', 'uploads', 'apprentices');
       url = `/api/uploads/apprentices/${filename}`;
+    } else if (type === 'feedback') {
+      // Feedback attachments: /public/uploads/feedback/
+      uploadsDir = join(process.cwd(), 'public', 'uploads', 'feedback');
+      url = `/api/uploads/feedback/${filename}`;
     } else if (type === 'assignment' || type === 'submission') {
       // Assignment/submission photos
       const apprenticeId = formData.get('apprenticeId') as string | null;
