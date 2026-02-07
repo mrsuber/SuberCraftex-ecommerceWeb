@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { formatCurrency } from '@/lib/currency'
 
 interface PaymentPageClientProps {
   data: {
@@ -141,7 +142,7 @@ export function PaymentPageClient({ data }: PaymentPageClientProps) {
               <div>
                 <h2 className="text-2xl font-bold text-green-900">Payment Successful!</h2>
                 <p className="text-green-700 mt-2">
-                  Your down payment of ${quote.downPaymentAmount.toFixed(2)} has been processed
+                  Your down payment of {formatCurrency(quote.downPaymentAmount)} has been processed
                 </p>
               </div>
               <div className="pt-4">
@@ -236,13 +237,13 @@ export function PaymentPageClient({ data }: PaymentPageClientProps) {
                   </>
                 ) : (
                   <>
-                    Pay ${quote.downPaymentAmount.toFixed(2)} Now
+                    Pay {formatCurrency(quote.downPaymentAmount)} Now
                   </>
                 )}
               </Button>
 
               <p className="text-xs text-center text-gray-500">
-                You will be charged ${quote.downPaymentAmount.toFixed(2)} today
+                You will be charged {formatCurrency(quote.downPaymentAmount)} today
               </p>
             </CardContent>
           </Card>
@@ -277,7 +278,7 @@ export function PaymentPageClient({ data }: PaymentPageClientProps) {
               <div className="flex gap-2">
                 <span className="text-primary font-medium">•</span>
                 <p>
-                  Final payment of ${remainingBalance.toFixed(2)} is due upon completion
+                  Final payment of {formatCurrency(remainingBalance)} is due upon completion
                 </p>
               </div>
             </CardContent>
@@ -318,16 +319,16 @@ export function PaymentPageClient({ data }: PaymentPageClientProps) {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Materials</span>
-                  <span>${quote.materialCost.toFixed(2)}</span>
+                  <span>{formatCurrency(quote.materialCost)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Labor</span>
-                  <span>${quote.laborCost.toFixed(2)}</span>
+                  <span>{formatCurrency(quote.laborCost)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold">
                   <span>Total Cost</span>
-                  <span>${quote.totalCost.toFixed(2)}</span>
+                  <span>{formatCurrency(quote.totalCost)}</span>
                 </div>
               </div>
 
@@ -338,18 +339,18 @@ export function PaymentPageClient({ data }: PaymentPageClientProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Down Payment (Due Now)</span>
                   <span className="font-semibold text-primary">
-                    ${quote.downPaymentAmount.toFixed(2)}
+                    {formatCurrency(quote.downPaymentAmount)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Remaining Balance</span>
-                  <span>${remainingBalance.toFixed(2)}</span>
+                  <span>{formatCurrency(remainingBalance)}</span>
                 </div>
               </div>
 
               <Alert>
                 <AlertDescription className="text-xs">
-                  The remaining balance of ${remainingBalance.toFixed(2)} will be due when your
+                  The remaining balance of {formatCurrency(remainingBalance)} will be due when your
                   order is complete and ready for delivery or collection.
                 </AlertDescription>
               </Alert>

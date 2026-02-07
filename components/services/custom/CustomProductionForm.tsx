@@ -10,6 +10,7 @@ import { PhotoUpload } from '@/components/shared/PhotoUpload'
 import { MaterialGrid } from '@/components/materials/MaterialGrid'
 import { MaterialQuantitySelector } from '@/components/materials/MaterialQuantitySelector'
 import { AlertCircle, Package, Image as ImageIcon, FileText, Link as LinkIcon } from 'lucide-react'
+import { formatCurrency } from '@/lib/currency'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { DesignSelection } from '@/components/services/DesignOptionsPicker'
 import type { Service, Material } from '@/types'
@@ -214,7 +215,7 @@ export function CustomProductionForm({
                 <div>
                   <p className="font-medium">{sm.material.name}</p>
                   <p className="text-sm text-gray-500">
-                    ${Number(sm.material.price).toFixed(2)} per {sm.material.unit}
+                    {formatCurrency(Number(sm.material.price))} per {sm.material.unit}
                   </p>
                 </div>
                 <MaterialQuantitySelector

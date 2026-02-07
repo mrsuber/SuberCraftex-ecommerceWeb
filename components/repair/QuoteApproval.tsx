@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 interface QuoteApprovalProps {
   repairId: string;
@@ -132,24 +133,24 @@ export function QuoteApproval({
               {diagnosticFee !== null && diagnosticFee > 0 && (
                 <div className="flex justify-between py-2">
                   <span className="text-muted-foreground">Diagnostic Fee</span>
-                  <span>${diagnosticFee.toFixed(2)}</span>
+                  <span>{formatCurrency(diagnosticFee)}</span>
                 </div>
               )}
               {estimatedPartsCost !== null && estimatedPartsCost > 0 && (
                 <div className="flex justify-between py-2">
                   <span className="text-muted-foreground">Parts & Components</span>
-                  <span>${estimatedPartsCost.toFixed(2)}</span>
+                  <span>{formatCurrency(estimatedPartsCost)}</span>
                 </div>
               )}
               {estimatedLaborCost !== null && estimatedLaborCost > 0 && (
                 <div className="flex justify-between py-2">
                   <span className="text-muted-foreground">Labor</span>
-                  <span>${estimatedLaborCost.toFixed(2)}</span>
+                  <span>{formatCurrency(estimatedLaborCost)}</span>
                 </div>
               )}
               <div className="flex justify-between py-3 border-t font-bold text-lg">
                 <span>Total</span>
-                <span>${totalQuote.toFixed(2)}</span>
+                <span>{formatCurrency(totalQuote)}</span>
               </div>
             </div>
           </div>

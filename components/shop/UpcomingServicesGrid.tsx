@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Clock, ArrowRight, MapPin, Calendar } from 'lucide-react'
 import { UpcomingService } from '@/types'
 import { format } from 'date-fns'
+import { formatCurrency } from '@/lib/currency'
 
 interface UpcomingServicesGridProps {
   services: UpcomingService[]
@@ -137,7 +138,7 @@ function UpcomingServiceCard({ service }: { service: UpcomingService }) {
         <div className="mt-4 flex items-center justify-between">
           {service.price && (
             <span className="text-lg font-bold text-primary">
-              ${parseFloat(service.price).toFixed(2)}
+              {formatCurrency(parseFloat(service.price))}
             </span>
           )}
           <Link href={`/upcoming-services/${service.id}`} className="ml-auto">

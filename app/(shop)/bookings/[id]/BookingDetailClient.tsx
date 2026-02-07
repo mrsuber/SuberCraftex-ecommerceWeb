@@ -37,6 +37,7 @@ import {
 import { format } from 'date-fns'
 import Link from 'next/link'
 import Image from 'next/image'
+import { formatCurrency } from '@/lib/currency'
 import type { ServiceBooking } from '@/types'
 
 interface BookingDetailClientProps {
@@ -338,10 +339,10 @@ export function BookingDetailClient({ booking, currentUser }: BookingDetailClien
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">
-                          ${(Number(bm.priceAtBooking) * bm.quantity).toFixed(2)}
+                          {formatCurrency(Number(bm.priceAtBooking) * bm.quantity)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          ${Number(bm.priceAtBooking).toFixed(2)} / {bm.material.unit}
+                          {formatCurrency(Number(bm.priceAtBooking))} / {bm.material.unit}
                         </p>
                       </div>
                     </div>
@@ -543,13 +544,13 @@ export function BookingDetailClient({ booking, currentUser }: BookingDetailClien
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Base Price</span>
-                    <span>${Number(booking.price).toFixed(2)}</span>
+                    <span>{formatCurrency(Number(booking.price))}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-semibold">
                     <span>Final Price</span>
                     <span className="text-lg text-primary">
-                      ${Number(booking.finalPrice).toFixed(2)}
+                      {formatCurrency(Number(booking.finalPrice))}
                     </span>
                   </div>
                   {booking.quote && (
@@ -562,7 +563,7 @@ export function BookingDetailClient({ booking, currentUser }: BookingDetailClien
                 <div className="flex justify-between">
                   <span className="text-gray-600">Estimated Price</span>
                   <span className="font-semibold">
-                    ${Number(booking.price).toFixed(2)}
+                    {formatCurrency(Number(booking.price))}
                   </span>
                 </div>
               )}
@@ -591,7 +592,7 @@ export function BookingDetailClient({ booking, currentUser }: BookingDetailClien
                         </p>
                       </div>
                       <span className="font-semibold">
-                        ${Number(payment.amount).toFixed(2)}
+                        {formatCurrency(Number(payment.amount))}
                       </span>
                     </div>
                   ))}

@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Search, Calendar, Clock, ArrowRight, Package } from 'lucide-react'
 import { format } from 'date-fns'
+import { formatCurrency } from '@/lib/currency'
 
 interface BookingsListClientProps {
   bookings: any[]
@@ -208,15 +209,15 @@ export function BookingsListClient({ bookings }: BookingsListClientProps) {
                       <div className="text-sm text-gray-600">
                         {booking.quote ? (
                           <span className="font-semibold text-gray-900">
-                            Quote: ${Number(booking.quote.totalCost).toFixed(2)}
+                            Quote: {formatCurrency(Number(booking.quote.totalCost))}
                           </span>
                         ) : booking.finalPrice ? (
                           <span className="font-semibold text-gray-900">
-                            ${Number(booking.finalPrice).toFixed(2)}
+                            {formatCurrency(Number(booking.finalPrice))}
                           </span>
                         ) : (
                           <span>
-                            Est. ${Number(booking.price).toFixed(2)}
+                            Est. {formatCurrency(Number(booking.price))}
                           </span>
                         )}
                       </div>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { formatCurrency } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -259,35 +260,35 @@ export default async function CustomerRepairDetailPage({ params }: PageProps) {
               {repair.diagnosticFee && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Diagnostic Fee</span>
-                  <span className="font-medium">${Number(repair.diagnosticFee).toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(Number(repair.diagnosticFee))}</span>
                 </div>
               )}
               {repair.estimatedPartsCost && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Parts</span>
-                  <span className="font-medium">${Number(repair.estimatedPartsCost).toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(Number(repair.estimatedPartsCost))}</span>
                 </div>
               )}
               {repair.estimatedLaborCost && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Labor</span>
-                  <span className="font-medium">${Number(repair.estimatedLaborCost).toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(Number(repair.estimatedLaborCost))}</span>
                 </div>
               )}
               {totalQuote !== null && (
                 <>
                   <div className="flex justify-between border-t pt-2">
                     <span className="font-medium">Total Quote</span>
-                    <span className="font-bold">${totalQuote.toFixed(2)}</span>
+                    <span className="font-bold">{formatCurrency(totalQuote)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Paid</span>
-                    <span className="font-medium text-green-600">${totalPaid.toFixed(2)}</span>
+                    <span className="font-medium text-green-600">{formatCurrency(totalPaid)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Balance</span>
                     <span className={`font-medium ${totalQuote - totalPaid > 0 ? "text-destructive" : "text-green-600"}`}>
-                      ${(totalQuote - totalPaid).toFixed(2)}
+                      {formatCurrency(totalQuote - totalPaid)}
                     </span>
                   </div>
                 </>

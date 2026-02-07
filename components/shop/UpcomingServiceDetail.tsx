@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Clock, ArrowLeft, MapPin, Calendar, DollarSign, Bell } from 'lucide-react'
 import { UpcomingService } from '@/types'
 import { format } from 'date-fns'
+import { formatCurrency } from '@/lib/currency'
 
 interface UpcomingServiceDetailProps {
   service: UpcomingService
@@ -168,7 +169,7 @@ export function UpcomingServiceDetail({ service }: UpcomingServiceDetailProps) {
               <div className="flex items-center gap-3">
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
                 <span className="text-2xl font-bold text-primary">
-                  ${parseFloat(service.price).toFixed(2)}
+                  {formatCurrency(parseFloat(service.price))}
                 </span>
               </div>
             )}

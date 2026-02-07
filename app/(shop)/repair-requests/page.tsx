@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { formatCurrency } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,7 +129,7 @@ export default async function CustomerRepairRequestsPage() {
                       <div className="text-right shrink-0">
                         {repair.totalQuote && (
                           <div className="font-semibold">
-                            ${Number(repair.totalQuote).toFixed(2)}
+                            {formatCurrency(Number(repair.totalQuote))}
                           </div>
                         )}
                         <Button variant="ghost" size="sm">
