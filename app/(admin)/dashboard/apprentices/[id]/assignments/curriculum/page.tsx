@@ -20,7 +20,7 @@ export default async function CurriculumAssignmentPage({ params }: PageProps) {
   const user = await requireAuth();
   const { id } = await params;
 
-  if (!user || !["admin", "tailor"].includes(user.role)) {
+  if (!user || !["admin", "tailor", "technician"].includes(user.role)) {
     redirect("/dashboard");
   }
 
@@ -33,6 +33,7 @@ export default async function CurriculumAssignmentPage({ params }: PageProps) {
       status: true,
       mentorId: true,
       department: true,
+      serviceTrack: true,
     },
   });
 
@@ -40,8 +41,8 @@ export default async function CurriculumAssignmentPage({ params }: PageProps) {
     notFound();
   }
 
-  // Check if tailor can access (must be mentor of this apprentice)
-  if (user.role === "tailor" && apprentice.mentorId !== user.id) {
+  // Check if tailor/technician can access (must be mentor of this apprentice)
+  if ((user.role === "tailor" || user.role === "technician") && apprentice.mentorId !== user.id) {
     redirect("/dashboard");
   }
 
@@ -86,6 +87,7 @@ export default async function CurriculumAssignmentPage({ params }: PageProps) {
       <CurriculumBrowser
         apprenticeId={id}
         apprenticeName={apprentice.fullName}
+        serviceTrack={apprentice.serviceTrack}
       />
     </div>
   );

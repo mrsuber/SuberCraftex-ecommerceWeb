@@ -53,8 +53,17 @@ interface TemplatesResponse {
 interface CurriculumBrowserProps {
   apprenticeId: string;
   apprenticeName: string;
+  serviceTrack?: string;
   onAssignmentCreated?: () => void;
 }
+
+const SERVICE_TRACK_LABELS: Record<string, string> = {
+  tailoring: "Tailoring",
+  device_repair: "Device Repair",
+  sales: "Sales",
+  delivery: "Delivery",
+  operations: "Operations",
+};
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: "bg-green-100 text-green-800 border-green-200",
@@ -74,8 +83,10 @@ const LEVEL_COLORS: Record<string, string> = {
 export function CurriculumBrowser({
   apprenticeId,
   apprenticeName,
+  serviceTrack = "tailoring",
   onAssignmentCreated,
 }: CurriculumBrowserProps) {
+  const curriculumTitle = SERVICE_TRACK_LABELS[serviceTrack] || "Training";
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [templates, setTemplates] = useState<AssignmentTemplate[]>([]);
@@ -91,12 +102,15 @@ export function CurriculumBrowser({
 
   useEffect(() => {
     fetchTemplates();
-  }, []);
+  }, [serviceTrack]);
 
   const fetchTemplates = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/assignment-templates");
+      const url = serviceTrack
+        ? `/api/assignment-templates?serviceTrack=${serviceTrack}`
+        : "/api/assignment-templates";
+      const response = await fetch(url);
       if (response.ok) {
         const data: TemplatesResponse = await response.json();
         setTemplates(data.templates);
@@ -204,7 +218,7 @@ export function CurriculumBrowser({
             <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Curriculum Templates</h3>
             <p className="text-muted-foreground max-w-md">
-              No curriculum templates have been created yet. Contact an administrator to set up the tailoring curriculum.
+              No curriculum templates have been created yet. Contact an administrator to set up the {curriculumTitle.toLowerCase()} curriculum.
             </p>
           </div>
         </CardContent>
@@ -220,7 +234,7 @@ export function CurriculumBrowser({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <GraduationCap className="h-5 w-5" />
-                Tailoring Curriculum
+                {curriculumTitle} Curriculum
               </CardTitle>
               <CardDescription>
                 Select an assignment from the curriculum to assign to {apprenticeName}

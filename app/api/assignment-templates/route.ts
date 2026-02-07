@@ -7,14 +7,15 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await verifyAuth(request)
 
-    // Only admin, tailor (mentor), can view templates
-    if (!auth.user || !['admin', 'tailor'].includes(auth.user.role)) {
+    // Only admin, tailor (mentor), technician can view templates
+    if (!auth.user || !['admin', 'tailor', 'technician'].includes(auth.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)
     const level = searchParams.get('level')
     const category = searchParams.get('category')
+    const serviceTrack = searchParams.get('serviceTrack')
 
     const where: any = { isActive: true }
 
@@ -24,6 +25,11 @@ export async function GET(request: NextRequest) {
 
     if (category) {
       where.category = category
+    }
+
+    // Filter by service track (tailoring, device_repair, etc.)
+    if (serviceTrack) {
+      where.serviceTrack = serviceTrack
     }
 
     const templates = await db.assignmentTemplate.findMany({
