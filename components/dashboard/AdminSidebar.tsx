@@ -30,6 +30,8 @@ import {
   MessageSquare,
   GraduationCap,
   Newspaper,
+  Smartphone,
+  HardDrive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +127,16 @@ const adminNavigation = [
     icon: GraduationCap,
   },
   {
+    name: "Technicians",
+    href: "/dashboard/technicians",
+    icon: HardDrive,
+  },
+  {
+    name: "Repair Requests",
+    href: "/dashboard/repair-requests",
+    icon: Smartphone,
+  },
+  {
     name: "Suppliers",
     href: "/dashboard/suppliers",
     icon: Building2,
@@ -200,6 +212,24 @@ const tailorNavigation = [
   },
 ];
 
+const technicianNavigation = [
+  {
+    name: "Overview",
+    href: "/dashboard/technician",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "My Repairs",
+    href: "/dashboard/technician/repairs",
+    icon: Smartphone,
+  },
+  {
+    name: "My Apprentices",
+    href: "/dashboard/technician/apprentices",
+    icon: GraduationCap,
+  },
+];
+
 interface AdminSidebarProps {
   userRole: string;
 }
@@ -210,11 +240,13 @@ export function AdminSidebar({ userRole }: AdminSidebarProps) {
     userRole === 'driver' ? driverNavigation :
     userRole === 'cashier' ? cashierNavigation :
     userRole === 'tailor' ? tailorNavigation :
+    userRole === 'technician' ? technicianNavigation :
     adminNavigation;
   const dashboardTitle =
     userRole === 'driver' ? 'Driver Dashboard' :
     userRole === 'cashier' ? 'Cashier Dashboard' :
     userRole === 'tailor' ? 'Tailor Dashboard' :
+    userRole === 'technician' ? 'Technician Dashboard' :
     'Admin Dashboard';
 
   return (

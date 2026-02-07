@@ -54,6 +54,15 @@ export default async function ApprenticeDashboardPage() {
         },
       },
     })
+  } else if (apprentice.mentorType === 'technician') {
+    mentor = await db.technician.findUnique({
+      where: { id: apprentice.mentorId },
+      include: {
+        user: {
+          select: { fullName: true, email: true },
+        },
+      },
+    })
   }
 
   // Calculate stats
@@ -88,6 +97,9 @@ export default async function ApprenticeDashboardPage() {
     expectedEndDate: apprentice.expectedEndDate?.toISOString() || null,
     status: apprentice.status,
     isActive: apprentice.isActive,
+    serviceTrack: apprentice.serviceTrack || 'tailoring',
+    canWorkOnRealJobs: apprentice.canWorkOnRealJobs || false,
+    realJobsCompleted: apprentice.realJobsCompleted || 0,
     stats,
     assignments: apprentice.assignments.map((a) => ({
       id: a.id,

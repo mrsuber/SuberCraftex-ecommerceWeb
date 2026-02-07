@@ -54,6 +54,9 @@ interface Apprentice {
   startDate: string;
   expectedEndDate: string | null;
   status: string;
+  serviceTrack: string;
+  canWorkOnRealJobs: boolean;
+  realJobsCompleted: number;
   totalAssignments: number;
   completedAssignments: number;
   certificatesCount: number;
@@ -84,10 +87,27 @@ const departmentLabels: Record<string, string> = {
   operations: "Operations",
 };
 
+const serviceTrackLabels: Record<string, string> = {
+  tailoring: "Tailoring",
+  device_repair: "Device Repair",
+  sales: "Sales",
+  delivery: "Delivery",
+  operations: "Operations",
+};
+
+const serviceTrackColors: Record<string, string> = {
+  tailoring: "bg-purple-100 text-purple-700",
+  device_repair: "bg-blue-100 text-blue-700",
+  sales: "bg-green-100 text-green-700",
+  delivery: "bg-orange-100 text-orange-700",
+  operations: "bg-gray-100 text-gray-700",
+};
+
 export function ApprenticesTable({ apprentices }: ApprenticesTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [serviceTrackFilter, setServiceTrackFilter] = useState<string>("all");
 
   const filteredApprentices = apprentices.filter((apprentice) => {
     const matchesSearch =
@@ -97,8 +117,9 @@ export function ApprenticesTable({ apprentices }: ApprenticesTableProps) {
 
     const matchesStatus = statusFilter === "all" || apprentice.status === statusFilter;
     const matchesDepartment = departmentFilter === "all" || apprentice.department === departmentFilter;
+    const matchesServiceTrack = serviceTrackFilter === "all" || apprentice.serviceTrack === serviceTrackFilter;
 
-    return matchesSearch && matchesStatus && matchesDepartment;
+    return matchesSearch && matchesStatus && matchesDepartment && matchesServiceTrack;
   });
 
   if (apprentices.length === 0) {
@@ -153,6 +174,19 @@ export function ApprenticesTable({ apprentices }: ApprenticesTableProps) {
             <SelectItem value="operations">Operations</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={serviceTrackFilter} onValueChange={setServiceTrackFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Service Track" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tracks</SelectItem>
+            <SelectItem value="tailoring">Tailoring</SelectItem>
+            <SelectItem value="device_repair">Device Repair</SelectItem>
+            <SelectItem value="sales">Sales</SelectItem>
+            <SelectItem value="delivery">Delivery</SelectItem>
+            <SelectItem value="operations">Operations</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -162,7 +196,7 @@ export function ApprenticesTable({ apprentices }: ApprenticesTableProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Apprentice</TableHead>
-                <TableHead>Department</TableHead>
+                <TableHead>Service Track</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Progress</TableHead>
                 <TableHead>Start Date</TableHead>
@@ -193,9 +227,16 @@ export function ApprenticesTable({ apprentices }: ApprenticesTableProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {departmentLabels[apprentice.department] || apprentice.department}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge className={serviceTrackColors[apprentice.serviceTrack] || "bg-gray-100 text-gray-700"}>
+                        {serviceTrackLabels[apprentice.serviceTrack] || apprentice.serviceTrack}
+                      </Badge>
+                      {apprentice.canWorkOnRealJobs && (
+                        <Badge variant="default" className="text-xs bg-green-600">
+                          Ready for Real Work
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={statusColors[apprentice.status] || "outline"}>
@@ -268,7 +309,7 @@ export function ApprenticesTable({ apprentices }: ApprenticesTableProps) {
       </Card>
 
       {/* Results Count */}
-      {(searchQuery || statusFilter !== "all" || departmentFilter !== "all") && (
+      {(searchQuery || statusFilter !== "all" || departmentFilter !== "all" || serviceTrackFilter !== "all") && (
         <p className="text-sm text-muted-foreground">
           Showing {filteredApprentices.length} of {apprentices.length} apprentices
         </p>

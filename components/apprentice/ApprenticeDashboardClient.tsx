@@ -83,6 +83,9 @@ interface ApprenticeData {
   expectedEndDate: string | null
   status: string
   isActive: boolean
+  serviceTrack: string
+  canWorkOnRealJobs: boolean
+  realJobsCompleted: number
   stats: {
     totalAssignments: number
     completedAssignments: number
@@ -161,9 +164,29 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
             <p className="text-muted-foreground mb-1">
               Apprentice #{apprentice.apprenticeNumber}
             </p>
-            <p className="text-muted-foreground">
-              Department: <span className="font-medium capitalize">{apprentice.department.toLowerCase()}</span>
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <Badge className={
+                apprentice.serviceTrack === 'device_repair'
+                  ? 'bg-blue-100 text-blue-700'
+                  : apprentice.serviceTrack === 'tailoring'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'bg-gray-100 text-gray-700'
+              }>
+                {apprentice.serviceTrack === 'device_repair' ? 'Device Repair Track'
+                  : apprentice.serviceTrack === 'tailoring' ? 'Tailoring Track'
+                  : `${apprentice.serviceTrack.charAt(0).toUpperCase() + apprentice.serviceTrack.slice(1)} Track`}
+              </Badge>
+              {apprentice.canWorkOnRealJobs && (
+                <Badge className="bg-green-600 text-white">
+                  Ready for Real Work
+                </Badge>
+              )}
+              {apprentice.realJobsCompleted > 0 && (
+                <Badge variant="outline">
+                  {apprentice.realJobsCompleted} real jobs completed
+                </Badge>
+              )}
+            </div>
             <p className="text-muted-foreground">
               Mentor: <span className="font-medium">{apprentice.mentorName}</span>
             </p>
