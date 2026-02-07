@@ -19,7 +19,7 @@ export default async function FeedbackPage() {
   }
 
   // Get user's feedback history
-  const feedback = await db.feedback.findMany({
+  const feedbackRaw = await db.feedback.findMany({
     where: { userId: user.id },
     include: {
       adminResponses: {
@@ -29,6 +29,18 @@ export default async function FeedbackPage() {
     },
     orderBy: { createdAt: 'desc' },
   })
+
+  // Serialize dates for client component
+  const feedback = feedbackRaw.map((f) => ({
+    ...f,
+    createdAt: f.createdAt.toISOString(),
+    updatedAt: f.updatedAt.toISOString(),
+    resolvedAt: f.resolvedAt?.toISOString() || null,
+    adminResponses: f.adminResponses.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+    })),
+  }))
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
