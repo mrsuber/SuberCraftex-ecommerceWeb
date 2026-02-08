@@ -2103,6 +2103,7 @@ enum Department {
   delivery
   operations
   beadwork
+  henna
 }
 
 enum ServiceTrack {
@@ -2112,6 +2113,7 @@ enum ServiceTrack {
   delivery
   operations
   beadwork
+  henna
 }
 
 enum AssignmentStatus {
