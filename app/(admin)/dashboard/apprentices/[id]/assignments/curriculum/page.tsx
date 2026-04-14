@@ -34,6 +34,18 @@ export default async function CurriculumAssignmentPage({ params }: PageProps) {
       mentorId: true,
       department: true,
       serviceTrack: true,
+      enrollments: {
+        where: {
+          status: { in: ["active", "paused"] },
+        },
+        select: {
+          id: true,
+          serviceTrack: true,
+          status: true,
+          totalAssignments: true,
+        },
+        orderBy: { startDate: "desc" },
+      },
     },
   });
 
@@ -50,6 +62,9 @@ export default async function CurriculumAssignmentPage({ params }: PageProps) {
   if (!["active", "pending"].includes(apprentice.status)) {
     redirect(`/dashboard/apprentices/${id}`);
   }
+
+  // Get all unique service tracks from enrollments
+  const enrolledTracks = apprentice.enrollments.map(e => e.serviceTrack);
 
   return (
     <div className="space-y-6">
@@ -87,7 +102,8 @@ export default async function CurriculumAssignmentPage({ params }: PageProps) {
       <CurriculumBrowser
         apprenticeId={id}
         apprenticeName={apprentice.fullName}
-        serviceTrack={apprentice.serviceTrack}
+        enrolledTracks={enrolledTracks}
+        defaultTrack={apprentice.serviceTrack}
       />
     </div>
   );

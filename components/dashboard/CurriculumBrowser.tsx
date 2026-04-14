@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -53,7 +60,8 @@ interface TemplatesResponse {
 interface CurriculumBrowserProps {
   apprenticeId: string;
   apprenticeName: string;
-  serviceTrack?: string;
+  enrolledTracks?: string[];
+  defaultTrack?: string;
   onAssignmentCreated?: () => void;
 }
 
@@ -66,6 +74,10 @@ const SERVICE_TRACK_LABELS: Record<string, string> = {
   beadwork: "Beadwork",
   henna: "Henna",
   printing_press: "Printing Press",
+  embroidery: "Embroidery",
+  electronics: "Electronics",
+  computing: "Computing",
+  woodworking_aerospace: "Woodworking → Aerospace",
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -86,11 +98,12 @@ const LEVEL_COLORS: Record<string, string> = {
 export function CurriculumBrowser({
   apprenticeId,
   apprenticeName,
-  serviceTrack = "tailoring",
+  enrolledTracks = [],
+  defaultTrack = "tailoring",
   onAssignmentCreated,
 }: CurriculumBrowserProps) {
-  const curriculumTitle = SERVICE_TRACK_LABELS[serviceTrack] || "Training";
   const router = useRouter();
+  const [selectedTrack, setSelectedTrack] = useState(defaultTrack);
   const [isLoading, setIsLoading] = useState(true);
   const [templates, setTemplates] = useState<AssignmentTemplate[]>([]);
   const [groupedTemplates, setGroupedTemplates] = useState<Record<string, Record<string, AssignmentTemplate[]>>>({});
@@ -103,15 +116,24 @@ export function CurriculumBrowser({
   const [additionalInstructions, setAdditionalInstructions] = useState("");
   const [expandedLevels, setExpandedLevels] = useState<string[]>([]);
 
+  const curriculumTitle = SERVICE_TRACK_LABELS[selectedTrack] || "Training";
+
+  // If enrolledTracks is provided and doesn't include selectedTrack, use the first enrolled track
+  useEffect(() => {
+    if (enrolledTracks.length > 0 && !enrolledTracks.includes(selectedTrack)) {
+      setSelectedTrack(enrolledTracks[0]);
+    }
+  }, [enrolledTracks]);
+
   useEffect(() => {
     fetchTemplates();
-  }, [serviceTrack]);
+  }, [selectedTrack]);
 
   const fetchTemplates = async () => {
     setIsLoading(true);
     try {
-      const url = serviceTrack
-        ? `/api/assignment-templates?serviceTrack=${serviceTrack}`
+      const url = selectedTrack
+        ? `/api/assignment-templates?serviceTrack=${selectedTrack}`
         : "/api/assignment-templates";
       const response = await fetch(url);
       if (response.ok) {
@@ -251,6 +273,27 @@ export function CurriculumBrowser({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Curriculum Selector - Only show if multiple curricula enrolled */}
+          {enrolledTracks.length > 1 && (
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+              <Label htmlFor="curriculum-select" className="font-semibold whitespace-nowrap">
+                Select Curriculum:
+              </Label>
+              <Select value={selectedTrack} onValueChange={setSelectedTrack}>
+                <SelectTrigger id="curriculum-select" className="w-full max-w-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {enrolledTracks.map((track) => (
+                    <SelectItem key={track} value={track}>
+                      {SERVICE_TRACK_LABELS[track] || track}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
