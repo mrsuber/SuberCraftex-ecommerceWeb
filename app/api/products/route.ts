@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
         { name: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
         { tags: { has: search } },
+        { category: { name: { contains: search, mode: "insensitive" } } },
+        { category: { parent: { name: { contains: search, mode: "insensitive" } } } },
       ];
     }
 
@@ -62,6 +64,13 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               slug: true,
+              parent: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
             },
           },
         },

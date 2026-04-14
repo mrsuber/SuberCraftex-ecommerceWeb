@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EnrollmentHistory } from "@/components/apprentice/EnrollmentHistory";
 import {
   ArrowLeft,
   Edit,
@@ -47,6 +48,9 @@ const departmentLabels: Record<string, string> = {
   sales: "Sales",
   delivery: "Delivery",
   operations: "Operations",
+  beadwork: "Beadwork",
+  henna: "Henna",
+  printing_press: "Printing Press",
 };
 
 export default async function ApprenticeDetailsPage({ params }: PageProps) {
@@ -76,12 +80,38 @@ export default async function ApprenticeDetailsPage({ params }: PageProps) {
       certificates: {
         orderBy: { issuedDate: "desc" },
       },
+      enrollments: {
+        include: {
+          _count: {
+            select: { assignments: true },
+          },
+          assignments: {
+            where: { status: "completed" },
+            select: { id: true },
+          },
+        },
+        orderBy: [{ status: "asc" }, { startDate: "desc" }],
+      },
     },
   });
 
   if (!apprentice) {
     notFound();
   }
+
+  // Format enrollments for the client component
+  const enrollments = apprentice.enrollments.map((enrollment) => ({
+    id: enrollment.id,
+    serviceTrack: enrollment.serviceTrack,
+    status: enrollment.status,
+    startDate: enrollment.startDate.toISOString(),
+    completionDate: enrollment.completionDate?.toISOString() || null,
+    totalAssignments: enrollment.totalAssignments,
+    completedAssignments: enrollment.assignments.length,
+    progressPercentage: Math.round(
+      (enrollment.assignments.length / enrollment.totalAssignments) * 100
+    ),
+  }));
 
   // Get mentor info
   const mentor = await db.user.findUnique({
@@ -285,6 +315,9 @@ export default async function ApprenticeDetailsPage({ params }: PageProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Curriculum Enrollments */}
+          <EnrollmentHistory apprenticeId={id} enrollments={enrollments} />
 
           {/* Emergency Contact */}
           {(apprentice.emergencyContactName || apprentice.emergencyContactPhone) && (

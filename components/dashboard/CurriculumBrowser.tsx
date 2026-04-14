@@ -63,6 +63,9 @@ const SERVICE_TRACK_LABELS: Record<string, string> = {
   sales: "Sales",
   delivery: "Delivery",
   operations: "Operations",
+  beadwork: "Beadwork",
+  henna: "Henna",
+  printing_press: "Printing Press",
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {

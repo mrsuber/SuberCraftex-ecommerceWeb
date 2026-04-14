@@ -13,12 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface Category {
-  id: string;
-  name: string;
-  children?: Category[];
-}
-
 export function ProductGrid() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -28,29 +22,23 @@ export function ProductGrid() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState(searchParams.get("sort") || "newest");
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  // Fetch categories to know parent-child relationships
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const res = await fetch("/api/categories?parentOnly=true&includeChildren=true");
-        if (res.ok) {
-          const data = await res.json();
-          setCategories(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
-      }
-    }
-    fetchCategories();
-  }, []);
 
   useEffect(() => {
     async function fetchProducts() {
       try {
         setLoading(true);
-        const response = await fetch("/api/products");
+
+        // Build query params for server-side filtering
+        const params = new URLSearchParams();
+        params.append('limit', '1000'); // Fetch more products to ensure we get all
+
+        // Add category filter if present
+        const categoryId = searchParams.get("categoryId") || searchParams.get("category");
+        if (categoryId) {
+          params.append('category', categoryId);
+        }
+
+        const response = await fetch(`/api/products?${params.toString()}`);
 
         if (!response.ok) {
           throw new Error("Failed to fetch products");
@@ -67,21 +55,9 @@ export function ProductGrid() {
     }
 
     fetchProducts();
-  }, []);
+  }, [searchParams]);
 
-  // Get all category IDs including subcategories for a given parent category
-  const getCategoryIdsForFilter = (categoryId: string): string[] => {
-    // Check if this is a parent category
-    const parentCategory = categories.find(c => c.id === categoryId);
-    if (parentCategory && parentCategory.children && parentCategory.children.length > 0) {
-      // Return parent ID plus all child IDs
-      return [categoryId, ...parentCategory.children.map(c => c.id)];
-    }
-    // It's either a subcategory or a category with no children
-    return [categoryId];
-  };
-
-  // Apply filters when searchParams or products change
+  // Apply client-side filters (category filtering is now handled server-side)
   useEffect(() => {
     if (products.length === 0) {
       setFilteredProducts([]);
@@ -102,17 +78,6 @@ export function ProductGrid() {
       });
     }
 
-    // Category filter - supports categoryId from filter sidebar
-    const categoryId = searchParams.get("categoryId") || searchParams.get("category");
-
-    if (categoryId) {
-      // Get all relevant category IDs (parent + children if parent selected)
-      const categoryIds = getCategoryIdsForFilter(categoryId);
-      filtered = filtered.filter((product) =>
-        product.category_id && categoryIds.includes(product.category_id)
-      );
-    }
-
     // In stock filter
     const inStock = searchParams.get("inStock");
     if (inStock === "true") {
@@ -126,7 +91,7 @@ export function ProductGrid() {
     }
 
     setFilteredProducts(filtered);
-  }, [products, searchParams, categories]);
+  }, [products, searchParams]);
 
   // Apply sorting when filteredProducts or sortBy changes
   useEffect(() => {

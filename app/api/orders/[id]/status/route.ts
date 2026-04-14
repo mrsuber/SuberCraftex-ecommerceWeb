@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/api-auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { Decimal } from '@prisma/client/runtime/library';
 
 const statusUpdateSchema = z.object({
   orderStatus: z.enum(['pending', 'paid', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'refunded']),
@@ -127,7 +128,191 @@ export async function PATCH(
       });
     }
 
-    // Update the order (non-cancellation)
+    // If delivering, process investor profit distribution in a transaction
+    if (orderStatus === 'delivered' && existingOrder.orderStatus !== 'delivered') {
+      const result = await db.$transaction(async (tx) => {
+        // Update order status
+        const order = await tx.order.update({
+          where: { id },
+          data: updateData,
+        });
+
+        const distributions = [];
+
+        // Process each order item for investor profit distribution
+        for (const item of existingOrder.orderItems) {
+          // Find investor allocations for this product (FIFO order)
+          const allocations = await tx.investorProductAllocation.findMany({
+            where: {
+              productId: item.productId,
+              variantId: item.variantId,
+              quantityRemaining: { gt: 0 },
+            },
+            include: {
+              investor: true,
+            },
+            orderBy: { allocatedAt: 'asc' }, // FIFO - First allocated, first sold
+          });
+
+          let remainingQuantity = item.quantity;
+
+          for (const allocation of allocations) {
+            if (remainingQuantity <= 0) break;
+
+            // Calculate how many units from this allocation to process
+            const quantityToProcess = Math.min(remainingQuantity, allocation.quantityRemaining);
+
+            if (quantityToProcess <= 0) continue;
+
+            // Calculate profit for these units
+            const salePrice = new Decimal(item.price);
+            const costPrice = allocation.purchasePrice;
+            const unitProfit = salePrice.sub(costPrice);
+
+            if (unitProfit.gt(0)) {
+              const totalProfit = unitProfit.mul(quantityToProcess);
+              const companyShare = totalProfit.div(2);
+              const investorShare = totalProfit.div(2);
+
+              // Calculate capital to return
+              const capitalReturned = costPrice.mul(quantityToProcess);
+
+              // Update investor balances
+              const updatedInvestor = await tx.investor.update({
+                where: { id: allocation.investorId },
+                data: {
+                  cashBalance: {
+                    increment: capitalReturned, // Return capital
+                  },
+                  profitBalance: {
+                    increment: investorShare, // Add profit
+                  },
+                  totalProfit: {
+                    increment: investorShare,
+                  },
+                },
+              });
+
+              // Update allocation
+              await tx.investorProductAllocation.update({
+                where: { id: allocation.id },
+                data: {
+                  quantitySold: {
+                    increment: quantityToProcess,
+                  },
+                  quantityRemaining: {
+                    decrement: quantityToProcess,
+                  },
+                  profitGenerated: {
+                    increment: investorShare,
+                  },
+                  capitalReturned: {
+                    increment: capitalReturned,
+                  },
+                },
+              });
+
+              // Create profit distribution record
+              await tx.profitDistribution.create({
+                data: {
+                  investorId: allocation.investorId,
+                  orderId: id,
+                  productId: item.productId,
+                  saleRevenue: salePrice.mul(quantityToProcess),
+                  saleCost: costPrice.mul(quantityToProcess),
+                  grossProfit: totalProfit,
+                  companyShare,
+                  investorShare,
+                  capitalReturned,
+                  description: `Sale of ${quantityToProcess} x ${item.productName}`,
+                  notes: `Order: ${existingOrder.orderNumber}`,
+                },
+              });
+
+              // Create investor transaction record
+              await tx.investorTransaction.create({
+                data: {
+                  investorId: allocation.investorId,
+                  type: 'profit_credit',
+                  amount: capitalReturned.add(investorShare),
+                  balanceAfter: updatedInvestor.cashBalance,
+                  profitAfter: updatedInvestor.profitBalance,
+                  productId: item.productId,
+                  orderId: id,
+                  description: `Sale: ${quantityToProcess} x ${item.productName} - Capital: ${capitalReturned}, Profit: ${investorShare}`,
+                  notes: `Order: ${existingOrder.orderNumber}`,
+                  createdBy: user.id,
+                },
+              });
+
+              distributions.push({
+                investorId: allocation.investorId,
+                investorName: allocation.investor.fullName,
+                product: item.productName,
+                quantity: quantityToProcess,
+                capitalReturned: capitalReturned.toString(),
+                profitShare: investorShare.toString(),
+              });
+            }
+
+            remainingQuantity -= quantityToProcess;
+          }
+        }
+
+        return { order, distributions };
+      });
+
+      if (result.distributions.length > 0) {
+        console.log(`✅ Order ${existingOrder.orderNumber} delivered - Profit distributed to ${result.distributions.length} investor allocations`);
+      }
+
+      // Create/update shipping tracking
+      if (signatureUrl || user.role === 'driver') {
+        let driverId = null;
+        if (user.role === 'driver') {
+          const driver = await db.driver.findUnique({
+            where: { userId: user.id },
+          });
+          driverId = driver?.id || null;
+        }
+
+        const trackingData: any = {
+          status: 'delivered',
+          actualDeliveryTime: new Date(),
+          notes: notes || null,
+        };
+
+        if (signatureUrl) {
+          trackingData.signatureUrl = signatureUrl;
+        }
+
+        if (driverId) {
+          trackingData.driverId = driverId;
+        }
+
+        if (existingOrder.shippingTracking) {
+          await db.shippingTracking.update({
+            where: { orderId: id },
+            data: trackingData,
+          });
+        } else {
+          await db.shippingTracking.create({
+            data: {
+              orderId: id,
+              ...trackingData,
+            },
+          });
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        order: result.order,
+        investorDistributions: result.distributions,
+      });
+    }
+
+    // Update the order (non-cancellation, non-delivery)
     const updatedOrder = await db.order.update({
       where: { id },
       data: updateData,

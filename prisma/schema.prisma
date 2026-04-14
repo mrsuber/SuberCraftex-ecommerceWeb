@@ -2104,6 +2104,7 @@ enum Department {
   operations
   beadwork
   henna
+  printing_press
 }
 
 enum ServiceTrack {
@@ -2114,6 +2115,11 @@ enum ServiceTrack {
   operations
   beadwork
   henna
+  printing_press
+  embroidery
+  electronics
+  computing
+  woodworking_aerospace
 }
 
 enum AssignmentStatus {
@@ -2123,6 +2129,13 @@ enum AssignmentStatus {
   needs_revision // Needs more work
   completed // Successfully completed
   overdue // Past deadline
+}
+
+enum EnrollmentStatus {
+  active // Currently enrolled in this curriculum
+  completed // Successfully completed this curriculum
+  dropped // Discontinued this curriculum
+  paused // Temporarily paused
 }
 
 model Apprentice {
@@ -2162,16 +2175,48 @@ model Apprentice {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignments    ApprenticeAssignment[]
   certificates   ApprenticeCertificate[]
   repairRequests RepairRequest[] // For device_repair track apprentices
+  enrollments    ApprenticeEnrollment[] // Track multiple curriculum enrollments
 
   @@index([mentorId])
   @@index([department])
   @@index([status])
   @@index([serviceTrack])
   @@map("apprentices")
+}
+
+// Apprentice Enrollment (for tracking multiple curricula per apprentice)
+model ApprenticeEnrollment {
+  id           String   @id @default(uuid())
+  apprenticeId String   @map("apprentice_id")
+  serviceTrack ServiceTrack @map("service_track")
+
+  // Status tracking
+  status         EnrollmentStatus @default(active)
+  startDate      DateTime         @default(now()) @map("start_date")
+  completionDate DateTime?        @map("completion_date")
+
+  // Progress tracking
+  totalAssignments     Int @default(0) @map("total_assignments")
+  completedAssignments Int @default(0) @map("completed_assignments")
+  progressPercentage   Int @default(0) @map("progress_percentage")
+
+  // Metadata
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  apprentice  Apprentice             @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  assignments ApprenticeAssignment[]
+
+  @@index([apprenticeId])
+  @@index([serviceTrack])
+  @@index([status])
+  @@map("apprentice_enrollments")
 }
 
 // Assignment Templates (Default Curriculum)
@@ -2231,6 +2276,7 @@ model AssignmentTemplate {
 model ApprenticeAssignment {
   id           String @id @default(uuid())
   apprenticeId String @map("apprentice_id")
+  enrollmentId String? @map("enrollment_id") // Links assignment to a specific curriculum enrollment
 
   // Template Reference (null for custom assignments)
   templateId String? @map("template_id")
@@ -2269,11 +2315,13 @@ model ApprenticeAssignment {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  apprentice Apprentice          @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
-  template   AssignmentTemplate? @relation(fields: [templateId], references: [id])
+  apprentice Apprentice              @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  enrollment ApprenticeEnrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  template   AssignmentTemplate?     @relation(fields: [templateId], references: [id])
   comments   AssignmentComment[]
 
   @@index([apprenticeId])
+  @@index([enrollmentId])
   @@index([status])
   @@index([dueDate])
   @@map("apprentice_assignments")

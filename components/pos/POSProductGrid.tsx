@@ -3,9 +3,16 @@
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Plus, Package } from 'lucide-react'
+import { Search, Plus, Package, ChevronDown, X, Filter } from 'lucide-react'
 import Image from 'next/image'
 import { formatCurrency } from '@/lib/currency'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface Product {
   id: string
@@ -15,6 +22,14 @@ interface Product {
   featured_image?: string
   inventory_count: number
   is_active: boolean
+  category_id?: string
+}
+
+interface Category {
+  id: string
+  name: string
+  slug: string
+  children?: Category[]
 }
 
 interface POSProductGridProps {
@@ -26,20 +41,56 @@ export default function POSProductGrid({ onAddToCart, refreshTrigger }: POSProdu
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string>('All Categories')
+
+  useEffect(() => {
+    loadCategories()
+  }, [])
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   useEffect(() => {
     loadProducts()
-  }, [refreshTrigger])
+  }, [refreshTrigger, selectedCategory, debouncedSearch])
 
-  useEffect(() => {
-    filterProducts()
-  }, [searchQuery, products])
+  const loadCategories = async () => {
+    try {
+      const response = await fetch('/api/categories?parentOnly=true&includeChildren=true')
+      if (response.ok) {
+        const data = await response.json()
+        setCategories(data)
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error)
+    }
+  }
 
   const loadProducts = async () => {
     try {
-      // Add cache-buster to ensure fresh data
-      const response = await fetch(`/api/products?isActive=true&_=${Date.now()}`, {
+      setLoading(true)
+      // Build query string with category filter and search
+      const params = new URLSearchParams()
+      params.append('isActive', 'true')
+      params.append('limit', '1000') // Fetch more products for POS
+      if (selectedCategory) {
+        params.append('category', selectedCategory)
+      }
+      if (debouncedSearch.trim()) {
+        params.append('search', debouncedSearch.trim())
+      }
+      params.append('_', Date.now().toString()) // cache-buster
+
+      const response = await fetch(`/api/products?${params.toString()}`, {
         cache: 'no-store'
       })
       if (response.ok) {
@@ -56,19 +107,9 @@ export default function POSProductGrid({ onAddToCart, refreshTrigger }: POSProdu
     }
   }
 
-  const filterProducts = () => {
-    if (!searchQuery.trim()) {
-      setFilteredProducts(products)
-      return
-    }
-
-    const query = searchQuery.toLowerCase()
-    const filtered = products.filter(
-      (product) =>
-        product.name.toLowerCase().includes(query) ||
-        product.sku.toLowerCase().includes(query)
-    )
-    setFilteredProducts(filtered)
+  const handleCategorySelect = (categoryId: string | null, categoryName: string) => {
+    setSelectedCategory(categoryId)
+    setSelectedCategoryName(categoryName)
   }
 
   const handleAddToCart = (product: Product) => {
@@ -95,16 +136,76 @@ export default function POSProductGrid({ onAddToCart, refreshTrigger }: POSProdu
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <Input
-          type="text"
-          placeholder="Search products by name or SKU..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 text-lg py-6"
-        />
+      {/* Search and Filter Row */}
+      <div className="flex gap-2">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search products by name or SKU..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 text-lg py-6"
+          />
+        </div>
+
+        {/* Category Filter Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="px-4 py-6 min-w-[200px] justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                <span className="truncate">{selectedCategoryName}</span>
+              </div>
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[250px] max-h-[400px] overflow-y-auto bg-white border border-gray-200 shadow-lg">
+            <DropdownMenuItem
+              onClick={() => handleCategorySelect(null, 'All Categories')}
+              className={selectedCategory === null ? 'bg-accent' : ''}
+            >
+              All Categories
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {categories.map((category) => (
+              <div key={category.id}>
+                <DropdownMenuItem
+                  onClick={() => handleCategorySelect(category.id, category.name)}
+                  className={selectedCategory === category.id ? 'bg-accent font-medium' : ''}
+                >
+                  {category.name}
+                </DropdownMenuItem>
+                {category.children && category.children.length > 0 && (
+                  <div className="ml-4">
+                    {category.children.map((subCategory) => (
+                      <DropdownMenuItem
+                        key={subCategory.id}
+                        onClick={() => handleCategorySelect(subCategory.id, `${category.name} > ${subCategory.name}`)}
+                        className={selectedCategory === subCategory.id ? 'bg-accent font-medium' : ''}
+                      >
+                        <span className="text-sm">↳ {subCategory.name}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Clear filter button */}
+        {selectedCategory && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleCategorySelect(null, 'All Categories')}
+            className="py-6"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* Products Grid */}
