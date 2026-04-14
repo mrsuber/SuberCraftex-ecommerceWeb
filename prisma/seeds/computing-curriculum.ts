@@ -526,7 +526,7 @@ export async function seedComputingCurriculum() {
   console.log(`   Level 10 (Flight Software): State machines, fault tolerance`)
   console.log(`   Level 11 (Rocket Software): Sensor fusion, apogee detection, deployment`)
   console.log(`   Level 12 (AI/Infrastructure): Machine learning, data centers`)
-  console.log(`\n🚀 This curriculum provides complete software stack for spacecraft!')
+  console.log(`\n🚀 This curriculum provides complete software stack for spacecraft!`)
 }
 
 // Run if called directly
