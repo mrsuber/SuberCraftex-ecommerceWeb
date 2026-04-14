@@ -307,16 +307,24 @@ export function CurriculumBrowser({
 
           {/* Level Summary */}
           {summary && !searchQuery && (
-            <div className="grid grid-cols-5 gap-2">
-              {Object.entries(summary.byLevel).map(([level, count]) => (
-                <div
-                  key={level}
-                  className={`p-3 rounded-lg bg-gradient-to-br ${LEVEL_COLORS[`Level ${level.replace("level", "")}`] || "from-gray-500 to-gray-600"} text-white text-center`}
-                >
-                  <p className="text-xs opacity-90">Level {level.replace("level", "")}</p>
-                  <p className="text-lg font-bold">{count}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-2">
+              {Object.entries(summary.byLevel)
+                .sort(([a], [b]) => {
+                  const aNum = parseInt(a.replace("level", ""));
+                  const bNum = parseInt(b.replace("level", ""));
+                  return aNum - bNum;
+                })
+                .map(([level, count]) => (
+                  <div
+                    key={level}
+                    className={`p-3 rounded-lg bg-gradient-to-br ${
+                      LEVEL_COLORS[`Level ${level.replace("level", "")}`] || "from-gray-500 to-gray-600"
+                    } text-white text-center`}
+                  >
+                    <p className="text-xs opacity-90">L{level.replace("level", "")}</p>
+                    <p className="text-lg font-bold">{count}</p>
+                  </div>
+                ))}
             </div>
           )}
 

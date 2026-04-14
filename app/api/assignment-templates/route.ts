@@ -64,18 +64,22 @@ export async function GET(request: NextRequest) {
       return acc
     }, {})
 
+    // Build dynamic level summary
+    const byLevel: Record<string, number> = {}
+    const maxLevel = templates.length > 0 ? Math.max(...templates.map(t => t.level)) : 0
+    for (let i = 1; i <= maxLevel; i++) {
+      const count = templates.filter((t) => t.level === i).length
+      if (count > 0) {
+        byLevel[`level${i}`] = count
+      }
+    }
+
     return NextResponse.json({
       templates,
       grouped,
       summary: {
         total: templates.length,
-        byLevel: {
-          level1: templates.filter((t) => t.level === 1).length,
-          level2: templates.filter((t) => t.level === 2).length,
-          level3: templates.filter((t) => t.level === 3).length,
-          level4: templates.filter((t) => t.level === 4).length,
-          level5: templates.filter((t) => t.level === 5).length,
-        },
+        byLevel,
       },
     })
   } catch (error) {
