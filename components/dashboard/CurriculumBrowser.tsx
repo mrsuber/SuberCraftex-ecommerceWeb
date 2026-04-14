@@ -273,24 +273,30 @@ export function CurriculumBrowser({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Curriculum Selector - Only show if multiple curricula enrolled */}
-          {enrolledTracks.length > 1 && (
+          {/* Curriculum Selector - Show if apprentice has enrollments */}
+          {enrolledTracks.length > 0 && (
             <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
               <Label htmlFor="curriculum-select" className="font-semibold whitespace-nowrap">
-                Select Curriculum:
+                {enrolledTracks.length > 1 ? "Select Curriculum:" : "Curriculum:"}
               </Label>
-              <Select value={selectedTrack} onValueChange={setSelectedTrack}>
-                <SelectTrigger id="curriculum-select" className="w-full max-w-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {enrolledTracks.map((track) => (
-                    <SelectItem key={track} value={track}>
-                      {SERVICE_TRACK_LABELS[track] || track}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {enrolledTracks.length > 1 ? (
+                <Select value={selectedTrack} onValueChange={setSelectedTrack}>
+                  <SelectTrigger id="curriculum-select" className="w-full max-w-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {enrolledTracks.map((track) => (
+                      <SelectItem key={track} value={track}>
+                        {SERVICE_TRACK_LABELS[track] || track}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="font-medium">
+                  {SERVICE_TRACK_LABELS[selectedTrack] || selectedTrack}
+                </div>
+              )}
             </div>
           )}
 
