@@ -51,6 +51,11 @@ const departmentLabels: Record<string, string> = {
   beadwork: "Beadwork",
   henna: "Henna",
   printing_press: "Printing Press",
+  embroidery: "Embroidery",
+  electronics: "Electronics",
+  computing: "Computing",
+  woodworking_aerospace: "Woodworking → Aerospace",
+  device_repair: "Device Repair",
 };
 
 export default async function ApprenticeDetailsPage({ params }: PageProps) {

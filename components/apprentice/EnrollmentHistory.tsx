@@ -49,6 +49,10 @@ const SERVICE_TRACK_LABELS: Record<string, string> = {
   beadwork: "Beadwork",
   henna: "Henna",
   printing_press: "Printing Press",
+  embroidery: "Embroidery",
+  electronics: "Electronics",
+  computing: "Computing",
+  woodworking_aerospace: "Woodworking → Aerospace",
 };
 
 const ENROLLMENT_STATUS_COLORS: Record<

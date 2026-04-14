@@ -93,6 +93,13 @@ const serviceTrackLabels: Record<string, string> = {
   sales: "Sales",
   delivery: "Delivery",
   operations: "Operations",
+  beadwork: "Beadwork",
+  henna: "Henna",
+  printing_press: "Printing Press",
+  embroidery: "Embroidery",
+  electronics: "Electronics",
+  computing: "Computing",
+  woodworking_aerospace: "Woodworking → Aerospace",
 };
 
 const serviceTrackColors: Record<string, string> = {
@@ -101,6 +108,13 @@ const serviceTrackColors: Record<string, string> = {
   sales: "bg-green-100 text-green-700",
   delivery: "bg-orange-100 text-orange-700",
   operations: "bg-gray-100 text-gray-700",
+  beadwork: "bg-pink-100 text-pink-700",
+  henna: "bg-amber-100 text-amber-700",
+  printing_press: "bg-cyan-100 text-cyan-700",
+  embroidery: "bg-rose-100 text-rose-700",
+  electronics: "bg-indigo-100 text-indigo-700",
+  computing: "bg-emerald-100 text-emerald-700",
+  woodworking_aerospace: "bg-red-100 text-red-700",
 };
 
 export function ApprenticesTable({ apprentices }: ApprenticesTableProps) {
