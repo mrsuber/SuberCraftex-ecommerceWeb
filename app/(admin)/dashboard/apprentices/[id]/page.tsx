@@ -55,6 +55,7 @@ const departmentLabels: Record<string, string> = {
   electronics: "Electronics",
   computing: "Computing",
   woodworking_aerospace: "Woodworking → Aerospace",
+  leather_working: "Leather Working",
   device_repair: "Device Repair",
 };
 
