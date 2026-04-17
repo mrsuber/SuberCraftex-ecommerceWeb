@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
  * Leather Working Curriculum Seed
  *
  * Complete leather craftsmanship journey from raw hide to finished products
- * 6 levels, ~70 assignments
+ * 6 levels, 70 assignments total
  *
  * Level 1: Foundations - Tools, Materials, Basic Techniques (12 assignments)
  * Level 2: Hand Stitching & Small Goods (12 assignments)
@@ -15,7 +15,7 @@ const prisma = new PrismaClient()
  * Level 5: Advanced Footwear & Furniture (12 assignments)
  * Level 6: Business & Production (10 assignments)
  *
- * Total: 70 assignments
+ * Total: 70 assignments covering raw hide tanning to running a leather business
  */
 
 export async function seedLeatherWorkingCurriculum() {
@@ -1988,8 +1988,913 @@ export async function seedLeatherWorkingCurriculum() {
       ],
     },
 
-    // Note: Due to space constraints, I'm providing a condensed version of Levels 5-6
-    // Each would follow the same detailed format with full 10-step instructions
+    // ========================================================================
+    // LEVEL 5: ADVANCED FOOTWEAR & FURNITURE
+    // ========================================================================
+    {
+      level: 5,
+      moduleNumber: '5.1',
+      assignmentNumber: 'LW-5.1.1',
+      orderIndex: 49,
+      title: 'Advanced Boot Making: Tall Boots',
+      description: 'Create tall boots (knee-high or higher) learning pattern scaling, shaft support, and maintaining shape over extended height.',
+      instructions: `1. Study tall boot construction: shaft support, calf shaping, knee articulation, weight distribution
+2. Measure for tall boots: calf circumference, knee height, total height, ankle girth
+3. Scale pattern from ankle boot: extend shaft, add shaping darts, calf muscle accommodation
+4. Cut all pieces: longer shaft pieces, reinforcements at stress points
+5. Create internal support: stiff shank for arch support, heel counter extends higher
+6. Assemble shaft with shaping: darts or gussets for calf fit, smooth curves
+7. Attach shaft to foot: strong seam, reinforced stitching, proper alignment
+8. Last and attach sole: same methods as shorter boots, extra care with height
+9. Add closure system: full-length zipper, laces, or combination, easy on/off
+10. Finish and condition: tall boots require more leather care, conditioning throughout`,
+      objectives: [
+        'Scale patterns for tall boots',
+        'Create shaped shaft for calf',
+        'Provide adequate internal support',
+        'Execute long shaft seams',
+        'Install full-length closures',
+        'Complete wearable tall boots',
+      ],
+      skills: ['Tall boot construction', 'Pattern scaling', 'Shaft shaping', 'Long zipper installation', 'Internal support systems', 'Advanced lasting'],
+      expectedOutcome: 'Completed pair of tall boots (knee-high minimum) with shaped shaft, internal support, full closure, professional finish, comfortable fit.',
+      passingCriteria: 'Boots fit properly up entire leg, shaft holds shape, closures function smoothly, adequate support, comfortable for walking',
+      referencePhotos: ['/curriculum/leather/tall-boot-pattern.jpg', '/curriculum/leather/shaft-shaping.jpg', '/curriculum/leather/completed-tall-boots.jpg'],
+      estimatedHours: 40,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'footwear',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Tall boot construction techniques',
+        'Shaft shaping and support methods',
+        'Long zipper installation in boots',
+      ],
+      crossReferences: [
+        'LW-4.4.1: Boot Upper Construction',
+        'LW-4.6.2: Complete Leather Boot',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.1',
+      assignmentNumber: 'LW-5.1.2',
+      orderIndex: 50,
+      title: 'Dress Shoe Construction',
+      description: 'Create elegant dress shoes with refined details, high-quality finishing, and traditional construction methods.',
+      instructions: `1. Study dress shoe aesthetics: sleek lines, minimal decoration, quality materials, refined proportions
+2. Select premium leather: calf leather for uppers, quality sole leather, luxury lining
+3. Create dress shoe pattern: oxford, derby, or monk strap style, refined proportions
+4. Cut pieces with precision: extremely accurate cutting, minimal waste, quality selection
+5. Assemble upper with fine stitching: small stitch spacing, perfect alignment, hidden seams where possible
+6. Last with extreme care: smooth pulls, no wrinkles, perfect toe shape, crisp lines
+7. Execute Goodyear welt: traditional method, fine stitching, narrow welt
+8. Attach premium outsole: leather sole, tight stitching, flush trim
+9. Finish to luxury standard: mirror polish, perfect edge finish, premium laces
+10. Present in shoe box: tissue paper, care instructions, luxury presentation`,
+      objectives: [
+        'Execute refined dress shoe design',
+        'Work with premium materials',
+        'Achieve luxury-level finishing',
+        'Master subtle proportions',
+        'Create investment-quality footwear',
+        'Present professionally',
+      ],
+      skills: ['Dress shoe construction', 'Premium material handling', 'Luxury finishing', 'Refined proportions', 'Traditional methods', 'Presentation'],
+      expectedOutcome: 'Pair of dress shoes with refined design, premium materials, luxury finishing, mirror polish, suitable for formal wear.',
+      passingCriteria: 'Shoes have sleek proportions, premium materials throughout, mirror polish achieved, no visible flaws, luxury quality throughout',
+      referencePhotos: ['/curriculum/leather/dress-shoe-lasts.jpg', '/curriculum/leather/luxury-finishing.jpg', '/curriculum/leather/completed-dress-shoes.jpg'],
+      estimatedHours: 50,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'footwear',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        '"Handmade Shoes for Men" by László Vass - dress shoe chapter',
+        'Luxury shoe finishing techniques',
+        'Premium leather selection guide',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.2',
+      assignmentNumber: 'LW-5.2.1',
+      orderIndex: 51,
+      title: 'Leather Furniture: Seat Cushion',
+      description: 'Create a leather seat cushion learning upholstery basics, foam padding, and furniture-grade construction.',
+      instructions: `1. Study seat cushion construction: foam core, leather cover, attachment methods, durability
+2. Measure existing seat or create dimensions: width, depth, thickness, shape
+3. Select materials: furniture-grade leather (thick, durable), high-density foam, batting
+4. Cut foam to size: electric knife or foam cutter, smooth edges, proper density
+5. Wrap foam in batting: creates smooth surface, prevents foam breakdown
+6. Create leather cover pattern: top, bottom, boxing strip (sides), seam allowance
+7. Cut leather pieces: grain direction considered, quality selection
+8. Sew cover: industrial sewing machine, heavy thread, strong seams
+9. Insert foam into cover: tight fit, smooth surface, no wrinkles
+10. Attach to seat base: staples, screws, or straps, secure attachment, test durability`,
+      objectives: [
+        'Understand upholstery basics',
+        'Work with foam padding',
+        'Create furniture-grade leather cover',
+        'Execute tight upholstery',
+        'Attach cushion securely',
+        'Complete durable seat cushion',
+      ],
+      skills: ['Upholstery basics', 'Foam cutting', 'Furniture leather selection', 'Industrial sewing', 'Cushion construction', 'Attachment methods'],
+      expectedOutcome: 'Completed leather seat cushion with high-density foam, smooth leather cover, secure attachment, comfortable and durable.',
+      passingCriteria: 'Cushion is smooth and even, leather is taut without wrinkles, attachment is secure, comfortable to sit on, durable construction',
+      referencePhotos: ['/curriculum/leather/cushion-construction.jpg', '/curriculum/leather/foam-wrapping.jpg', '/curriculum/leather/completed-cushion.jpg'],
+      estimatedHours: 12,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'furniture',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Upholstery basics for leather',
+        'Foam selection and cutting',
+        'Furniture-grade leather characteristics',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.2',
+      assignmentNumber: 'LW-5.2.2',
+      orderIndex: 52,
+      title: 'Leather Upholstery Techniques',
+      description: 'Learn professional upholstery techniques including stretching, stapling, piping, and creating smooth surfaces.',
+      instructions: `1. Study upholstery tools: staple gun, tack hammer, upholstery needles, stretching pliers
+2. Learn leather stretching: pull evenly, work from center out, no wrinkles
+3. Practice stapling technique: proper angle, depth, spacing, hidden placement
+4. Create piping: cord wrapped in leather strip, sewn into seams, professional edge
+5. Learn double-welt technique: two cords for heavy-duty furniture, structural and decorative
+6. Practice pleating and gathering: decorative techniques, even spacing, secure stitching
+7. Study diamond tufting basics: button placement, depth control, pattern symmetry
+8. Learn edge treatments: blind stitching, fold-over edges, clean finishes
+9. Practice on sample board: demonstrate all techniques on test piece
+10. Complete upholstered ottoman: apply all techniques, professional result`,
+      objectives: [
+        'Master leather stretching',
+        'Execute professional stapling',
+        'Create and install piping',
+        'Perform edge treatments',
+        'Understand tufting basics',
+        'Complete upholstered piece',
+      ],
+      skills: ['Leather stretching', 'Professional stapling', 'Piping creation', 'Edge treatments', 'Tufting basics', 'Upholstery tools'],
+      expectedOutcome: 'Sample board demonstrating all upholstery techniques and completed ottoman applying these skills professionally.',
+      passingCriteria: 'All techniques correctly demonstrated, leather is smooth and taut, piping is even, edges are clean, ottoman is professional quality',
+      referencePhotos: ['/curriculum/leather/upholstery-techniques.jpg', '/curriculum/leather/piping-detail.jpg', '/curriculum/leather/upholstered-ottoman.jpg'],
+      estimatedHours: 16,
+      difficulty: 'expert',
+      category: 'techniques',
+      subcategory: 'upholstery',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Professional upholstery techniques',
+        'Piping and welt construction',
+        'Leather furniture upholstery guide',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.3',
+      assignmentNumber: 'LW-5.3.1',
+      orderIndex: 53,
+      title: 'Leather Chair Construction',
+      description: 'Build a complete leather chair from frame to finished upholstery, integrating woodworking and leather working skills.',
+      instructions: `1. Design chair: style selection (dining, accent, office), dimensions, leather placement
+2. Build or source frame: wood or metal frame, structural integrity, upholstery-ready
+3. Add webbing or spring system: seat support, tension, durability
+4. Install base padding: foam, batting, proper density for use
+5. Create pattern for each section: seat, back, arms (if applicable), pattern each separately
+6. Cut leather pieces: quality selection, grain direction, minimize waste
+7. Upholster seat: stretch and staple, smooth surface, no wrinkles
+8. Upholster back: align pattern (if applicable), proper tension, clean edges
+9. Add decorative elements: nailhead trim, tufting, piping as designed
+10. Final assembly: attach all components, test structure, quality check`,
+      objectives: [
+        'Design complete chair',
+        'Integrate frame and upholstery',
+        'Execute multi-section upholstery',
+        'Add decorative elements',
+        'Create functional furniture',
+        'Ensure structural integrity',
+      ],
+      skills: ['Chair construction', 'Frame integration', 'Multi-section upholstery', 'Decorative elements', 'Structural design', 'Furniture assembly'],
+      expectedOutcome: 'Completed leather chair with solid frame, professionally upholstered surfaces, decorative elements, comfortable and durable.',
+      passingCriteria: 'Chair is structurally sound, all upholstery smooth and taut, decorative elements properly applied, comfortable to sit in, professional quality',
+      referencePhotos: ['/curriculum/leather/chair-frame.jpg', '/curriculum/leather/chair-upholstery.jpg', '/curriculum/leather/completed-chair.jpg'],
+      estimatedHours: 35,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'furniture',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Chair frame construction basics',
+        'Multi-section upholstery techniques',
+        'Decorative furniture elements',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.3',
+      assignmentNumber: 'LW-5.3.2',
+      orderIndex: 54,
+      title: 'Tufting & Buttoning Techniques',
+      description: 'Master diamond tufting and button placement for creating luxurious tufted leather furniture and headboards.',
+      instructions: `1. Study tufting patterns: diamond, biscuit, square, channel tufting, aesthetic and structural
+2. Learn button types: covered buttons, nail-head buttons, custom leather buttons
+3. Create covered buttons: leather over button forms, smooth wrapping, secure backing
+4. Mark tufting pattern: precise measurement, symmetrical layout, pattern template
+5. Drill holes in backing: correct size for button attachment, pattern alignment
+6. Prepare padding: extra-deep foam for tufting depth, cuts between buttons
+7. Attach buttons from back: twine through padding and leather, secure knot, even tension
+8. Create tufting depth: pull each button to consistent depth, create valleys
+9. Pleat fabric between buttons: even folds, symmetrical pattern, secure pleats
+10. Complete tufted headboard: full pattern execution, professional finish, mounted`,
+      objectives: [
+        'Execute diamond tufting pattern',
+        'Create covered buttons',
+        'Maintain consistent tufting depth',
+        'Create even pleating',
+        'Complete tufted project',
+        'Achieve luxury appearance',
+      ],
+      skills: ['Diamond tufting', 'Button covering', 'Pattern layout', 'Depth control', 'Pleating technique', 'Luxury finishing'],
+      expectedOutcome: 'Completed tufted leather headboard with symmetrical diamond pattern, covered buttons, consistent depth, professional luxury finish.',
+      passingCriteria: 'Pattern is perfectly symmetrical, all buttons at same depth, pleats are even, leather is smooth, luxury quality achieved',
+      referencePhotos: ['/curriculum/leather/tufting-pattern.jpg', '/curriculum/leather/button-placement.jpg', '/curriculum/leather/tufted-headboard.jpg'],
+      estimatedHours: 20,
+      difficulty: 'expert',
+      category: 'techniques',
+      subcategory: 'upholstery',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Diamond tufting comprehensive guide',
+        'Button covering techniques',
+        'Luxury upholstery methods',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.4',
+      assignmentNumber: 'LW-5.4.1',
+      orderIndex: 55,
+      title: 'Exotic Leather Working',
+      description: 'Learn to work with exotic leathers including alligator, ostrich, python, and stingray, understanding their unique properties.',
+      instructions: `1. Study exotic leather regulations: CITES, legal sourcing, documentation requirements
+2. Learn exotic leather properties: alligator (tile pattern), ostrich (quill marks), python (scales), stingray (bumpy)
+3. Study cutting techniques: work with scale direction, avoid waste, maximize pattern
+4. Learn edge finishing for exotics: some cannot be burnished, edge paint required
+5. Practice stitching exotics: pre-punch all holes, scales can be brittle, careful tension
+6. Study exotic leather care: special conditioning, water sensitivity, storage
+7. Create small project in alligator: wallet or card holder, showcase tile pattern
+8. Create project in ostrich: utilize quill marks decoratively, smooth areas
+9. Study pricing and sourcing: exotic leathers are expensive, quality grading
+10. Complete exotic leather portfolio piece: demonstrate understanding of unique properties`,
+      objectives: [
+        'Understand exotic leather regulations',
+        'Work with unique leather properties',
+        'Execute appropriate techniques for each type',
+        'Create exotic leather projects',
+        'Source legally and ethically',
+        'Demonstrate material knowledge',
+      ],
+      skills: ['Exotic leather knowledge', 'Legal compliance', 'Specialized techniques', 'Material sourcing', 'Unique properties handling', 'Luxury materials'],
+      expectedOutcome: 'Completed projects in 2+ exotic leathers demonstrating understanding of each material\'s unique properties and appropriate techniques.',
+      passingCriteria: 'Projects showcase exotic leathers properly, techniques appropriate for material, legal sourcing documented, professional execution',
+      referencePhotos: ['/curriculum/leather/exotic-leathers.jpg', '/curriculum/leather/alligator-wallet.jpg', '/curriculum/leather/ostrich-project.jpg'],
+      estimatedHours: 16,
+      difficulty: 'expert',
+      category: 'materials',
+      subcategory: 'exotic',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'CITES regulations for exotic leathers',
+        'Exotic leather working guide',
+        'Legal sourcing and documentation',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.4',
+      assignmentNumber: 'LW-5.4.2',
+      orderIndex: 56,
+      title: 'Advanced Surface Treatments',
+      description: 'Master advanced leather finishing including antiquing, distressing, embossing, foiling, and custom textures.',
+      instructions: `1. Study antiquing techniques: gel vs liquid, color selection, highlight wiping, depth creation
+2. Learn controlled distressing: natural wear patterns, edge scuffing, color variation
+3. Practice embossing: heat embossing, blind embossing, foil embossing, pressure control
+4. Learn foil application: heat-activated foil, pattern placement, adhesion control
+5. Study resist dyeing: wax resist, masked areas, multi-color effects
+6. Practice airbrush techniques: color gradients, stenciled patterns, controlled overspray
+7. Learn texture creation: stamping, carving, molding, surface manipulation
+8. Study protective finishes: maintain texture while protecting, appropriate sealers
+9. Create sample board: demonstrate 8+ advanced surface treatments
+10. Execute custom project: combine multiple techniques, original design, professional finish`,
+      objectives: [
+        'Master antiquing techniques',
+        'Create controlled distressing',
+        'Execute embossing and foiling',
+        'Use airbrushing effectively',
+        'Create custom textures',
+        'Combine multiple techniques',
+      ],
+      skills: ['Antiquing', 'Distressing', 'Embossing', 'Foil application', 'Airbrushing', 'Surface texturing', 'Creative finishing'],
+      expectedOutcome: 'Sample board with 8+ surface treatments and custom project combining multiple techniques to create unique artistic piece.',
+      passingCriteria: 'All techniques correctly executed, effects are controlled and intentional, custom project shows creativity, professional quality',
+      referencePhotos: ['/curriculum/leather/surface-treatments.jpg', '/curriculum/leather/embossing-foiling.jpg', '/curriculum/leather/artistic-finish.jpg'],
+      estimatedHours: 18,
+      difficulty: 'expert',
+      category: 'techniques',
+      subcategory: 'finishing',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Advanced leather finishing techniques',
+        'Embossing and foiling guide',
+        'Creative surface treatments',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.5',
+      assignmentNumber: 'LW-5.5.1',
+      orderIndex: 57,
+      title: 'Leather Furniture: Ottoman',
+      description: 'Create a complete leather ottoman with internal structure, padding, upholstery, and optional storage.',
+      instructions: `1. Design ottoman: size, shape (square, round, rectangular), storage vs solid
+2. Build frame: wood frame, structural integrity, upholstery-ready
+3. Add optional storage: hinged top, internal box, safe hinge placement
+4. Create webbing or base: seat support, tension, appropriate for use
+5. Add foam layers: high-density base, softer top, proper heights
+6. Wrap in batting: smooth transition, edge padding, no hard corners
+7. Create leather cover pattern: top, sides, boxing if needed, piping
+8. Cut and prepare leather: quality selection, grain direction
+9. Upholster ottoman: stretch evenly, staple securely, piping at seams, clean edges
+10. Add feet or base: screw-in furniture feet, glides, or upholstered base, finish touches`,
+      objectives: [
+        'Design functional ottoman',
+        'Build structural frame',
+        'Execute padding layers',
+        'Create fitted leather cover',
+        'Apply upholstery techniques',
+        'Complete furniture piece',
+      ],
+      skills: ['Ottoman construction', 'Frame building', 'Multi-layer padding', 'Fitted upholstery', 'Furniture finishing', 'Optional storage integration'],
+      expectedOutcome: 'Completed leather ottoman with solid frame, comfortable padding, professionally upholstered, optional storage, functional furniture.',
+      passingCriteria: 'Ottoman is structurally sound, padding is comfortable, leather is smooth and taut, all edges clean, feet attached securely',
+      referencePhotos: ['/curriculum/leather/ottoman-frame.jpg', '/curriculum/leather/ottoman-upholstery.jpg', '/curriculum/leather/completed-ottoman.jpg'],
+      estimatedHours: 24,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'furniture',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Ottoman construction guide',
+        'Furniture frame building',
+        'Professional upholstery methods',
+      ],
+      crossReferences: [
+        'LW-5.2.1: Seat Cushion',
+        'LW-5.2.2: Upholstery Techniques',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.5',
+      assignmentNumber: 'LW-5.5.2',
+      orderIndex: 58,
+      title: 'Leather Furniture: Accent Chair',
+      description: 'Create a complete accent chair with arms, decorative elements, and luxury finishing.',
+      instructions: `1. Design accent chair: style (mid-century, traditional, modern), dimensions, decorative elements
+2. Source or build frame: arms, legs, back support, structural integrity
+3. Plan upholstery approach: inside back, outside back, seat, inside arms, outside arms
+4. Add support systems: webbing, springs, foam layers for each section
+5. Create pattern for all sections: measure each area, add seam allowance, match grain
+6. Cut all leather pieces: quality selection, grain direction, pattern matching if applicable
+7. Upholster seat first: foundation for other sections, proper support
+8. Upholster inside sections: back and arms, smooth surfaces, proper tension
+9. Apply decorative elements: nailhead trim, tufting, piping, welt cord
+10. Upholster outside sections: clean finish, hidden seams, professional back, attach legs`,
+      objectives: [
+        'Design complete accent chair',
+        'Execute multi-section upholstery',
+        'Create decorative elements',
+        'Achieve professional finishing',
+        'Complete luxury furniture piece',
+        'Demonstrate all Level 5 skills',
+      ],
+      skills: ['Accent chair construction', 'Multi-section upholstery', 'Decorative trim', 'Arms upholstery', 'Professional back finishing', 'Luxury furniture'],
+      expectedOutcome: 'Completed leather accent chair with arms, decorative elements, professional upholstery throughout, comfortable and beautiful.',
+      passingCriteria: 'Chair is comfortable, all upholstery smooth and professional, decorative elements properly applied, structurally sound, luxury quality',
+      referencePhotos: ['/curriculum/leather/accent-chair-design.jpg', '/curriculum/leather/chair-upholstery-process.jpg', '/curriculum/leather/completed-accent-chair.jpg'],
+      estimatedHours: 40,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'furniture',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Accent chair construction',
+        'Arms upholstery techniques',
+        'Luxury furniture finishing',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.6',
+      assignmentNumber: 'LW-5.6.1',
+      orderIndex: 59,
+      title: 'Custom Furniture Project',
+      description: 'Design and create an original leather furniture piece applying all Level 5 skills and demonstrating creativity.',
+      instructions: `1. Develop original furniture concept: identify need, unique design, functionality
+2. Create detailed design drawings: multiple views, dimensions, material list
+3. Build or source frame: custom fabrication or modification, structural planning
+4. Develop complete pattern set: all sections measured and patterned
+5. Source all materials: leather, foam, webbing, hardware, decorative elements
+6. Build prototype or mock-up: test design, identify issues, refine
+7. Execute final version: apply all learned techniques, professional execution
+8. Add unique elements: showcase specialty skills, creative solutions
+9. Complete finishing: luxury-level detail, perfect execution
+10. Document process: photos, notes, lessons learned, portfolio piece`,
+      objectives: [
+        'Design original furniture',
+        'Execute complete project independently',
+        'Solve design challenges',
+        'Apply all Level 5 skills',
+        'Create portfolio piece',
+        'Demonstrate creativity and mastery',
+      ],
+      skills: ['Furniture design', 'Problem solving', 'Creative application', 'Independent execution', 'Portfolio development', 'Professional documentation'],
+      expectedOutcome: 'Completed original leather furniture piece demonstrating all Level 5 skills, creativity, and professional execution with full documentation.',
+      passingCriteria: 'Design is original and functional, all techniques correctly applied, professional quality throughout, well-documented, portfolio-ready',
+      referencePhotos: ['/curriculum/leather/custom-furniture-design.jpg', '/curriculum/leather/custom-build-process.jpg', '/curriculum/leather/completed-custom-furniture.jpg'],
+      estimatedHours: 50,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'furniture',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Furniture design principles',
+        'Portfolio development for craftspeople',
+        'Creative problem solving in crafts',
+      ],
+    },
+    {
+      level: 5,
+      moduleNumber: '5.6',
+      assignmentNumber: 'LW-5.6.2',
+      orderIndex: 60,
+      title: 'Level 5 Final: Leather Lounge Chair',
+      description: 'Synthesize all Level 5 skills to create a complete leather lounge chair with recline function, luxury details, and investment-quality construction.',
+      instructions: `1. Design lounge chair: comfort-focused, reclining mechanism optional, luxury materials
+2. Source reclining mechanism: manual or powered, weight capacity, smooth operation
+3. Build or adapt frame: integrate mechanism, structural support, quality materials
+4. Plan comprehensive padding: multi-density foam, lumbar support, headrest, comfort zones
+5. Create patterns for all sections: seat, back, arms, headrest, sides, pattern complexity
+6. Select premium leather: quality grading, sufficient yardage, color selection
+7. Execute upholstery: all sections professionally done, pattern matching, seam alignment
+8. Install decorative elements: tufting, nailhead trim, piping, luxury details
+9. Integrate mechanism: smooth reclining, secure attachment, operational testing
+10. Final finishing: condition leather, quality check all details, test comfort and function`,
+      objectives: [
+        'Create luxury lounge chair',
+        'Integrate reclining mechanism',
+        'Execute complex upholstery',
+        'Apply all decorative skills',
+        'Achieve investment-quality result',
+        'Demonstrate mastery of Level 5',
+      ],
+      skills: ['Lounge chair construction', 'Mechanism integration', 'Complex upholstery', 'Luxury finishing', 'Comfort engineering', 'Quality control'],
+      expectedOutcome: 'Completed leather lounge chair with optional recline, luxury upholstery, decorative elements, investment quality, comfortable and beautiful.',
+      passingCriteria: 'Chair is extremely comfortable, mechanism works smoothly, upholstery is flawless, decorative elements perfect, investment-quality throughout',
+      referencePhotos: ['/curriculum/leather/lounge-chair-design.jpg', '/curriculum/leather/mechanism-integration.jpg', '/curriculum/leather/completed-lounge-chair.jpg'],
+      estimatedHours: 60,
+      difficulty: 'expert',
+      category: 'projects',
+      subcategory: 'furniture',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Lounge chair construction guide',
+        'Reclining mechanism integration',
+        'Investment-quality furniture standards',
+      ],
+      crossReferences: [
+        'LW-5.3.1: Leather Chair Construction',
+        'LW-5.3.2: Tufting & Buttoning',
+        'LW-5.5.2: Accent Chair',
+      ],
+    },
+
+    // ========================================================================
+    // LEVEL 6: BUSINESS & PRODUCTION
+    // ========================================================================
+    {
+      level: 6,
+      moduleNumber: '6.1',
+      assignmentNumber: 'LW-6.1.1',
+      orderIndex: 61,
+      title: 'Workshop Efficiency & Production Flow',
+      description: 'Optimize workshop layout and workflow for efficient production, minimizing waste and maximizing productivity.',
+      instructions: `1. Study production workflow: material flow, workstation arrangement, minimize movement
+2. Analyze current workspace: identify bottlenecks, wasted motion, inefficiencies
+3. Design optimized layout: group similar tasks, logical flow, efficient material storage
+4. Implement cutting station: pattern storage, cutting mat, tool organization, scrap management
+5. Set up stitching zone: machine access, hand-stitching area, thread organization
+6. Create finishing area: separate from cutting (avoid dust), all finishing supplies accessible
+7. Organize material storage: leather flat or rolled, sorted by type/color, easy access
+8. Implement work-in-progress system: designated area, project tracking, priority management
+9. Establish quality control checkpoint: final inspection before completion, standards checklist
+10. Document workflow: visual diagram, train others if applicable, continuous improvement`,
+      objectives: [
+        'Analyze workflow efficiency',
+        'Design optimized workshop layout',
+        'Implement production zones',
+        'Organize material storage',
+        'Create work tracking system',
+        'Establish quality control',
+      ],
+      skills: ['Workflow analysis', 'Space optimization', 'Production efficiency', 'Material management', 'Quality systems', 'Process improvement'],
+      expectedOutcome: 'Optimized workshop with logical flow, organized materials, efficient workstations, quality control checkpoint, documented workflow.',
+      passingCriteria: 'Workshop layout is logical, material flow is efficient, all zones are organized, quality system is in place, productivity improved',
+      referencePhotos: ['/curriculum/leather/workshop-layout.jpg', '/curriculum/leather/production-zones.jpg', '/curriculum/leather/efficient-workspace.jpg'],
+      estimatedHours: 12,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'operations',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Lean manufacturing principles for small shops',
+        'Workshop organization for craftspeople',
+        'Production efficiency techniques',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.1',
+      assignmentNumber: 'LW-6.1.2',
+      orderIndex: 62,
+      title: 'Pattern Library & Organization',
+      description: 'Create a comprehensive pattern library system for repeatable production and efficient pattern management.',
+      instructions: `1. Study pattern organization systems: filing, labeling, storage, retrieval
+2. Create pattern numbering system: logical categorization, sequential numbering, version control
+3. Transfer patterns to durable material: hardboard, plastic, or thin metal, label permanently
+4. Document each pattern: project name, date created, sizes, material requirements
+5. Create pattern index: searchable database or catalog, photos, quick reference
+6. Photograph finished projects: with pattern number, multiple angles, detail shots
+7. Write construction notes: assembly order, special techniques, time estimates
+8. Organize physical storage: flat storage or hanging, protected from damage, easy access
+9. Implement version control: pattern updates, improvements documented, old versions archived
+10. Create digital backup: scan or photograph patterns, cloud storage, searchable database`,
+      objectives: [
+        'Develop pattern numbering system',
+        'Create durable pattern templates',
+        'Document construction process',
+        'Organize physical and digital patterns',
+        'Implement version control',
+        'Build searchable library',
+      ],
+      skills: ['Organization systems', 'Documentation', 'Database management', 'Version control', 'Photography', 'Knowledge management'],
+      expectedOutcome: 'Complete pattern library with numbered templates, construction notes, photos, organized storage, digital backup, searchable index.',
+      passingCriteria: 'All patterns numbered and documented, photos linked to patterns, construction notes complete, storage organized, digital backup created',
+      referencePhotos: ['/curriculum/leather/pattern-library.jpg', '/curriculum/leather/pattern-documentation.jpg', '/curriculum/leather/organized-storage.jpg'],
+      estimatedHours: 10,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'organization',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Knowledge management for craftspeople',
+        'Pattern library systems',
+        'Digital documentation best practices',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.2',
+      assignmentNumber: 'LW-6.2.1',
+      orderIndex: 63,
+      title: 'Pricing & Cost Analysis',
+      description: 'Develop a comprehensive pricing strategy based on accurate cost analysis, market research, and value proposition.',
+      instructions: `1. Track all material costs: leather, hardware, thread, supplies, shipping, waste factor
+2. Calculate labor hours: time tracking for each project, learning curve vs production time
+3. Determine hourly rate: desired income, overhead, taxes, benefits, professional level
+4. Calculate overhead costs: rent, utilities, insurance, equipment, marketing, all fixed costs
+5. Add profit margin: reinvestment, growth, savings, industry standards
+6. Research market prices: competitors, similar quality, market positioning
+7. Calculate break-even point: minimum sales to cover costs, production capacity
+8. Create pricing tiers: standard, custom, luxury, volume discounts
+9. Develop pricing formula: material + labor + overhead + profit = price
+10. Document pricing strategy: formula, justification, market position, regular review`,
+      objectives: [
+        'Track all costs accurately',
+        'Calculate true hourly rate',
+        'Understand overhead costs',
+        'Research market pricing',
+        'Develop pricing formula',
+        'Create profitable pricing strategy',
+      ],
+      skills: ['Cost analysis', 'Financial planning', 'Market research', 'Pricing strategy', 'Profit calculation', 'Business math'],
+      expectedOutcome: 'Complete pricing strategy with cost tracking, hourly rate calculation, overhead analysis, competitive pricing, documented formula.',
+      passingCriteria: 'All costs accurately tracked, hourly rate covers all expenses, pricing is competitive and profitable, formula is documented',
+      referencePhotos: ['/curriculum/leather/cost-tracking.jpg', '/curriculum/leather/pricing-worksheet.jpg', '/curriculum/leather/price-list.jpg'],
+      estimatedHours: 10,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'finance',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Pricing for profit in craft business',
+        'Cost analysis for makers',
+        'Financial planning for small business',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.2',
+      assignmentNumber: 'LW-6.2.2',
+      orderIndex: 64,
+      title: 'Customer Relations & Custom Orders',
+      description: 'Develop systems for managing customer relationships, custom order process, and maintaining client satisfaction.',
+      instructions: `1. Create inquiry response template: professional, informative, timely, personal touch
+2. Develop consultation process: understand needs, present options, set expectations
+3. Design custom order form: specifications, measurements, preferences, timeline, deposit
+4. Establish deposit policy: percentage required, refund policy, payment schedule
+5. Create progress update system: photos, milestones, keep clients informed
+6. Develop approval process: critical decision points, client sign-off, changes documentation
+7. Handle changes and revisions: scope creep prevention, change order process, additional fees
+8. Implement quality check before delivery: final inspection, client specifications met
+9. Create packaging and presentation: professional presentation, care instructions, thank you
+10. Follow-up system: satisfaction check, testimonial request, future business, referrals`,
+      objectives: [
+        'Create professional inquiry process',
+        'Manage custom orders effectively',
+        'Set clear expectations',
+        'Communicate progress regularly',
+        'Handle changes professionally',
+        'Build long-term relationships',
+      ],
+      skills: ['Customer service', 'Custom order management', 'Communication', 'Expectation setting', 'Change management', 'Relationship building'],
+      expectedOutcome: 'Complete custom order system with templates, forms, communication protocols, quality checks, follow-up process.',
+      passingCriteria: 'All templates created, order process documented, communication system in place, quality checks defined, follow-up protocol established',
+      referencePhotos: ['/curriculum/leather/order-form.jpg', '/curriculum/leather/progress-update.jpg', '/curriculum/leather/professional-packaging.jpg'],
+      estimatedHours: 10,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'customer_service',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Customer service excellence for craftspeople',
+        'Managing custom orders',
+        'Client communication best practices',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.3',
+      assignmentNumber: 'LW-6.3.1',
+      orderIndex: 65,
+      title: 'Marketing & Brand Development',
+      description: 'Develop a complete brand identity and marketing strategy for your leather working business.',
+      instructions: `1. Define brand identity: values, style, target market, unique selling proposition
+2. Create visual brand: logo, color palette, fonts, photography style, consistency
+3. Write brand story: your journey, philosophy, why leather work, connect with customers
+4. Develop social media strategy: platform selection, content calendar, engagement plan
+5. Create content: behind-the-scenes, process videos, finished pieces, customer stories
+6. Build email list: website opt-in, newsletter strategy, value for subscribers
+7. Develop photography skills: product photography, natural light, styling, editing
+8. Create marketing materials: business cards, flyers, look book, digital assets
+9. Plan launch or relaunch: strategy, timeline, coordinated effort, special offer
+10. Track marketing metrics: followers, engagement, conversions, ROI, adjust strategy`,
+      objectives: [
+        'Develop clear brand identity',
+        'Create visual brand consistency',
+        'Build social media presence',
+        'Create valuable content',
+        'Develop photography skills',
+        'Track marketing effectiveness',
+      ],
+      skills: ['Brand development', 'Social media marketing', 'Content creation', 'Photography', 'Marketing strategy', 'Analytics'],
+      expectedOutcome: 'Complete brand identity with visual elements, social media presence, content strategy, marketing materials, metrics tracking system.',
+      passingCriteria: 'Brand identity is clear and consistent, social media active, quality content created, photography is professional, metrics tracked',
+      referencePhotos: ['/curriculum/leather/brand-identity.jpg', '/curriculum/leather/social-media-content.jpg', '/curriculum/leather/product-photography.jpg'],
+      estimatedHours: 16,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'marketing',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Brand development for small business',
+        'Social media marketing for makers',
+        'Product photography basics',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.3',
+      assignmentNumber: 'LW-6.3.2',
+      orderIndex: 66,
+      title: 'E-commerce & Online Sales',
+      description: 'Set up online sales channels including website, online marketplace presence, and e-commerce operations.',
+      instructions: `1. Choose e-commerce platform: Shopify, Etsy, own website, consider fees and features
+2. Set up online shop: product listings, descriptions, pricing, policies, payment processing
+3. Create product photography: multiple angles, detail shots, styled images, consistent lighting
+4. Write compelling descriptions: materials, dimensions, care instructions, story, keywords
+5. Establish shipping strategy: packaging materials, carrier selection, rates, tracking
+6. Create policies: returns, exchanges, custom orders, processing time, clear communication
+7. Implement inventory management: track available items, materials needed, production capacity
+8. Set up customer service: response time, FAQ, email templates, professionalism
+9. Launch online presence: announce, first orders, gather reviews, build trust
+10. Analyze and optimize: sales data, traffic sources, conversion rate, continuous improvement`,
+      objectives: [
+        'Set up e-commerce platform',
+        'Create professional product listings',
+        'Establish shipping operations',
+        'Implement customer service system',
+        'Launch online sales',
+        'Optimize based on data',
+      ],
+      skills: ['E-commerce setup', 'Online marketing', 'Shipping logistics', 'Customer service', 'Data analysis', 'Online sales'],
+      expectedOutcome: 'Active online shop with professional listings, shipping system, customer service protocols, sales tracking, optimization strategy.',
+      passingCriteria: 'Shop is live and professional, products well-presented, shipping efficient, customer service responsive, sales tracking in place',
+      referencePhotos: ['/curriculum/leather/online-shop.jpg', '/curriculum/leather/product-listings.jpg', '/curriculum/leather/shipping-station.jpg'],
+      estimatedHours: 14,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'sales',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'E-commerce for makers',
+        'Online marketplace strategies',
+        'Shipping and fulfillment guide',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.4',
+      assignmentNumber: 'LW-6.4.1',
+      orderIndex: 67,
+      title: 'Production Techniques & Templates',
+      description: 'Develop efficient production methods and jigs/templates for repeatable quality and increased productivity.',
+      instructions: `1. Identify repetitive tasks: cutting, hole punching, stitching lines, hardware placement
+2. Create cutting templates: acrylic or hardboard, trace quickly, consistent shapes
+3. Build hole-punching jigs: pre-marked spacing, guide for chisels, consistent results
+4. Design stitching guides: straight edge guides, curve templates, spacing markers
+5. Create assembly jigs: hold pieces for gluing, alignment guides, hands-free work
+6. Develop batch processing: cut multiple pieces at once, batch similar tasks, efficiency
+7. Standardize hardware: common sizes, bulk ordering, interchangeable parts
+8. Create process documentation: step-by-step for each product, photos, time estimates
+9. Train for consistency: if hiring help, documented processes, quality standards
+10. Continuously improve: track time, identify slow points, optimize, update documentation`,
+      objectives: [
+        'Create production templates',
+        'Build helpful jigs',
+        'Implement batch processing',
+        'Standardize components',
+        'Document processes',
+        'Increase productivity',
+      ],
+      skills: ['Template creation', 'Jig building', 'Batch processing', 'Process documentation', 'Efficiency improvement', 'Standardization'],
+      expectedOutcome: 'Set of production templates, jigs, and documented processes that increase productivity while maintaining quality.',
+      passingCriteria: 'Templates speed up production, jigs ensure consistency, processes documented, batch processing implemented, productivity measurably increased',
+      referencePhotos: ['/curriculum/leather/production-templates.jpg', '/curriculum/leather/assembly-jigs.jpg', '/curriculum/leather/batch-processing.jpg'],
+      estimatedHours: 12,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'production',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Production efficiency for small shops',
+        'Jig and template design',
+        'Lean manufacturing principles',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.4',
+      assignmentNumber: 'LW-6.4.2',
+      orderIndex: 68,
+      title: 'Quality Control Systems',
+      description: 'Establish comprehensive quality control procedures to ensure consistent excellence in all work.',
+      instructions: `1. Define quality standards: specifications for each product, acceptable tolerances, professional level
+2. Create inspection checklist: all critical points, objective criteria, pass/fail standards
+3. Implement in-process checks: catch errors early, fix before finishing, prevent waste
+4. Establish final inspection: comprehensive check before delivery, quality gate, no exceptions
+5. Document defects and fixes: learn from mistakes, prevent recurrence, continuous improvement
+6. Create customer feedback system: gather input, address issues, improve products
+7. Develop material inspection: check leather quality upon receipt, reject substandard materials
+8. Set up rework procedures: when to fix, when to scrap, cost-benefit analysis
+9. Train for quality: if hiring help, quality standards, inspection training, accountability
+10. Maintain quality records: track defect rates, improvement over time, demonstrate excellence`,
+      objectives: [
+        'Define clear quality standards',
+        'Create inspection procedures',
+        'Implement quality gates',
+        'Learn from defects',
+        'Gather customer feedback',
+        'Continuously improve quality',
+      ],
+      skills: ['Quality control', 'Inspection procedures', 'Standards development', 'Problem solving', 'Continuous improvement', 'Documentation'],
+      expectedOutcome: 'Complete quality control system with defined standards, inspection checklists, feedback loops, defect tracking, continuous improvement.',
+      passingCriteria: 'Standards clearly defined, inspection procedures in place, feedback system active, defects tracked and reduced, quality consistently high',
+      referencePhotos: ['/curriculum/leather/quality-checklist.jpg', '/curriculum/leather/inspection-process.jpg', '/curriculum/leather/quality-records.jpg'],
+      estimatedHours: 10,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'quality',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Quality control for small manufacturing',
+        'Defect prevention strategies',
+        'Continuous improvement methodologies',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.5',
+      assignmentNumber: 'LW-6.5.1',
+      orderIndex: 69,
+      title: 'Teaching Leather Working',
+      description: 'Develop skills to teach leather working to others through workshops, online courses, or apprenticeships.',
+      instructions: `1. Design beginner workshop: 3-4 hour class, simple project, all materials included
+2. Create lesson plan: learning objectives, demonstration, practice time, guided instruction
+3. Develop teaching materials: handouts, tool lists, resource recommendations, clear instructions
+4. Practice teaching techniques: clear demonstrations, positive feedback, patience, adaptability
+5. Set up teaching space: adequate workstations, good lighting, tool access, safe environment
+6. Price workshop appropriately: materials, time, space rental, fair value
+7. Market workshop: social media, local craft stores, community centers, word of mouth
+8. Run first workshop: teach, observe, gather feedback, improve
+9. Create online content: video tutorials, written guides, build online presence
+10. Develop ongoing teaching: regular classes, private lessons, apprenticeship program, teaching income`,
+      objectives: [
+        'Design effective workshops',
+        'Develop teaching skills',
+        'Create teaching materials',
+        'Set up teaching space',
+        'Market classes successfully',
+        'Build teaching revenue stream',
+      ],
+      skills: ['Workshop design', 'Teaching techniques', 'Curriculum development', 'Public speaking', 'Marketing', 'Student management'],
+      expectedOutcome: 'Complete workshop designed and taught successfully, teaching materials created, feedback gathered, path forward for teaching revenue.',
+      passingCriteria: 'Workshop successfully delivered, students learn skills, positive feedback received, materials effective, profitable and repeatable',
+      referencePhotos: ['/curriculum/leather/workshop-setup.jpg', '/curriculum/leather/teaching-demonstration.jpg', '/curriculum/leather/student-work.jpg'],
+      estimatedHours: 16,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'teaching',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Teaching craft workshops',
+        'Adult education principles',
+        'Workshop marketing strategies',
+      ],
+    },
+    {
+      level: 6,
+      moduleNumber: '6.5',
+      assignmentNumber: 'LW-6.5.2',
+      orderIndex: 70,
+      title: 'Level 6 Final: Complete Portfolio & Business Plan',
+      description: 'Create a comprehensive professional portfolio and detailed business plan demonstrating readiness to operate a successful leather working business.',
+      instructions: `1. Compile portfolio: best work from all levels, professional photography, variety of projects
+2. Write artist statement: philosophy, style, unique approach, target market
+3. Document your journey: timeline, skills acquired, challenges overcome, growth demonstrated
+4. Create business plan: mission, vision, market analysis, competitive advantage, goals
+5. Develop financial projections: startup costs, operating expenses, revenue projections, break-even
+6. Plan marketing strategy: brand position, target customers, channels, budget, timeline
+7. Outline operations: workspace, equipment, suppliers, production capacity, quality systems
+8. Set short and long-term goals: 1-year, 3-year, 5-year objectives, measurable milestones
+9. Present portfolio and plan: professional presentation, demonstrate readiness, receive feedback
+10. Launch or grow business: implement plan, track progress, adjust as needed, continue learning`,
+      objectives: [
+        'Create professional portfolio',
+        'Develop comprehensive business plan',
+        'Set clear business goals',
+        'Demonstrate business readiness',
+        'Present professionally',
+        'Launch or grow leather business',
+      ],
+      skills: ['Portfolio development', 'Business planning', 'Financial projections', 'Strategic thinking', 'Professional presentation', 'Goal setting'],
+      expectedOutcome: 'Professional portfolio showcasing best work and comprehensive business plan demonstrating readiness to operate successful leather working business.',
+      passingCriteria: 'Portfolio is professional quality, business plan is thorough and realistic, financial projections sound, presentation excellent, ready for business',
+      referencePhotos: ['/curriculum/leather/professional-portfolio.jpg', '/curriculum/leather/business-plan.jpg', '/curriculum/leather/portfolio-presentation.jpg'],
+      estimatedHours: 30,
+      difficulty: 'expert',
+      category: 'business',
+      subcategory: 'planning',
+      serviceTrack: 'leather_working' as ServiceTrack,
+      requiredReading: [
+        'Business planning for craftspeople',
+        'Portfolio development for makers',
+        'Financial planning for small business',
+        'Marketing strategy development',
+      ],
+      crossReferences: [
+        'LW-6.1.1: Workshop Efficiency',
+        'LW-6.2.1: Pricing & Cost Analysis',
+        'LW-6.3.1: Marketing & Brand Development',
+        'LW-6.4.2: Quality Control Systems',
+      ],
+    },
 
   ]
 
