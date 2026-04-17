@@ -8,6 +8,7 @@ import { seedEmbroideryCurriculum } from './embroidery-curriculum'
 import { seedElectronicsCurriculum } from './electronics-curriculum'
 import { seedComputingCurriculum } from './computing-curriculum'
 import { seedWoodworkingAerospaceCurriculum } from './woodworking-aerospace-curriculum'
+import { seedLeatherWorkingCurriculum } from './leather-working-curriculum'
 
 const prisma = new PrismaClient()
 
@@ -24,6 +25,7 @@ const prisma = new PrismaClient()
  *    - Printing Press
  *    - Beadwork
  *    - Henna
+ *    - Leather Working (NEW!)
  *
  * 2. Technical Curricula (reference foundations):
  *    - Embroidery (references: Tailoring, Printing Press, Beadwork)
@@ -33,7 +35,7 @@ const prisma = new PrismaClient()
  * 3. Master Integration Curriculum:
  *    - Woodworking-Aerospace (references: ALL above)
  *
- * Total: 9 curricula, ~830 assignments across 70 levels
+ * Total: 10 curricula, ~878 assignments across 76 levels
  */
 
 async function masterSeed() {
@@ -68,9 +70,15 @@ async function masterSeed() {
     await seedBeadworkCurriculum()
     console.log('    ✅ Complete\n')
 
-    console.log('5/9 Henna Curriculum')
+    console.log('5/10 Henna Curriculum')
     console.log('    (Henna Tattoo Art & Design)')
     await seedHennaCurriculum()
+    console.log('    ✅ Complete\n')
+
+    console.log('6/10 Leather Working Curriculum')
+    console.log('    (Raw Hide to Finished Leather Goods)')
+    console.log('    Covers: Tanning, Wallets, Bags, Shoes, Boots, Furniture, Business')
+    await seedLeatherWorkingCurriculum()
     console.log('    ✅ Complete\n')
 
     // ========================================================================
@@ -78,19 +86,19 @@ async function masterSeed() {
     // ========================================================================
     console.log('📦 PHASE 2: Seeding Technical Curricula...\n')
 
-    console.log('6/9 Embroidery Curriculum')
+    console.log('7/10 Embroidery Curriculum')
     console.log('    (Machine Embroidery, Digitizing, Mission Patches)')
     console.log('    Cross-refs: Tailoring, Printing Press, Beadwork, Woodworking-Aerospace')
     await seedEmbroideryCurriculum()
     console.log('    ✅ Complete\n')
 
-    console.log('7/9 Electronics Curriculum')
+    console.log('8/10 Electronics Curriculum')
     console.log('    (Circuits, PCB Design, Microcontrollers, Avionics)')
     console.log('    Cross-refs: Device Repair, Computing, Woodworking-Aerospace')
     await seedElectronicsCurriculum()
     console.log('    ✅ Complete\n')
 
-    console.log('8/9 Computing Curriculum')
+    console.log('9/10 Computing Curriculum')
     console.log('    (Programming, Embedded Systems, Flight Software, AI, Data Centers)')
     console.log('    Cross-refs: Electronics, Woodworking-Aerospace')
     await seedComputingCurriculum()
@@ -101,7 +109,7 @@ async function masterSeed() {
     // ========================================================================
     console.log('📦 PHASE 3: Seeding Master Integration Curriculum...\n')
 
-    console.log('9/9 Woodworking → Aerospace Manufacturing Curriculum')
+    console.log('10/10 Woodworking → Aerospace Manufacturing Curriculum')
     console.log('    (Wood → Metal → Fusion 360 → Machining → Foundry → Rockets)')
     console.log('    Cross-refs: ALL curricula')
     console.log('    This is where EVERYTHING connects!')
@@ -122,6 +130,7 @@ async function masterSeed() {
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'printing_press' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'beadwork' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'henna' } }),
+      prisma.assignmentTemplate.count({ where: { serviceTrack: 'leather_working' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'embroidery' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'electronics' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'computing' } }),
@@ -135,6 +144,7 @@ async function masterSeed() {
       printingPressCount,
       beadworkCount,
       hennaCount,
+      leatherWorkingCount,
       embroideryCount,
       electronicsCount,
       computingCount,
@@ -149,6 +159,7 @@ async function masterSeed() {
     console.log(`   Printing Press:         ${printingPressCount.toString().padStart(3)} assignments (6 levels)`)
     console.log(`   Beadwork:               ${beadworkCount.toString().padStart(3)} assignments (6 levels)`)
     console.log(`   Henna:                  ${hennaCount.toString().padStart(3)} assignments (5 levels)`)
+    console.log(`   Leather Working:        ${leatherWorkingCount.toString().padStart(3)} assignments (6 levels) 🧰`)
     console.log(`   Embroidery:             ${embroideryCount.toString().padStart(3)} assignments (6 levels)`)
     console.log(`   Electronics:            ${electronicsCount.toString().padStart(3)} assignments (12 levels) 📡`)
     console.log(`   Computing:              ${computingCount.toString().padStart(3)} assignments (12 levels) 💻`)
@@ -162,6 +173,9 @@ async function masterSeed() {
     console.log('   ✅ Custom flight computers with avionics')
     console.log('   ✅ Parachute recovery systems')
     console.log('   ✅ Mission patches and branding')
+    console.log('   ✅ Custom leather boots and footwear')
+    console.log('   ✅ Professional bags and carrying equipment')
+    console.log('   ✅ Leather furniture and upholstery')
     console.log('   ✅ Ground support equipment')
     console.log('   ✅ Mission control furniture & systems')
     console.log('   ✅ Data centers for telemetry processing')
