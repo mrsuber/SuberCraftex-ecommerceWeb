@@ -78,6 +78,8 @@ const SERVICE_TRACK_LABELS: Record<string, string> = {
   electronics: "Electronics",
   computing: "Computing",
   woodworking_aerospace: "Woodworking → Aerospace",
+  leather_working: "Leather Working",
+  drawing_sketching: "Drawing & Sketching",
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {

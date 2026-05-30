@@ -2121,6 +2121,7 @@ enum ServiceTrack {
   computing
   woodworking_aerospace
   leather_working
+  drawing_sketching
 }
 
 enum AssignmentStatus {

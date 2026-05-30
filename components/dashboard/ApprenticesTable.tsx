@@ -100,6 +100,8 @@ const serviceTrackLabels: Record<string, string> = {
   electronics: "Electronics",
   computing: "Computing",
   woodworking_aerospace: "Woodworking → Aerospace",
+  leather_working: "Leather Working",
+  drawing_sketching: "Drawing & Sketching",
 };
 
 const serviceTrackColors: Record<string, string> = {
