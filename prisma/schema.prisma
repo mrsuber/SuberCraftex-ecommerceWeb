@@ -2122,6 +2122,7 @@ enum ServiceTrack {
   woodworking_aerospace
   leather_working
   drawing_sketching
+  beauty_grooming
 }
 
 enum AssignmentStatus {
