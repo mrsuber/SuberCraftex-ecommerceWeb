@@ -65,6 +65,10 @@ interface Assignment {
   submissionVideos: string[]
   submissionDocuments: string[]
   serviceTrack: string | null
+  level: number | null
+  moduleNumber: string | null
+  assignmentNumber: string | null
+  orderIndex: number | null
 }
 
 interface Certificate {
@@ -454,6 +458,21 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
+                            {/* Assignment Number and Level */}
+                            {(assignment.level || assignment.moduleNumber || assignment.assignmentNumber) && (
+                              <div className="flex items-center gap-2 mb-2">
+                                {assignment.level && (
+                                  <Badge variant="secondary" className="text-xs font-mono">
+                                    Level {assignment.level}
+                                  </Badge>
+                                )}
+                                {assignment.assignmentNumber && (
+                                  <Badge variant="outline" className="text-xs font-mono">
+                                    {assignment.assignmentNumber}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
                             <div className="flex items-center gap-2 flex-wrap mb-1">
                               <h3 className="font-semibold">{assignment.title}</h3>
                               {assignment.serviceTrack && (
@@ -610,6 +629,27 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
             </DialogHeader>
             {selectedAssignment && (
               <div className="space-y-6">
+                {/* Level and Assignment Number */}
+                {(selectedAssignment.level || selectedAssignment.moduleNumber || selectedAssignment.assignmentNumber) && (
+                  <div className="flex items-center gap-2">
+                    {selectedAssignment.level && (
+                      <Badge variant="secondary" className="text-xs font-mono">
+                        Level {selectedAssignment.level}
+                      </Badge>
+                    )}
+                    {selectedAssignment.assignmentNumber && (
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {selectedAssignment.assignmentNumber}
+                      </Badge>
+                    )}
+                    {selectedAssignment.serviceTrack && (
+                      <Badge variant="outline" className="text-xs">
+                        {SERVICE_TRACK_LABELS[selectedAssignment.serviceTrack] || selectedAssignment.serviceTrack}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
                 {/* Status and Dates */}
                 <div className="flex flex-wrap gap-3 items-center">
                   {getStatusBadge(selectedAssignment.status)}

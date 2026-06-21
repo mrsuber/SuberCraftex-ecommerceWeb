@@ -22,14 +22,25 @@ export default async function ApprenticeDashboardPage() {
         },
       },
       assignments: {
-        orderBy: { assignedDate: 'desc' },
         include: {
           enrollment: {
             select: {
               serviceTrack: true,
             },
           },
+          template: {
+            select: {
+              level: true,
+              moduleNumber: true,
+              assignmentNumber: true,
+              orderIndex: true,
+            },
+          },
         },
+        orderBy: [
+          { template: { orderIndex: 'asc' } },
+          { assignedDate: 'desc' },
+        ],
       },
       certificates: {
         orderBy: { issuedDate: 'desc' },
@@ -126,6 +137,10 @@ export default async function ApprenticeDashboardPage() {
       submissionVideos: a.submissionVideos || [],
       submissionDocuments: a.submissionDocuments || [],
       serviceTrack: a.enrollment?.serviceTrack || null,
+      level: a.template?.level || null,
+      moduleNumber: a.template?.moduleNumber || null,
+      assignmentNumber: a.template?.assignmentNumber || null,
+      orderIndex: a.template?.orderIndex || null,
     })),
     certificates: apprentice.certificates.map((c) => ({
       id: c.id,
