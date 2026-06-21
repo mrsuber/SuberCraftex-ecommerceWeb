@@ -55,6 +55,7 @@ const SERVICE_TRACK_LABELS: Record<string, string> = {
   woodworking_aerospace: "Woodworking → Aerospace",
   leather_working: "Leather Working",
   drawing_sketching: "Drawing & Sketching",
+  beauty_grooming: "Beauty & Grooming",
 };
 
 const ENROLLMENT_STATUS_COLORS: Record<

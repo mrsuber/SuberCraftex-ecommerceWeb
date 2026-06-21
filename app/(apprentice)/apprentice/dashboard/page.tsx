@@ -23,6 +23,13 @@ export default async function ApprenticeDashboardPage() {
       },
       assignments: {
         orderBy: { assignedDate: 'desc' },
+        include: {
+          enrollment: {
+            select: {
+              serviceTrack: true,
+            },
+          },
+        },
       },
       certificates: {
         orderBy: { issuedDate: 'desc' },
@@ -118,6 +125,7 @@ export default async function ApprenticeDashboardPage() {
       submissionPhotos: a.submissionPhotos || [],
       submissionVideos: a.submissionVideos || [],
       submissionDocuments: a.submissionDocuments || [],
+      serviceTrack: a.enrollment?.serviceTrack || null,
     })),
     certificates: apprentice.certificates.map((c) => ({
       id: c.id,

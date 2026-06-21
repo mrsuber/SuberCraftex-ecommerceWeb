@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,6 +41,7 @@ import {
   MessageSquare,
   ExternalLink,
   File,
+  Filter,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { AssignmentSubmissionForm } from './AssignmentSubmissionForm'
@@ -56,6 +64,7 @@ interface Assignment {
   submissionPhotos: string[]
   submissionVideos: string[]
   submissionDocuments: string[]
+  serviceTrack: string | null
 }
 
 interface Certificate {
@@ -109,6 +118,8 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [showSubmitForm, setShowSubmitForm] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [curriculumFilter, setCurriculumFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -138,6 +149,37 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
     const parts = url.split('/')
     return decodeURIComponent(parts[parts.length - 1] || 'Document')
   }
+
+  // Service track labels
+  const SERVICE_TRACK_LABELS: Record<string, string> = {
+    tailoring: 'Tailoring',
+    device_repair: 'Device Repair',
+    beadwork: 'Beadwork',
+    henna: 'Henna Art',
+    printing_press: 'Printing Press',
+    embroidery: 'Embroidery',
+    electronics: 'Electronics',
+    computing: 'Computing',
+    woodworking_aerospace: 'Woodworking & Aerospace',
+    leather_working: 'Leather Working',
+    drawing_sketching: 'Drawing & Sketching',
+    beauty_grooming: 'Beauty & Grooming',
+    sales: 'Sales',
+    delivery: 'Delivery',
+    operations: 'Operations',
+  }
+
+  // Get unique curricula from assignments
+  const uniqueCurricula = Array.from(
+    new Set(apprentice.assignments.map((a) => a.serviceTrack).filter(Boolean))
+  ) as string[]
+
+  // Filter assignments based on selected filters
+  const filteredAssignments = apprentice.assignments.filter((assignment) => {
+    const matchesCurriculum = curriculumFilter === 'all' || assignment.serviceTrack === curriculumFilter
+    const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter
+    return matchesCurriculum && matchesStatus
+  })
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -317,10 +359,67 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
           <TabsContent value="assignments">
             <Card>
               <CardHeader>
-                <CardTitle>All Assignments</CardTitle>
+                <CardTitle>
+                  All Assignments
+                  {apprentice.assignments.length > 0 && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({filteredAssignments.length} of {apprentice.assignments.length})
+                    </span>
+                  )}
+                </CardTitle>
                 <CardDescription>Your learning assignments and their progress</CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Filters */}
+                {apprentice.assignments.length > 0 && (
+                  <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
+                        <SelectTrigger className="w-full sm:w-[250px]">
+                          <SelectValue placeholder="All Curricula" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Curricula ({apprentice.assignments.length})</SelectItem>
+                          {uniqueCurricula.map((track) => (
+                            <SelectItem key={track} value={track}>
+                              {SERVICE_TRACK_LABELS[track] || track} ({apprentice.assignments.filter(a => a.serviceTrack === track).length})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2 flex-1">
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-[200px]">
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="needs_revision">Needs Revision</SelectItem>
+                          <SelectItem value="overdue">Overdue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {(curriculumFilter !== 'all' || statusFilter !== 'all') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCurriculumFilter('all')
+                          setStatusFilter('all')
+                        }}
+                        className="w-full sm:w-auto"
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 {apprentice.assignments.length === 0 ? (
                   <div className="text-center py-12">
                     <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -329,16 +428,40 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
                       Your mentor will assign tasks to help you learn.
                     </p>
                   </div>
+                ) : filteredAssignments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Assignments Found</h3>
+                    <p className="text-muted-foreground mb-4">
+                      No assignments match your current filters.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCurriculumFilter('all')
+                        setStatusFilter('all')
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-4">
-                    {apprentice.assignments.map((assignment) => (
+                    {filteredAssignments.map((assignment) => (
                       <div
                         key={assignment.id}
                         className="border rounded-lg p-4 hover:border-primary transition-colors"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h3 className="font-semibold">{assignment.title}</h3>
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <h3 className="font-semibold">{assignment.title}</h3>
+                              {assignment.serviceTrack && (
+                                <Badge variant="outline" className="text-xs">
+                                  {SERVICE_TRACK_LABELS[assignment.serviceTrack] || assignment.serviceTrack}
+                                </Badge>
+                              )}
+                            </div>
                             {assignment.description && (
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {assignment.description}
