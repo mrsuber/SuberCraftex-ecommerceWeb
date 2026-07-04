@@ -42,6 +42,8 @@ import {
   ExternalLink,
   File,
   Filter,
+  CalendarDays,
+  BarChart3,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { AssignmentSubmissionForm } from './AssignmentSubmissionForm'
@@ -241,7 +243,7 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
@@ -283,6 +285,30 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
               </div>
             </CardContent>
           </Card>
+
+          <Link href="/apprentice/dashboard/calendar" className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">My Calendar</CardTitle>
+                <CalendarDays className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm font-medium text-muted-foreground">View Schedule</div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/apprentice/dashboard/statistics" className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Statistics</CardTitle>
+                <BarChart3 className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm font-medium text-muted-foreground">Self-Discipline</div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Tabs */}

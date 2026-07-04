@@ -32,6 +32,7 @@ import {
   Newspaper,
   Smartphone,
   HardDrive,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -127,6 +128,11 @@ const adminNavigation = [
     icon: GraduationCap,
   },
   {
+    name: "Calendar",
+    href: "/dashboard/calendar",
+    icon: CalendarDays,
+  },
+  {
     name: "Technicians",
     href: "/dashboard/technicians",
     icon: HardDrive,
@@ -196,6 +202,11 @@ const tailorNavigation = [
     icon: Calendar,
   },
   {
+    name: "Calendar",
+    href: "/dashboard/calendar",
+    icon: CalendarDays,
+  },
+  {
     name: "Measurements",
     href: "/dashboard/tailor/measurements",
     icon: Ruler,
@@ -227,6 +238,11 @@ const technicianNavigation = [
     name: "My Apprentices",
     href: "/dashboard/technician/apprentices",
     icon: GraduationCap,
+  },
+  {
+    name: "Calendar",
+    href: "/dashboard/calendar",
+    icon: CalendarDays,
   },
 ];
 
