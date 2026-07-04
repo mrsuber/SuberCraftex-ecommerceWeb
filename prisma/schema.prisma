@@ -2123,6 +2123,7 @@ enum ServiceTrack {
   leather_working
   drawing_sketching
   beauty_grooming
+  filmmaking
 }
 
 enum AssignmentStatus {
@@ -2178,11 +2179,18 @@ model Apprentice {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignments    ApprenticeAssignment[]
-  certificates   ApprenticeCertificate[]
-  repairRequests RepairRequest[] // For device_repair track apprentices
-  enrollments    ApprenticeEnrollment[] // Track multiple curriculum enrollments
+  user                 User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments          ApprenticeAssignment[]
+  certificates         ApprenticeCertificate[]
+  repairRequests       RepairRequest[] // For device_repair track apprentices
+  enrollments          ApprenticeEnrollment[] // Track multiple curriculum enrollments
+  timetableEvents      TimetableEventAttendee[] // Timetable events apprentice is attending
+  reminderLogs         ReminderLog[] // Email reminders sent to apprentice
+  calendarEvents       CalendarEvent[] // Calendar events for apprentice
+  eventEditRequests    EventEditRequest[] // Edit requests for calendar events
+  freePeriodRequests   FreePeriodRequest[] // Free period requests
+  calendarReminders    CalendarReminder[] // Calendar reminders
+  eventCompletionLogs  EventCompletionLog[] // Event completion tracking
 
   @@index([mentorId])
   @@index([department])
@@ -2322,10 +2330,11 @@ model ApprenticeAssignment {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  apprentice Apprentice              @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
-  enrollment ApprenticeEnrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
-  template   AssignmentTemplate?     @relation(fields: [templateId], references: [id])
-  comments   AssignmentComment[]
+  apprentice     Apprentice              @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  enrollment     ApprenticeEnrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  template       AssignmentTemplate?     @relation(fields: [templateId], references: [id])
+  comments       AssignmentComment[]
+  calendarEvents CalendarEvent[] // Calendar events linked to this assignment
 
   @@index([apprenticeId])
   @@index([enrollmentId])
@@ -2373,6 +2382,397 @@ model ApprenticeCertificate {
 
   @@index([apprenticeId])
   @@map("apprentice_certificates")
+}
+
+// ============================================================================
+// TIMETABLE & REMINDER SYSTEM
+// ============================================================================
+
+enum EventType {
+  class
+  meeting
+  assignment_deadline
+  workshop
+  exam
+  orientation
+  other
+}
+
+enum EventStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
+}
+
+enum AttendanceStatus {
+  invited
+  confirmed
+  attended
+  missed
+  cancelled
+}
+
+enum ReminderType {
+  one_week_before
+  three_days_before
+  one_day_before
+  three_hours_before
+  one_hour_before
+}
+
+model TimetableEvent {
+  id          String      @id @default(uuid())
+  title       String
+  description String?     @db.Text
+  eventType   EventType   @default(class) @map("event_type")
+  status      EventStatus @default(scheduled)
+
+  // Schedule
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  location  String?
+
+  // Recurrence
+  isRecurring       Boolean  @default(false) @map("is_recurring")
+  recurrencePattern String? @map("recurrence_pattern") // 'daily', 'weekly', 'monthly'
+  recurrenceEnd     DateTime? @map("recurrence_end")
+
+  // Organization
+  serviceTrack ServiceTrack? @map("service_track") // Optional - event specific to a track
+  createdBy    String        @map("created_by") // Admin/Mentor user ID
+  notes        String?       @db.Text
+
+  // Metadata
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  attendees TimetableEventAttendee[]
+  reminders ReminderLog[]
+
+  @@index([startTime])
+  @@index([serviceTrack])
+  @@index([eventType])
+  @@index([status])
+  @@map("timetable_events")
+}
+
+model TimetableEventAttendee {
+  id           String           @id @default(uuid())
+  eventId      String           @map("event_id")
+  apprenticeId String           @map("apprentice_id")
+  status       AttendanceStatus @default(invited)
+
+  // Tracking
+  reminderSent Boolean   @default(false) @map("reminder_sent")
+  respondedAt  DateTime? @map("responded_at")
+  notes        String?
+
+  // Metadata
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  event      TimetableEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  apprentice Apprentice     @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, apprenticeId])
+  @@index([eventId])
+  @@index([apprenticeId])
+  @@index([status])
+  @@map("timetable_event_attendees")
+}
+
+model ReminderLog {
+  id           String       @id @default(uuid())
+  eventId      String       @map("event_id")
+  apprenticeId String       @map("apprentice_id")
+  reminderType ReminderType @map("reminder_type")
+
+  // Email details
+  emailTo      String  @map("email_to")
+  emailSubject String  @map("email_subject")
+  emailBody    String  @db.Text @map("email_body")
+  emailStatus  String  @default("sent") @map("email_status") // 'sent', 'failed', 'bounced'
+  errorMessage String? @db.Text @map("error_message")
+
+  // Metadata
+  sentAt    DateTime @default(now()) @map("sent_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  event      TimetableEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  apprentice Apprentice     @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([apprenticeId])
+  @@index([sentAt])
+  @@map("reminder_logs")
+}
+
+// ============================================================================
+// CALENDAR SYSTEM (Enhanced Timetable with Self-Discipline Tracking)
+// ============================================================================
+
+enum EventCreatorRole {
+  admin
+  apprentice
+  mentor
+  system // For auto-generated assignment deadlines
+}
+
+enum CalendarEventType {
+  class
+  assignment_deadline
+  meeting
+  workshop
+  exam
+  orientation
+  free_period
+  personal_event
+  recurring_class
+  mentor_session
+  study_time
+  break
+  other
+}
+
+enum CalendarEventStatus {
+  pending          // Waiting approval (for apprentice-created or edit requests)
+  approved         // Approved by admin/mentor
+  rejected         // Rejected
+  scheduled        // Confirmed and scheduled
+  in_progress      // Currently happening
+  completed        // Successfully completed
+  incomplete       // Passed due date, not completed
+  cancelled        // Cancelled
+}
+
+enum EventEditRequestType {
+  edit
+  postpone
+  cancel
+}
+
+enum RequestStatus {
+  pending
+  approved
+  rejected
+}
+
+model CalendarEvent {
+  id          String              @id @default(uuid())
+  title       String
+  description String?             @db.Text
+  eventType   CalendarEventType   @default(personal_event) @map("event_type")
+  status      CalendarEventStatus @default(scheduled)
+
+  // Time & Duration
+  startTime DateTime  @map("start_time")
+  endTime   DateTime  @map("end_time")
+  isAllDay  Boolean   @default(false) @map("is_all_day")
+  dueDate   DateTime? @map("due_date") // For assignments
+
+  // Recurrence
+  isRecurring       Boolean   @default(false) @map("is_recurring")
+  recurrencePattern String?   @map("recurrence_pattern") // 'daily', 'weekly', 'monthly'
+  recurrenceEnd     DateTime? @map("recurrence_end")
+
+  // Ownership & Attribution
+  apprenticeId   String            @map("apprentice_id") // Who this event belongs to
+  createdBy      String            @map("created_by") // User ID who created it
+  createdByRole  EventCreatorRole  @map("created_by_role")
+  assignmentId   String?           @map("assignment_id") // Link to curriculum assignment if applicable
+
+  // Metadata
+  color       String? // Hex color for UI
+  location    String?
+  notes       String? @db.Text
+  attachments String[] @default([]) // File URLs
+
+  // Completion Tracking
+  isCompleted       Boolean   @default(false) @map("is_completed")
+  completedAt       DateTime? @map("completed_at")
+  completionNotes   String?   @db.Text @map("completion_notes")
+  completionEvidence String[] @default([]) @map("completion_evidence") // Photos/files
+
+  // Soft Delete (never truly delete - for statistics)
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  apprentice      Apprentice            @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  assignment      ApprenticeAssignment? @relation(fields: [assignmentId], references: [id])
+  editRequests    EventEditRequest[]
+  conflicts       EventConflict[]       @relation("event1")
+  conflictsAs2    EventConflict[]       @relation("event2")
+  reminders       CalendarReminder[]
+  completionLog   EventCompletionLog?
+
+  @@index([apprenticeId])
+  @@index([createdBy])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([status])
+  @@index([eventType])
+  @@index([isDeleted])
+  @@map("calendar_events")
+}
+
+model EventEditRequest {
+  id       String                 @id @default(uuid())
+  eventId  String                 @map("event_id")
+  apprenticeId String              @map("apprentice_id")
+  requestType EventEditRequestType @map("request_type")
+
+  // Requested changes (JSON)
+  requestedChanges Json    @map("requested_changes") // {newStartTime, newEndTime, newTitle, etc}
+  reason           String  @db.Text
+  attachments      String[] @default([]) // Supporting documents
+
+  // Review
+  status       RequestStatus @default(pending)
+  reviewedBy   String?       @map("reviewed_by") // Admin/Mentor user ID
+  reviewedAt   DateTime?     @map("reviewed_at")
+  reviewNotes  String?       @db.Text @map("review_notes")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  event      CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  apprentice Apprentice    @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([apprenticeId])
+  @@index([status])
+  @@map("event_edit_requests")
+}
+
+model FreePeriodRequest {
+  id           String   @id @default(uuid())
+  apprenticeId String   @map("apprentice_id")
+
+  // Time Range
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+
+  // Request Details
+  reason      String   @db.Text
+  attachments String[] @default([]) // Documents/images for proof
+
+  // Review
+  status       RequestStatus @default(pending)
+  reviewedBy   String?       @map("reviewed_by")
+  reviewedAt   DateTime?     @map("reviewed_at")
+  reviewNotes  String?       @db.Text @map("review_notes")
+
+  // Link to created calendar event if approved
+  calendarEventId String? @unique @map("calendar_event_id")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  apprentice Apprentice @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([apprenticeId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("free_period_requests")
+}
+
+model EventConflict {
+  id           String   @id @default(uuid())
+  event1Id     String   @map("event1_id")
+  event2Id     String   @map("event2_id")
+  conflictType String   @map("conflict_type") // 'time_overlap', 'double_booking'
+
+  // Auto-resolved when one event is deleted/rescheduled
+  isResolved Boolean   @default(false) @map("is_resolved")
+  resolvedAt DateTime? @map("resolved_at")
+
+  // Timestamps
+  detectedAt DateTime @default(now()) @map("detected_at")
+
+  // Relations
+  event1 CalendarEvent @relation("event1", fields: [event1Id], references: [id], onDelete: Cascade)
+  event2 CalendarEvent @relation("event2", fields: [event2Id], references: [id], onDelete: Cascade)
+
+  @@index([event1Id])
+  @@index([event2Id])
+  @@index([isResolved])
+  @@map("event_conflicts")
+}
+
+model CalendarReminder {
+  id           String       @id @default(uuid())
+  eventId      String       @map("event_id")
+  apprenticeId String       @map("apprentice_id")
+  reminderType ReminderType @map("reminder_type")
+
+  // Scheduling
+  scheduledFor DateTime @map("scheduled_for")
+  sentAt       DateTime? @map("sent_at")
+
+  // Email details
+  emailTo      String  @map("email_to")
+  emailSubject String  @map("email_subject")
+  emailBody    String  @db.Text @map("email_body")
+  emailStatus  String  @default("pending") @map("email_status") // 'pending', 'sent', 'failed'
+  errorMessage String? @db.Text @map("error_message")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  event      CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  apprentice Apprentice    @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([apprenticeId])
+  @@index([scheduledFor])
+  @@index([emailStatus])
+  @@map("calendar_reminders")
+}
+
+model EventCompletionLog {
+  id       String @id @default(uuid())
+  eventId  String @unique @map("event_id")
+  apprenticeId String @map("apprentice_id")
+
+  // Completion Status
+  wasCompleted     Boolean   @default(false) @map("was_completed")
+  completedOnTime  Boolean   @default(false) @map("completed_on_time")
+  completedAt      DateTime? @map("completed_at")
+
+  // Evidence
+  completionNotes    String?  @db.Text @map("completion_notes")
+  completionEvidence String[] @default([]) @map("completion_evidence")
+
+  // Discipline Scoring
+  disciplinePoints Int @default(0) @map("discipline_points") // Positive for on-time, negative for late/incomplete
+
+  // Logged automatically 1 day after due date
+  loggedAt DateTime @default(now()) @map("logged_at")
+
+  // Relations
+  event      CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  apprentice Apprentice    @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([apprenticeId])
+  @@index([wasCompleted])
+  @@index([loggedAt])
+  @@map("event_completion_logs")
 }
 
 // ============================================================================

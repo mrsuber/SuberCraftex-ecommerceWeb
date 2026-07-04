@@ -14,6 +14,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Plus, GraduationCap, CheckCircle, Clock, BookOpen } from "lucide-react";
+import { Plus, GraduationCap, CheckCircle, Clock, BookOpen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Enrollment {
@@ -56,6 +66,7 @@ const SERVICE_TRACK_LABELS: Record<string, string> = {
   leather_working: "Leather Working",
   drawing_sketching: "Drawing & Sketching",
   beauty_grooming: "Beauty & Grooming",
+  filmmaking: "Filmmaking & Video Production",
 };
 
 const ENROLLMENT_STATUS_COLORS: Record<
@@ -73,6 +84,12 @@ export function EnrollmentHistory({ apprenticeId, enrollments }: EnrollmentHisto
   const [open, setOpen] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [enrollmentToDelete, setEnrollmentToDelete] = useState<{
+    id: string;
+    serviceTrack: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Get tracks that are already enrolled
   const enrolledTracks = enrollments.map((e) => e.serviceTrack);
@@ -114,6 +131,44 @@ export function EnrollmentHistory({ apprenticeId, enrollments }: EnrollmentHisto
       toast.error(error.message || "Failed to enroll in curriculum");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (enrollmentId: string, serviceTrack: string) => {
+    setEnrollmentToDelete({ id: enrollmentId, serviceTrack });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!enrollmentToDelete) return;
+
+    setDeleting(true);
+
+    try {
+      const response = await fetch(
+        `/api/apprentices/${apprenticeId}/enrollments/${enrollmentToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to remove enrollment");
+      }
+
+      toast.success(
+        `Successfully removed ${SERVICE_TRACK_LABELS[enrollmentToDelete.serviceTrack]} curriculum (${data.deletedAssignments} assignments deleted)`
+      );
+      setDeleteDialogOpen(false);
+      setEnrollmentToDelete(null);
+      router.refresh();
+    } catch (error: any) {
+      console.error("Error removing enrollment:", error);
+      toast.error(error.message || "Failed to remove enrollment");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -201,20 +256,32 @@ export function EnrollmentHistory({ apprenticeId, enrollments }: EnrollmentHisto
                       </p>
                     </div>
                   </div>
-                  <Badge
-                    variant={
-                      ENROLLMENT_STATUS_COLORS[enrollment.status] || "outline"
-                    }
-                  >
-                    {enrollment.status === "active" && (
-                      <Clock className="h-3 w-3 mr-1" />
-                    )}
-                    {enrollment.status === "completed" && (
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                    )}
-                    {enrollment.status.replace("_", " ").charAt(0).toUpperCase() +
-                      enrollment.status.slice(1)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={
+                        ENROLLMENT_STATUS_COLORS[enrollment.status] || "outline"
+                      }
+                    >
+                      {enrollment.status === "active" && (
+                        <Clock className="h-3 w-3 mr-1" />
+                      )}
+                      {enrollment.status === "completed" && (
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                      )}
+                      {enrollment.status.replace("_", " ").charAt(0).toUpperCase() +
+                        enrollment.status.slice(1)}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        handleDeleteClick(enrollment.id, enrollment.serviceTrack)
+                      }
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -232,6 +299,33 @@ export function EnrollmentHistory({ apprenticeId, enrollments }: EnrollmentHisto
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Curriculum Enrollment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove the{" "}
+              <strong>
+                {enrollmentToDelete &&
+                  SERVICE_TRACK_LABELS[enrollmentToDelete.serviceTrack]}
+              </strong>{" "}
+              curriculum? This will permanently delete all associated assignments
+              and progress. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Removing..." : "Remove Curriculum"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

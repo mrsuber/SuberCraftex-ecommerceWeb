@@ -168,6 +168,7 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
     leather_working: 'Leather Working',
     drawing_sketching: 'Drawing & Sketching',
     beauty_grooming: 'Beauty & Grooming',
+    filmmaking: 'Filmmaking & Video Production',
     sales: 'Sales',
     delivery: 'Delivery',
     operations: 'Operations',

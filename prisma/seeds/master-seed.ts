@@ -11,6 +11,7 @@ import { seedWoodworkingAerospaceCurriculum } from './woodworking-aerospace-curr
 import { seedLeatherWorkingCurriculum } from './leather-working-curriculum'
 import { seedDrawingSketchingCurriculum } from './drawing-sketching-curriculum'
 import seedBeautyGroomingCurriculum from './beauty-grooming-curriculum'
+import { seedFilmmakingCurriculum } from './filmmaking-curriculum'
 
 const prisma = new PrismaClient()
 
@@ -91,10 +92,16 @@ async function masterSeed() {
     await seedDrawingSketchingCurriculum()
     console.log('    ✅ Complete\n')
 
-    console.log('8/12 Beauty & Grooming Curriculum')
+    console.log('8/13 Beauty & Grooming Curriculum')
     console.log('    (Complete Beauty Professional Training)')
     console.log('    Covers: Hair, Makeup, Nails, Skincare, Men\'s Grooming, Business')
     await seedBeautyGroomingCurriculum()
+    console.log('    ✅ Complete\n')
+
+    console.log('9/13 Filmmaking & Video Production Curriculum')
+    console.log('    (Smartphone to Professional Video Production)')
+    console.log('    Covers: Phone Camera, Cinematography, Lighting, Audio, Editing, Color Grading, Studio')
+    await seedFilmmakingCurriculum()
     console.log('    ✅ Complete\n')
 
     // ========================================================================
@@ -102,19 +109,19 @@ async function masterSeed() {
     // ========================================================================
     console.log('📦 PHASE 2: Seeding Technical Curricula...\n')
 
-    console.log('9/12 Embroidery Curriculum')
+    console.log('10/13 Embroidery Curriculum')
     console.log('    (Machine Embroidery, Digitizing, Mission Patches)')
     console.log('    Cross-refs: Tailoring, Printing Press, Beadwork, Woodworking-Aerospace')
     await seedEmbroideryCurriculum()
     console.log('    ✅ Complete\n')
 
-    console.log('10/12 Electronics Curriculum')
+    console.log('11/13 Electronics Curriculum')
     console.log('    (Circuits, PCB Design, Microcontrollers, Avionics)')
     console.log('    Cross-refs: Device Repair, Computing, Woodworking-Aerospace')
     await seedElectronicsCurriculum()
     console.log('    ✅ Complete\n')
 
-    console.log('11/12 Computing Curriculum')
+    console.log('12/13 Computing Curriculum')
     console.log('    (Programming, Embedded Systems, Flight Software, AI, Data Centers)')
     console.log('    Cross-refs: Electronics, Woodworking-Aerospace')
     await seedComputingCurriculum()
@@ -125,7 +132,7 @@ async function masterSeed() {
     // ========================================================================
     console.log('📦 PHASE 3: Seeding Master Integration Curriculum...\n')
 
-    console.log('12/12 Woodworking → Aerospace Manufacturing Curriculum')
+    console.log('13/13 Woodworking → Aerospace Manufacturing Curriculum')
     console.log('    (Wood → Metal → Fusion 360 → Machining → Foundry → Rockets)')
     console.log('    Cross-refs: ALL curricula')
     console.log('    This is where EVERYTHING connects!')
@@ -149,6 +156,7 @@ async function masterSeed() {
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'leather_working' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'drawing_sketching' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'beauty_grooming' } }),
+      prisma.assignmentTemplate.count({ where: { serviceTrack: 'filmmaking' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'embroidery' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'electronics' } }),
       prisma.assignmentTemplate.count({ where: { serviceTrack: 'computing' } }),
@@ -165,6 +173,7 @@ async function masterSeed() {
       leatherWorkingCount,
       drawingSketchingCount,
       beautyGroomingCount,
+      filmmakingCount,
       embroideryCount,
       electronicsCount,
       computingCount,
@@ -182,6 +191,7 @@ async function masterSeed() {
     console.log(`   Leather Working:        ${leatherWorkingCount.toString().padStart(3)} assignments (6 levels) 🧰`)
     console.log(`   Drawing & Sketching:    ${drawingSketchingCount.toString().padStart(3)} assignments (8 levels) ✏️`)
     console.log(`   Beauty & Grooming:      ${beautyGroomingCount.toString().padStart(3)} assignments (6 levels) 💄`)
+    console.log(`   Filmmaking:             ${filmmakingCount.toString().padStart(3)} assignments (9 levels) 🎥`)
     console.log(`   Embroidery:             ${embroideryCount.toString().padStart(3)} assignments (6 levels)`)
     console.log(`   Electronics:            ${electronicsCount.toString().padStart(3)} assignments (12 levels) 📡`)
     console.log(`   Computing:              ${computingCount.toString().padStart(3)} assignments (12 levels) 💻`)

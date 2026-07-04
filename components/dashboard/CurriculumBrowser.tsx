@@ -81,6 +81,7 @@ const SERVICE_TRACK_LABELS: Record<string, string> = {
   leather_working: "Leather Working",
   drawing_sketching: "Drawing & Sketching",
   beauty_grooming: "Beauty & Grooming",
+  filmmaking: "Filmmaking & Video Production",
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
