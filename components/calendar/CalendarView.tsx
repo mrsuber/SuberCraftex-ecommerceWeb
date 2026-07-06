@@ -289,6 +289,28 @@ function WeekView({
   const weekStart = startOfWeek(currentDate);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 24 }, (_, i) => i);
+  const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
+
+  // Calculate event position and height
+  const getEventStyle = (event: CalendarEvent, dayStart: Date) => {
+    const eventStart = new Date(event.startTime);
+    const eventEnd = new Date(event.endTime);
+
+    // Calculate minutes from start of day
+    const startMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
+    const endMinutes = eventEnd.getHours() * 60 + eventEnd.getMinutes();
+
+    // Calculate position and height
+    const top = (startMinutes / 60) * HOUR_HEIGHT;
+    const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
+
+    return {
+      top: `${top}px`,
+      height: `${Math.max(height - 2, 20)}px`, // Minimum 20px height, -2px for gap
+      left: '2px',
+      right: '2px',
+    };
+  };
 
   return (
     <div className="flex flex-col h-full overflow-auto">
@@ -309,41 +331,72 @@ function WeekView({
       </div>
 
       {/* Time slots */}
-      <div className="flex-1">
-        {hours.map((hour) => (
-          <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b min-h-[60px]">
-            <div className="p-2 text-right text-sm text-muted-foreground">
-              {format(new Date().setHours(hour, 0), "h a")}
-            </div>
-            {weekDays.map((day) => {
-              const dayEvents = getEventsForDate(day).filter((event) => {
-                const eventHour = new Date(event.startTime).getHours();
-                return eventHour === hour;
-              });
+      <div className="flex-1 relative">
+        <div className="grid grid-cols-[60px_repeat(7,1fr)]" style={{ height: `${HOUR_HEIGHT * 24}px` }}>
+          {/* Hour labels */}
+          <div className="relative">
+            {hours.map((hour) => (
+              <div
+                key={hour}
+                className="absolute w-full text-right pr-2 text-sm text-muted-foreground border-b"
+                style={{
+                  top: `${hour * HOUR_HEIGHT}px`,
+                  height: `${HOUR_HEIGHT}px`,
+                  lineHeight: `${HOUR_HEIGHT}px`
+                }}
+              >
+                {format(new Date().setHours(hour, 0), "h a")}
+              </div>
+            ))}
+          </div>
 
-              return (
-                <div key={day.toISOString()} className="border-l p-1 relative">
-                  {dayEvents.map((event) => (
+          {/* Day columns with events */}
+          {weekDays.map((day, dayIndex) => {
+            const dayEvents = getEventsForDate(day);
+
+            return (
+              <div key={day.toISOString()} className="relative border-l">
+                {/* Hour grid lines */}
+                {hours.map((hour) => (
+                  <div
+                    key={hour}
+                    className="absolute w-full border-b"
+                    style={{
+                      top: `${hour * HOUR_HEIGHT}px`,
+                      height: `${HOUR_HEIGHT}px`
+                    }}
+                  />
+                ))}
+
+                {/* Events positioned absolutely */}
+                {dayEvents.map((event) => {
+                  const style = getEventStyle(event, day);
+                  return (
                     <div
                       key={event.id}
-                      className="text-xs p-1 rounded mb-1 cursor-pointer hover:opacity-80"
-                      style={{ backgroundColor: getEventColor(event), color: "white" }}
+                      className="absolute text-xs p-2 rounded cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
+                      style={{
+                        ...style,
+                        backgroundColor: getEventColor(event),
+                        color: "white",
+                        zIndex: 1,
+                      }}
                       onClick={() => onEventClick(event)}
                     >
-                      <div className="font-semibold">{event.title}</div>
-                      <div className="text-[10px]">
+                      <div className="font-semibold truncate">{event.title}</div>
+                      <div className="text-[10px] opacity-90">
                         {format(new Date(event.startTime), "h:mm a")}
                       </div>
                       {showApprenticeNames && event.apprentice && (
-                        <div className="text-[10px] opacity-90">{event.apprentice.fullName}</div>
+                        <div className="text-[10px] opacity-80 truncate">{event.apprentice.fullName}</div>
                       )}
                     </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
