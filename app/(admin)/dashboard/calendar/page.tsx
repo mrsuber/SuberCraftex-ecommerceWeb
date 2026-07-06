@@ -209,6 +209,8 @@ export default function AdminCalendarPage() {
             onEventClick={handleEventClick}
             onDateClick={handleDateClick}
             showApprenticeNames={selectedApprenticeId === "all"}
+            onEventUpdate={handleEventUpdated}
+            userId={userId}
           />
         )}
       </div>

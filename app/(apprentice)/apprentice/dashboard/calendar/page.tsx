@@ -161,6 +161,8 @@ export default function ApprenticeCalendarPage() {
             onEventClick={handleEventClick}
             onDateClick={handleDateClick}
             showApprenticeNames={false}
+            onEventUpdate={handleEventUpdated}
+            userId={userId}
           />
         )}
       </div>

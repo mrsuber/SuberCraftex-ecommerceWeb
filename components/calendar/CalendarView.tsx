@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek, addDays, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type ViewMode = "year" | "month" | "week" | "day" | "agenda";
 
@@ -32,6 +33,8 @@ interface CalendarViewProps {
   onEventClick: (event: CalendarEvent) => void;
   onDateClick?: (date: Date) => void;
   showApprenticeNames?: boolean;
+  onEventUpdate?: () => void;
+  userId?: string;
 }
 
 export function CalendarView({
@@ -42,6 +45,8 @@ export function CalendarView({
   onEventClick,
   onDateClick,
   showApprenticeNames = false,
+  onEventUpdate,
+  userId,
 }: CalendarViewProps) {
   const getEventColor = (event: CalendarEvent) => {
     if (event.color) return event.color;
@@ -83,7 +88,7 @@ export function CalendarView({
   }
 
   if (viewMode === "week") {
-    return <WeekView currentDate={currentDate} events={events} onEventClick={onEventClick} getEventsForDate={getEventsForDate} getEventColor={getEventColor} showApprenticeNames={showApprenticeNames} />;
+    return <WeekView currentDate={currentDate} events={events} onEventClick={onEventClick} getEventsForDate={getEventsForDate} getEventColor={getEventColor} showApprenticeNames={showApprenticeNames} onEventUpdate={onEventUpdate} userId={userId} />;
   }
 
   if (viewMode === "day") {
@@ -278,6 +283,8 @@ function WeekView({
   getEventsForDate,
   getEventColor,
   showApprenticeNames,
+  onEventUpdate,
+  userId,
 }: {
   currentDate: Date;
   events: CalendarEvent[];
@@ -285,11 +292,20 @@ function WeekView({
   getEventsForDate: (date: Date) => CalendarEvent[];
   getEventColor: (event: CalendarEvent) => string;
   showApprenticeNames: boolean;
+  onEventUpdate?: () => void;
+  userId?: string;
 }) {
   const weekStart = startOfWeek(currentDate);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
+
+  // Drag state
+  const [draggingEvent, setDraggingEvent] = useState<{ event: CalendarEvent; mode: 'move' | 'resize' } | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ top: number; height: number } | null>(null);
+  const [initialDragY, setInitialDragY] = useState(0);
+  const [initialEventTop, setInitialEventTop] = useState(0);
+  const [initialEventHeight, setInitialEventHeight] = useState(0);
 
   // Calculate event position and height
   const getEventStyle = (event: CalendarEvent, dayStart: Date) => {
@@ -310,6 +326,99 @@ function WeekView({
       left: '2px',
       right: '2px',
     };
+  };
+
+  // Check if user can edit event
+  const canEditEvent = (event: CalendarEvent) => {
+    return userId && (event.createdBy === userId);
+  };
+
+  // Handle drag start for moving
+  const handleDragStart = (e: React.MouseEvent, event: CalendarEvent, mode: 'move' | 'resize') => {
+    if (!canEditEvent(event)) return;
+
+    e.stopPropagation();
+    const style = getEventStyle(event, new Date());
+    const top = parseFloat(style.top);
+    const height = parseFloat(style.height);
+
+    setDraggingEvent({ event, mode });
+    setInitialDragY(e.clientY);
+    setInitialEventTop(top);
+    setInitialEventHeight(height);
+    setDragPreview({ top, height });
+  };
+
+  // Handle drag move
+  const handleDragMove = (e: React.MouseEvent) => {
+    if (!draggingEvent || !dragPreview) return;
+
+    const deltaY = e.clientY - initialDragY;
+
+    if (draggingEvent.mode === 'move') {
+      // Move entire event
+      const newTop = Math.max(0, Math.min(initialEventTop + deltaY, HOUR_HEIGHT * 24 - dragPreview.height));
+      setDragPreview({ ...dragPreview, top: newTop });
+    } else if (draggingEvent.mode === 'resize') {
+      // Resize event
+      const newHeight = Math.max(30, initialEventHeight + deltaY); // Min 30px (0.5 hour)
+      setDragPreview({ top: dragPreview.top, height: newHeight });
+    }
+  };
+
+  // Handle drag end
+  const handleDragEnd = async () => {
+    if (!draggingEvent || !dragPreview || !onEventUpdate) {
+      setDraggingEvent(null);
+      setDragPreview(null);
+      return;
+    }
+
+    const { event, mode } = draggingEvent;
+
+    // Calculate new times
+    const startMinutes = Math.round((dragPreview.top / HOUR_HEIGHT) * 60);
+    const durationMinutes = Math.round((dragPreview.height / HOUR_HEIGHT) * 60);
+
+    const startHour = Math.floor(startMinutes / 60);
+    const startMinute = startMinutes % 60;
+    const endMinutes = startMinutes + durationMinutes;
+    const endHour = Math.floor(endMinutes / 60);
+    const endMinute = endMinutes % 60;
+
+    // Create new date objects
+    const eventDate = new Date(event.startTime);
+    const newStart = new Date(eventDate);
+    newStart.setHours(startHour, startMinute, 0, 0);
+
+    const newEnd = new Date(eventDate);
+    newEnd.setHours(endHour, endMinute, 0, 0);
+
+    // Update event via API
+    try {
+      const response = await fetch(`/api/calendar/events/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startTime: newStart.toISOString(),
+          endTime: newEnd.toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update event');
+      }
+
+      toast.success('Event updated successfully');
+      onEventUpdate();
+    } catch (error: any) {
+      console.error('Error updating event:', error);
+      toast.error(error.message || 'Failed to update event');
+    } finally {
+      setDraggingEvent(null);
+      setDragPreview(null);
+    }
   };
 
   return (
@@ -355,7 +464,13 @@ function WeekView({
             const dayEvents = getEventsForDate(day);
 
             return (
-              <div key={day.toISOString()} className="relative border-l">
+              <div
+                key={day.toISOString()}
+                className="relative border-l"
+                onMouseMove={handleDragMove}
+                onMouseUp={handleDragEnd}
+                onMouseLeave={handleDragEnd}
+              >
                 {/* Hour grid lines */}
                 {hours.map((hour) => (
                   <div
@@ -371,17 +486,34 @@ function WeekView({
                 {/* Events positioned absolutely */}
                 {dayEvents.map((event) => {
                   const style = getEventStyle(event, day);
+                  const isDragging = draggingEvent?.event.id === event.id;
+                  const isEditable = canEditEvent(event);
+
                   return (
                     <div
                       key={event.id}
-                      className="absolute text-xs p-2 rounded cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
+                      className={cn(
+                        "absolute text-xs p-2 rounded overflow-hidden",
+                        isEditable ? "cursor-move" : "cursor-pointer",
+                        !isDragging && "hover:opacity-90 transition-opacity"
+                      )}
                       style={{
                         ...style,
                         backgroundColor: getEventColor(event),
                         color: "white",
-                        zIndex: 1,
+                        zIndex: isDragging ? 10 : 1,
+                        opacity: isDragging ? 0.5 : 1,
                       }}
-                      onClick={() => onEventClick(event)}
+                      onClick={(e) => {
+                        if (!isDragging) {
+                          onEventClick(event);
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        if (isEditable) {
+                          handleDragStart(e, event, 'move');
+                        }
+                      }}
                     >
                       <div className="font-semibold truncate">{event.title}</div>
                       <div className="text-[10px] opacity-90">
@@ -390,9 +522,34 @@ function WeekView({
                       {showApprenticeNames && event.apprentice && (
                         <div className="text-[10px] opacity-80 truncate">{event.apprentice.fullName}</div>
                       )}
+
+                      {/* Resize handle */}
+                      {isEditable && (
+                        <div
+                          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            handleDragStart(e, event, 'resize');
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}
+
+                {/* Drag preview overlay */}
+                {draggingEvent && dragPreview && (
+                  <div
+                    className="absolute border-2 border-dashed border-white bg-white/10 rounded pointer-events-none"
+                    style={{
+                      top: `${dragPreview.top}px`,
+                      height: `${dragPreview.height}px`,
+                      left: '2px',
+                      right: '2px',
+                      zIndex: 20,
+                    }}
+                  />
+                )}
               </div>
             );
           })}
