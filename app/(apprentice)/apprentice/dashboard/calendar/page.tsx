@@ -21,10 +21,24 @@ export default function ApprenticeCalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [userId, setUserId] = useState<string | undefined>();
 
   useEffect(() => {
+    fetchUserData();
     fetchEvents();
   }, [currentDate, viewMode]);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch("/api/user/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setUserId(data.id);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -191,6 +205,7 @@ export default function ApprenticeCalendarPage() {
         event={selectedEvent}
         onEventUpdated={handleEventUpdated}
         userRole="apprentice"
+        userId={userId}
       />
     </div>
   );

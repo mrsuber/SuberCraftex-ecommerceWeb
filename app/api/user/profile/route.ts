@@ -8,6 +8,41 @@ const profileSchema = z.object({
   phone: z.string().optional(),
 });
 
+// GET - Get current user profile
+export async function GET() {
+  try {
+    const user = await getSession();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userProfile = await db.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        fullName: true,
+        phone: true,
+        avatarUrl: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!userProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(userProfile);
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+  }
+}
+
 // PUT - Update user profile
 export async function PUT(request: NextRequest) {
   try {

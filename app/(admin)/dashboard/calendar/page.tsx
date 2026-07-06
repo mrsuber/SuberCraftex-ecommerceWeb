@@ -30,14 +30,28 @@ export default function AdminCalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [userId, setUserId] = useState<string | undefined>();
 
   useEffect(() => {
+    fetchUserData();
     fetchApprentices();
   }, []);
 
   useEffect(() => {
     fetchEvents();
   }, [currentDate, viewMode, selectedApprenticeId]);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch("/api/user/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setUserId(data.id);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   const fetchApprentices = async () => {
     try {
@@ -245,6 +259,7 @@ export default function AdminCalendarPage() {
         event={selectedEvent}
         onEventUpdated={handleEventUpdated}
         userRole="admin"
+        userId={userId}
       />
     </div>
   );
