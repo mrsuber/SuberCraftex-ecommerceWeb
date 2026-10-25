@@ -87,6 +87,7 @@ export async function createOrder(input: CreateOrderInput) {
   if (!input.userId && !email) throw new PricingError('An email address is required for guest orders')
 
   const shippingCost = isPickup ? 0n : await shippingCostFor(shippingMethod)
+  const holdMinutes = await getSetting('checkout.paymentHoldMinutes')
 
   return db.$transaction(async (tx) => {
     const priced = await priceLines(tx, input.lines)
@@ -113,6 +114,8 @@ export async function createOrder(input: CreateOrderInput) {
         customerNotes: input.customerNotes?.slice(0, 2000) ?? null,
         // Pickup orders wait 12 hours for the customer, then their stock goes back on sale
         pickupDeadline: isPickup ? new Date(now + PICKUP_HOLD_HOURS * 3600_000) : null,
+        // Mobile Money orders hold their stock only this long; unpaid, they are cancelled
+        paymentDueAt: paymentMethod === 'mobile_payment' ? new Date(now + holdMinutes * 60_000) : null,
         orderItems: {
           create: priced.map((line) => ({
             productId: line.productId,

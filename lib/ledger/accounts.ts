@@ -62,6 +62,8 @@ export const Accounts = {
   drawer: (sessionId: string, label?: string) => asset(`DRAWER:${sessionId}`, `Cash drawer ${label ?? sessionId.slice(0, 8)}`, ['pos_session', sessionId]),
   driverCash: (driverId: string, name?: string) => asset(`DRIVER_CASH:${driverId}`, `Cash held by ${name ?? 'driver'}`, ['driver', driverId]),
   safe: () => asset('SAFE', 'Shop safe'),
+  /** The shop's own Mobile Money number, for money customers send by hand (not through PayWithCAMSOL) */
+  shopMobileMoney: () => asset('SHOP_MOMO', 'Shop Mobile Money number'),
   bank: () => asset('BANK', 'Bank account'),
   /** Money advanced to an employee, taken back from a later salary */
   employeeAdvance: (employeeId: string) => asset(`ADVANCE:${employeeId}`, 'Salary advance', ['employee', employeeId]),
@@ -86,6 +88,8 @@ export const Accounts = {
 
   // ------------------------------------------------------------- people
   customerCredit: (userId: string) => liability(`CUSTOMER_CREDIT:${userId}`, 'Store credit', ['user', userId]),
+  /** Money received for an order that cannot be fulfilled, owed back to a guest customer */
+  refundDue: (orderId: string) => liability(`REFUND_DUE:${orderId}`, 'Refund owed', ['order', orderId]),
   salaryWallet: (employeeId: string) => liability(`SALARY:${employeeId}`, 'Salary wallet', ['employee', employeeId]),
   /** Apprentice fees paid for months not yet taught */
   apprenticeFeesInAdvance: (apprenticeId: string) => liability(`APPRENTICE_FEES_ADVANCE:${apprenticeId}`, 'Fees paid in advance', ['apprentice', apprenticeId]),

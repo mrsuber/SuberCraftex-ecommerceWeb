@@ -80,14 +80,19 @@ export function OrderReview({
       const result = await response.json();
       console.log("Order created:", result);
 
-      // Clear cart and show success
       clearCart();
+      const token = encodeURIComponent(result.order.paymentToken);
+
+      if (paymentMethod === "mobile_payment") {
+        // Items are held while the customer approves the payment on their phone
+        router.push(`/order/pay?orderId=${result.order.id}&token=${token}`);
+        return;
+      }
+
       toast.success("Order placed successfully!", {
         description: `Order #${result.order.orderNumber} has been created.`,
       });
-
-      // Redirect to order confirmation with order ID
-      router.push(`/order/confirmation?orderId=${result.order.id}`);
+      router.push(`/order/confirmation?orderId=${result.order.id}&token=${token}`);
     } catch (error) {
       console.error("Order placement error:", error);
       toast.error("Failed to place order", {

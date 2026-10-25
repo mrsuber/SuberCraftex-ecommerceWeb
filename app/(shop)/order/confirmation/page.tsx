@@ -4,15 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Package, Mail } from "lucide-react";
 import Link from "next/link";
+import { db } from "@/lib/db";
+import { getSession } from "@/lib/auth/session";
+import { checkPaymentToken } from "@/lib/payments/token";
+import { formatCurrency } from "@/lib/currency";
 
 export const metadata = {
   title: "Order Confirmation - SuberCraftex",
   description: "Your order has been confirmed",
 };
 
-export default function OrderConfirmationPage() {
-  // In a real app, get order details from URL params or API
-  const orderNumber = "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+export const dynamic = "force-dynamic";
+
+export default async function OrderConfirmationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ orderId?: string; token?: string }>;
+}) {
+  const { orderId, token } = await searchParams;
+  const user = await getSession();
+  const order = orderId ? await db.order.findUnique({ where: { id: orderId } }) : null;
+  const visible =
+    !!order && ((order.userId && order.userId === user?.id) || checkPaymentToken("order", order.id, token));
+  const orderNumber = visible ? order!.orderNumber : null;
+  const paid = visible && order!.paymentStatus === "paid";
+  const payLater = visible && order!.paymentMethod === "cash";
 
   return (
     <>
@@ -32,15 +48,21 @@ export default function OrderConfirmationPage() {
               <div className="space-y-2">
                 <h1 className="text-4xl font-bold">Order Confirmed!</h1>
                 <p className="text-lg text-muted-foreground">
-                  Thank you for your purchase
+                  {paid
+                    ? `Payment of ${formatCurrency(Number(order!.totalAmount))} received. Thank you!`
+                    : payLater
+                      ? `Please have ${formatCurrency(Number(order!.totalAmount))} ready in cash.`
+                      : "Thank you for your purchase"}
                 </p>
               </div>
 
               {/* Order Number */}
-              <div className="p-6 bg-muted/50 rounded-lg">
-                <div className="text-sm text-muted-foreground mb-1">Order Number</div>
-                <div className="text-2xl font-bold">{orderNumber}</div>
-              </div>
+              {orderNumber && (
+                <div className="p-6 bg-muted/50 rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Order Number</div>
+                  <div className="text-2xl font-bold">{orderNumber}</div>
+                </div>
+              )}
 
               {/* Info */}
               <div className="space-y-4 text-left max-w-md mx-auto">

@@ -169,6 +169,24 @@ export class HttpCamsolGateway implements CamsolGateway {
     }
   }
 
+  // -------------------------------------------------------------------- balance
+
+  /**
+   * The organisation's balance at PayWithCAMSOL: the live balance with a live key, the demo
+   * balance with a test key. Payouts are paid from it, so it must cover what is approved.
+   */
+  async getBalance(): Promise<{ balance: number; type: string; currency: string } | null> {
+    try {
+      const response = await this.call('GET', '/api/v1/balance', undefined, { 'X-API-Key': this.config.secretKey })
+      const data = (response.data ?? response) as Record<string, any>
+      const balance = Number(data.balance ?? data.live_balance ?? data.available_balance)
+      if (!Number.isFinite(balance)) return null
+      return { balance, type: String(data.balance_type ?? 'live'), currency: String(data.currency ?? 'XAF') }
+    } catch {
+      return null
+    }
+  }
+
   // ------------------------------------------------------------------ key check
 
   /**

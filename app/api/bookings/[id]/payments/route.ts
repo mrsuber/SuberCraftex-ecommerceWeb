@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { audit } from '@/lib/audit'
+import { cashAccountForStaff } from '@/lib/commerce/order-payments'
+import { MoneyInputError, parseXaf } from '@/lib/money'
+import { bookingBalance, recordBookingPayment } from '@/lib/services/booking-payments'
 import { getCurrentUser } from '@/lib/session'
 
 /**
@@ -70,7 +74,8 @@ export async function GET(
 
 /**
  * POST /api/bookings/[id]/payments
- * Create a new payment (down payment, partial, or final)
+ * Staff record cash received at the shop: { amount?, paymentType? }. Without an amount, the
+ * amount due next is recorded. Customers pay by Mobile Money (/api/payments/mobile-money).
  */
 export async function POST(
   request: NextRequest,
@@ -79,85 +84,38 @@ export async function POST(
   try {
     const { id } = await params
     const user = await getCurrentUser()
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (!user || !['admin', 'tailor', 'cashier'].includes(user.role)) {
+      return NextResponse.json({ error: 'Only SuberCraftex staff can record a cash payment' }, { status: 403 })
     }
-
-    const body = await request.json()
-    const { amount, paymentType, paymentMethod = 'stripe' } = body
-
-    // Validate required fields
-    if (!amount || !paymentType) {
-      return NextResponse.json(
-        { error: 'Missing required fields: amount, paymentType' },
-        { status: 400 }
-      )
+    const body = await request.json().catch(() => ({}))
+    const balance = await bookingBalance(db, id)
+    if (!balance.next) {
+      return NextResponse.json({ error: 'Nothing is due on this booking' }, { status: 400 })
     }
-
-    // Get booking to check authorization and quote
-    const booking = await db.serviceBooking.findUnique({
-      where: { id: id },
-      include: {
-        quote: true,
-      }
-    })
-
-    if (!booking) {
-      return NextResponse.json(
-        { error: 'Booking not found' },
-        { status: 404 }
-      )
+    const amount = body.amount === undefined || body.amount === null || body.amount === ''
+      ? balance.next.amount
+      : parseXaf(body.amount)
+    if (amount > balance.remaining) {
+      return NextResponse.json({ error: `Only ${balance.remaining} FCFA is still due` }, { status: 400 })
     }
+    const type = amount < balance.remaining && amount !== balance.next.amount ? 'partial_payment' : balance.next.type
 
-    // Check authorization (must be booking owner)
-    if (booking.userId !== user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
-
-    // Validate payment amount
-    if (paymentType === 'down_payment' && booking.quote) {
-      const expectedAmount = Number(booking.quote.downPaymentAmount)
-      if (Math.abs(Number(amount) - expectedAmount) > 0.01) {
-        return NextResponse.json(
-          { error: `Down payment amount must be $${expectedAmount.toFixed(2)}` },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Create payment record
-    // In a real implementation, this would create a Stripe PaymentIntent
-    const payment = await db.bookingPayment.create({
-      data: {
+    const payment = await db.$transaction(async (tx) => {
+      const { account } = await cashAccountForStaff(tx, user.id)
+      return recordBookingPayment(tx, {
         bookingId: id,
+        type,
         amount,
-        paymentType,
-        paymentMethod,
-        status: 'pending', // Will be updated to 'completed' after confirmation
-        notes: `Payment initiated by ${user.email}`,
-      }
+        method: 'cash',
+        into: account,
+        confirmedById: user.id,
+      })
     })
-
-    console.log(`💳 Payment created for booking ${booking.bookingNumber} - Amount: $${Number(amount).toFixed(2)}`)
-
-    // Serialize Decimal fields
-    const serialized = {
-      ...payment,
-      amount: Number(payment.amount),
-    }
-
-    return NextResponse.json(serialized, { status: 201 })
+    await audit({ actor: user, action: 'booking.cash_received', targetType: 'booking', targetId: id, details: { amount, type } })
+    return NextResponse.json({ ...payment, amount: Number(payment.amount) }, { status: 201 })
   } catch (error) {
-    console.error('Error creating payment:', error)
-    return NextResponse.json(
-      { error: 'Failed to create payment' },
-      { status: 500 }
-    )
+    if (error instanceof MoneyInputError) return NextResponse.json({ error: error.message }, { status: 400 })
+    console.error('Error recording payment:', error)
+    return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
   }
 }

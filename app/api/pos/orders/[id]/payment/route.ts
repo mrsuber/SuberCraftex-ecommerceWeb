@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { Prisma } from '@prisma/client'
+import { Accounts } from '@/lib/ledger'
+import { markOrderPaid, OrderPaymentError } from '@/lib/commerce/order-payments'
 
 /**
  * POST /api/pos/orders/[id]/payment
@@ -68,65 +69,42 @@ export async function POST(
       )
     }
 
-    // Process payment
-    const updatedOrder = await db.$transaction(async (tx) => {
-      // Update order status
-      const paidOrder = await tx.order.update({
-        where: { id },
-        data: {
-          paymentStatus: 'paid',
-          orderStatus: 'delivered', // POS orders are delivered immediately
-          paidAt: new Date(),
-          deliveredAt: new Date(),
-        }
-      })
-
-      // Update POS session totals
-      if (order.posSession) {
-        const paymentAmount = paidOrder.totalAmount
-
-        await tx.pOSSession.update({
-          where: { id: order.posSession.id },
-          data: {
-            totalSales: {
-              increment: paymentAmount
-            },
-            totalOrders: {
-              increment: 1
-            },
-            expectedCash: {
-              increment: paidOrder.paymentMethod === 'cash' ? paymentAmount : 0
-            },
-            totalCash: {
-              increment: paidOrder.paymentMethod === 'cash' ? paymentAmount : 0
-            },
-            totalCard: {
-              increment: paidOrder.paymentMethod === 'card' ? paymentAmount : 0
-            },
-            totalMobile: {
-              increment: paidOrder.paymentMethod === 'mobile_payment' ? paymentAmount : 0
-            },
-          }
-        })
+    const body = await request.json().catch(() => ({}))
+    if (body.method === 'cash' && order.paymentMethod === 'mobile_payment') {
+      // The customer pays cash instead of Mobile Money: only if no prompt is still waiting
+      const waiting = await db.paymentCollection.count({ where: { targetId: order.id, status: 'pending' } })
+      if (waiting > 0) {
+        return NextResponse.json(
+          { error: 'A Mobile Money prompt is still waiting on the customer\'s phone. Wait for it to fail or expire first.' },
+          { status: 400 }
+        )
       }
-
-      // Update cashier stats
-      await tx.cashier.update({
-        where: { id: cashier.id },
+      const tendered = Number(body.amountTendered) || null
+      await db.order.update({
+        where: { id: order.id },
         data: {
-          totalSales: {
-            increment: paidOrder.totalAmount
-          },
-          totalOrders: {
-            increment: 1
-          }
-        }
+          paymentMethod: 'cash',
+          amountTendered: tendered,
+          changeGiven: tendered !== null ? Number(tendered) - Number(order.totalAmount) : null,
+        },
       })
+      order.paymentMethod = 'cash'
+    }
 
-      return paidOrder
+    if (order.paymentMethod !== 'cash') {
+      // Mobile Money sales are paid when PayWithCAMSOL confirms the prompt on the customer's phone
+      return NextResponse.json(
+        { error: 'Mobile Money sales are confirmed by PayWithCAMSOL. Send the payment prompt to the customer\'s phone.' },
+        { status: 400 }
+      )
+    }
+
+    // Cash goes into this session's drawer in the ledger
+    const updatedOrder = await db.$transaction(async (tx) => {
+      const session = order.posSession ?? (await tx.pOSSession.findFirst({ where: { cashierId: cashier.id, status: 'open' } }))
+      if (!session || session.status !== 'open') throw new OrderPaymentError('Open a till session before taking cash')
+      return markOrderPaid(tx, order.id, { into: Accounts.drawer(session.id, session.sessionNumber), actorId: user.id })
     })
-
-    console.log(`💳 Payment processed: ${order.orderNumber} - ${Number(updatedOrder.totalAmount).toFixed(2)} (${updatedOrder.paymentMethod})`)
 
     return NextResponse.json({
       success: true,

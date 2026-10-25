@@ -2,108 +2,60 @@ import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { bookingBalance } from '@/lib/services/booking-payments'
 import { PaymentPageClient } from './PaymentPageClient'
 
 interface PaymentPageProps {
   params: Promise<{ id: string }>
 }
 
-export async function generateMetadata({ params }: PaymentPageProps): Promise<Metadata> {
-  const { id } = await params
-
-  return {
-    title: 'Payment | SuberCraftex',
-    description: 'Complete your booking payment',
-  }
+export const metadata: Metadata = {
+  title: 'Payment | SuberCraftex',
+  description: 'Pay for your booking with Mobile Money',
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function PaymentPage({ params }: PaymentPageProps) {
   const { id } = await params
   const user = await getCurrentUser()
+  if (!user) redirect('/login')
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Fetch booking with quote
   const booking = await db.serviceBooking.findUnique({
     where: { id },
-    include: {
-      service: {
-        select: {
-          id: true,
-          name: true,
-          featuredImage: true,
-        },
-      },
-      quote: {
-        include: {
-          history: {
-            orderBy: {
-              createdAt: 'desc',
-            },
-            take: 1,
-          },
-        },
-      },
-      payments: {
-        where: {
-          paymentType: 'down_payment',
-          status: 'completed',
-        },
-      },
-    },
+    include: { service: { select: { id: true, name: true, featuredImage: true } }, quote: true },
   })
+  if (!booking || user.id !== booking.userId) notFound()
 
-  if (!booking) {
-    notFound()
-  }
+  // What is due is worked out on the server: the quote's down payment first, then the rest
+  const balance = await bookingBalance(db, booking.id)
+  if (!balance.next) redirect(`/bookings/${id}`)
 
-  // Check authorization
-  if (user.id !== booking.userId) {
-    notFound()
-  }
-
-  // Check if quote exists and is approved
-  if (!booking.quote || booking.quote.status !== 'approved') {
-    redirect(`/bookings/${id}`)
-  }
-
-  // Check if already paid
-  if (booking.payments.length > 0) {
-    redirect(`/bookings/${id}`)
-  }
-
-  // Check if booking is in correct status
-  if (booking.status !== 'awaiting_payment') {
-    redirect(`/bookings/${id}`)
-  }
-
-  // Serialize data
-  const serializedData = {
-    booking: {
-      id: booking.id,
-      bookingNumber: booking.bookingNumber,
-      status: booking.status,
-      service: {
-        id: booking.service.id,
-        name: booking.service.name,
-        featuredImage: booking.service.featuredImage,
-      },
-    },
-    quote: {
-      id: booking.quote.id,
-      totalCost: Number(booking.quote.totalCost),
-      downPaymentAmount: Number(booking.quote.downPaymentAmount),
-      materialCost: Number(booking.quote.materialCost),
-      laborCost: Number(booking.quote.laborCost),
-    },
-    user: {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-    },
-  }
-
-  return <PaymentPageClient data={serializedData} />
+  return (
+    <PaymentPageClient
+      data={{
+        booking: {
+          id: booking.id,
+          bookingNumber: booking.bookingNumber,
+          status: booking.status,
+          service: booking.service,
+        },
+        balance: {
+          total: Number(balance.total),
+          paid: Number(balance.paid),
+          remaining: Number(balance.remaining),
+          nextType: balance.next.type,
+          nextAmount: Number(balance.next.amount),
+        },
+        quote: booking.quote
+          ? {
+              materialCost: Number(booking.quote.materialCost),
+              laborCost: Number(booking.quote.laborCost),
+              totalCost: Number(booking.quote.totalCost),
+            }
+          : null,
+        phone: booking.customerPhone ?? user.phone ?? '',
+      }}
+    />
+  )
 }

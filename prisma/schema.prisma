@@ -289,6 +289,8 @@ model Order {
   deliveredAt    DateTime? @map("delivered_at")
   cancelledAt    DateTime? @map("cancelled_at")
   pickupDeadline DateTime? @map("pickup_deadline")
+  // Mobile Money orders must be paid by this time, or they are cancelled and their stock released
+  paymentDueAt   DateTime? @map("payment_due_at")
 
   // Relations
   user               User?               @relation(fields: [userId], references: [id])
@@ -1309,15 +1311,18 @@ model BookingTimeline {
 // ============================================================================
 
 model BookingPayment {
-  id              String      @id @default(uuid())
-  bookingId       String      @map("booking_id")
-  amount          Decimal     @db.Decimal(10, 2)
-  paymentType     PaymentType @map("payment_type")
-  paymentMethod   String // stripe, cash, bank_transfer
-  status          String      @default("pending") // pending, completed, failed, refunded
-  stripePaymentId String?     @map("stripe_payment_id")
-  notes           String?
-  createdAt       DateTime    @default(now()) @map("created_at")
+  id                  String      @id @default(uuid())
+  bookingId           String      @map("booking_id")
+  amount              Decimal     @db.Decimal(10, 2)
+  paymentType         PaymentType @map("payment_type")
+  paymentMethod       String // stripe, cash, bank_transfer
+  status              String      @default("pending") // pending, completed, failed, refunded
+  stripePaymentId     String?     @map("stripe_payment_id")
+  // The Mobile Money payment that paid it, when paid by Mobile Money
+  collectionReference String?     @unique @map("collection_reference")
+  confirmedById       String?     @map("confirmed_by_id") // staff member who received cash
+  notes               String?
+  createdAt           DateTime    @default(now()) @map("created_at")
 
   // Relations
   booking ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
@@ -3043,10 +3048,12 @@ model RepairPayment {
   repairRequestId String        @map("repair_request_id")
   repairRequest   RepairRequest @relation(fields: [repairRequestId], references: [id], onDelete: Cascade)
 
-  amount        Decimal @db.Decimal(10, 2)
-  paymentType   String  @map("payment_type") // diagnostic_fee, deposit, final_payment
-  paymentMethod String  @map("payment_method") // cash, card, mobile_money
-  reference     String?
+  amount              Decimal @db.Decimal(10, 2)
+  paymentType         String  @map("payment_type") // diagnostic_fee, deposit, final_payment
+  paymentMethod       String  @map("payment_method") // cash, card, mobile_money
+  reference           String?
+  // The Mobile Money payment that paid it, when paid by Mobile Money
+  collectionReference String? @unique @map("collection_reference")
 
   createdAt DateTime @default(now()) @map("created_at")
   createdBy String   @map("created_by")
@@ -3238,4 +3245,22 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// DRIVER CASH: cash collected on delivery, until it is handed in
+// ============================================================================
+
+model DriverCashHandover {
+  id           String   @id @default(uuid())
+  driverId     String   @map("driver_id")
+  amount       BigInt // what the admin received
+  heldBefore   BigInt   @map("held_before") // what the driver held according to the ledger
+  receivedById String   @map("received_by_id")
+  intoAccount  String   @map("into_account") // ledger account the cash went to (safe, drawer, bank)
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([driverId, createdAt])
+  @@map("driver_cash_handovers")
 }

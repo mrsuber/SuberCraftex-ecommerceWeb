@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/api-auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { Accounts } from '@/lib/ledger';
+import { cashAccountForStaff } from '@/lib/commerce/order-payments';
+import { recordRepairPayment, repairBalance } from '@/lib/services/booking-payments';
 
 const recordPaymentSchema = z.object({
-  amount: z.number().positive(),
+  amount: z.number().int().positive(),
   paymentType: z.enum(['diagnostic_fee', 'deposit', 'final_payment']),
-  paymentMethod: z.enum(['cash', 'card', 'mobile_money']),
+  // mobile_money here means money sent by hand to the shop's own number
+  paymentMethod: z.enum(['cash', 'mobile_money']),
   reference: z.string().optional(),
 });
 
@@ -39,51 +43,36 @@ export async function POST(
       return NextResponse.json({ error: 'Repair request not found' }, { status: 404 });
     }
 
-    // Create payment record
-    const payment = await db.repairPayment.create({
-      data: {
-        repairRequestId: id,
-        amount: data.amount,
+    const { payment, summary } = await db.$transaction(async (tx) => {
+      const into = data.paymentMethod === 'cash' ? (await cashAccountForStaff(tx, user.id)).account : Accounts.shopMobileMoney();
+      const payment = await recordRepairPayment(tx, {
+        repairId: id,
+        amount: BigInt(data.amount),
         paymentType: data.paymentType,
-        paymentMethod: data.paymentMethod,
-        reference: data.reference,
+        method: data.paymentMethod,
+        into,
         createdBy: user.id,
-      },
+        reference: data.reference,
+      });
+      return { payment, summary: await repairBalance(tx, id) };
     });
-
-    // Update payment status
-    const allPayments = await db.repairPayment.findMany({
-      where: { repairRequestId: id },
-    });
-
-    const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-    const finalCost = existingRequest.finalCost ? Number(existingRequest.finalCost) : 0;
-
-    let paymentStatus = 'pending';
-    if (totalPaid >= finalCost && finalCost > 0) {
-      paymentStatus = 'paid';
-    } else if (totalPaid > 0) {
-      paymentStatus = 'partial';
-    }
-
-    await db.repairRequest.update({
-      where: { id },
-      data: { paymentStatus },
-    });
+    const totalPaid = Number(summary.paid);
+    const finalCost = Number(summary.total);
+    const paymentStatus = (await db.repairRequest.findUniqueOrThrow({ where: { id } })).paymentStatus;
 
     // Add progress entry
     await db.repairProgress.create({
       data: {
         repairRequestId: id,
         status: 'payment_received',
-        description: `Payment received: $${data.amount.toFixed(2)} (${data.paymentType.replace(/_/g, ' ')}) via ${data.paymentMethod.replace(/_/g, ' ')}${data.reference ? `. Ref: ${data.reference}` : ''}`,
+        description: `Payment received: ${data.amount} FCFA (${data.paymentType.replace(/_/g, ' ')}) via ${data.paymentMethod.replace(/_/g, ' ')}${data.reference ? `. Ref: ${data.reference}` : ''}`,
         photos: [],
         updatedBy: user.id,
         updatedByName: user.fullName || user.email,
       },
     });
 
-    console.log(`Payment recorded for repair ${existingRequest.ticketNumber}: $${data.amount}`);
+    console.log(`Payment recorded for repair ${existingRequest.ticketNumber}: ${data.amount} FCFA`);
 
     return NextResponse.json({
       payment,

@@ -102,8 +102,14 @@ export function normalizeCameroonPhone(phone: unknown): string {
   return `237${match[1]}`
 }
 
+/** PayWithCAMSOL's test numbers (2376000000xx), used with test keys */
+export function isCamsolTestNumber(phone237: string): boolean {
+  return /^2376000000\d{2}$/.test(phone237)
+}
+
 /** MTN or Orange from the number's prefix (Cameroon numbering plan). */
 export function mobileProviderOf(phone237: string): 'MTN' | 'ORANGE' | null {
+  if (isCamsolTestNumber(phone237)) return 'MTN'
   const local = phone237.slice(3)
   if (local.startsWith('67') || local.startsWith('68')) return 'MTN'
   if (local.startsWith('69')) return 'ORANGE'

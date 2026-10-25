@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Trash2, Minus, Plus, ShoppingCart, Smartphone, Printer } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
+import { MobileMoneyPay } from '@/components/payments/MobileMoneyPay'
 
 interface CartItem {
   productId: string
@@ -51,7 +52,30 @@ export default function POSCart({
   const total = subtotal - discount
   const change = amountTendered ? parseFloat(amountTendered) - total : 0
 
+  const [mobileSale, setMobileSale] = useState<{ id: string; total: number } | null>(null)
+  // A sale created for Mobile Money that the customer will now pay in cash
+  const [openSaleId, setOpenSaleId] = useState<string | null>(null)
+
+  const finishSale = (orderId: string) => {
+    // Open receipt in new window
+    window.open(`/api/pos/receipt/${orderId}`, '_blank')
+    setShowCheckout(false)
+    setMobileSale(null)
+    setOpenSaleId(null)
+    setCustomerName('')
+    setCustomerPhone('')
+    setCustomerEmail('')
+    setAmountTendered('')
+    setDiscountAmount('0')
+    onOrderComplete()
+  }
+
   const handleCheckout = async () => {
+    if (paymentMethod === 'mobile_payment' && customerPhone.replace(/\D/g, '').length < 9) {
+      setError("Enter the customer's Mobile Money number")
+      return
+    }
+
     if (cart.length === 0) return
 
     if (paymentMethod === 'cash' && !amountTendered) {
@@ -68,6 +92,18 @@ export default function POSCart({
     setLoading(true)
 
     try {
+      if (openSaleId) {
+        // Same sale, now paid in cash
+        const res = await fetch(`/api/pos/orders/${openSaleId}/payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'cash', amountTendered: Number(amountTendered) || null }),
+        })
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed to process payment')
+        finishSale(openSaleId)
+        return
+      }
+
       // Create order
       const orderResponse = await fetch('/api/pos/orders', {
         method: 'POST',
@@ -95,34 +131,61 @@ export default function POSCart({
       const orderData = await orderResponse.json()
       const orderId = orderData.order.id
 
-      // Process payment
+      if (paymentMethod === 'mobile_payment') {
+        // The customer approves the prompt on their phone; the sale completes when PayWithCAMSOL confirms
+        setMobileSale({ id: orderId, total: Number(orderData.order.totalAmount) })
+        return
+      }
+
+      // Cash: into this session's drawer
       const paymentResponse = await fetch(`/api/pos/orders/${orderId}/payment`, {
         method: 'POST',
       })
 
       if (!paymentResponse.ok) {
-        throw new Error('Failed to process payment')
+        const data = await paymentResponse.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to process payment')
       }
 
-      // Show success and print receipt
-      alert('Order completed successfully!')
-
-      // Open receipt in new window
-      window.open(`/api/pos/receipt/${orderId}`, '_blank')
-
-      // Reset
-      setShowCheckout(false)
-      setCustomerName('')
-      setCustomerPhone('')
-      setCustomerEmail('')
-      setAmountTendered('')
-      setDiscountAmount('0')
-      onOrderComplete()
+      finishSale(orderId)
     } catch (err: any) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (mobileSale) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-bold">Mobile Money payment</h2>
+        </div>
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          <MobileMoneyPay
+            purpose="pos_order"
+            id={mobileSale.id}
+            amount={mobileSale.total}
+            defaultPhone={customerPhone}
+            compact
+            onPaid={() => setTimeout(() => finishSale(mobileSale.id), 1200)}
+          />
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={async () => {
+              // The customer pays cash instead: the same sale, taken into the drawer
+              setPaymentMethod('cash')
+              setOpenSaleId(mobileSale.id)
+              setMobileSale(null)
+              setError('Take the cash and enter the amount tendered to complete this sale.')
+            }}
+          >
+            Customer will pay cash instead
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (showCheckout) {

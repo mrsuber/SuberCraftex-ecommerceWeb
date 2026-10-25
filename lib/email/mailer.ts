@@ -22,6 +22,10 @@ export const sendEmail = async ({
   html: string;
   text?: string;
 }) => {
+  // Tests and local setups without SMTP set EMAIL_DISABLED=1: nothing is sent
+  if (process.env.EMAIL_DISABLED === '1') {
+    return { success: true, messageId: 'disabled' };
+  }
   try {
     const info = await transporter.sendMail({
       from: `"${process.env.SMTP_FROM_NAME || 'SuberCraftex'}" <${process.env.SMTP_FROM_EMAIL}>`,

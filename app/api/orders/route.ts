@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { createOrder } from "@/lib/commerce/orders";
 import { OutOfStockError, parseLines, PricingError } from "@/lib/commerce/pricing";
+import { paymentToken } from "@/lib/payments/token";
+import { sendOrderConfirmation } from "@/lib/commerce/order-emails";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,51 +55,9 @@ export async function POST(request: NextRequest) {
       console.error('⚠️  Failed to create admin notification:', notifError);
     }
 
-    // Send order confirmation email
-    try {
-      const { sendEmail } = await import('@/lib/email/mailer');
-      const { getOrderConfirmationTemplate } = await import('@/lib/email/templates/order-confirmation');
-
-      const emailData = {
-        orderNumber: order.orderNumber,
-        customerName: order.customerName || 'Customer',
-        customerEmail: order.guestEmail || '',
-        orderDate: new Date(order.createdAt).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-        items: order.orderItems.map(item => ({
-          productName: item.productName,
-          quantity: item.quantity,
-          price: parseFloat(item.price.toString()),
-          total: parseFloat(item.total.toString()),
-        })),
-        subtotal: parseFloat(order.subtotal.toString()),
-        shippingCost: parseFloat(order.shippingCost.toString()),
-        taxAmount: parseFloat(order.taxAmount.toString()),
-        totalAmount: parseFloat(order.totalAmount.toString()),
-        shippingAddress: (order.shippingAddress as any) || {},
-        paymentMethod: order.paymentMethod as 'card' | 'cash',
-        paymentStatus: order.paymentStatus,
-        trackingUrl: order.trackingNumber
-          ? `${process.env.NEXT_PUBLIC_APP_URL}/track/${order.id}`
-          : undefined,
-      };
-
-      const { html, text } = getOrderConfirmationTemplate(emailData);
-
-      await sendEmail({
-        to: order.guestEmail || '',
-        subject: `Order Confirmation - ${order.orderNumber}`,
-        html,
-        text,
-      });
-
-      console.log('✅ Order confirmation email sent');
-    } catch (emailError) {
-      // Don't fail the order if email fails
-      console.error('⚠️  Failed to send order confirmation email:', emailError);
+    // Cash orders are confirmed now; Mobile Money orders once PayWithCAMSOL confirms the payment
+    if (order.paymentMethod !== 'mobile_payment') {
+      await sendOrderConfirmation(order.id);
     }
 
     return NextResponse.json({
@@ -109,6 +69,9 @@ export async function POST(request: NextRequest) {
         status: order.orderStatus,
         paymentStatus: order.paymentStatus,
         paymentMethod: order.paymentMethod,
+        paymentDueAt: order.paymentDueAt,
+        // Lets this browser (or app) start and follow the Mobile Money payment, even as a guest
+        paymentToken: paymentToken('order', order.id),
         subtotal: order.subtotal,
         shippingCost: order.shippingCost,
       },

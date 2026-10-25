@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { closeDrawer } from '@/lib/commerce/pos-cash'
+import { parseXafOrZero, toDecimal } from '@/lib/money'
 import { getCurrentUser } from '@/lib/session'
 
 /**
@@ -52,36 +54,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate cash difference
-    const cashDifference = Number(actualCash) - Number(session.expectedCash)
+    let counted: bigint
+    try {
+      counted = parseXafOrZero(actualCash, 'counted cash')
+    } catch (error) {
+      return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+    }
 
-    // Close session
-    const closedSession = await db.pOSSession.update({
-      where: { id: session.id },
-      data: {
-        status: 'closed',
-        closedAt: new Date(),
-        actualCash,
-        closingBalance: actualCash,
-        cashDifference,
-        notes: notes || null
-      },
-      include: {
-        cashier: {
-          select: {
-            fullName: true,
-            employeeId: true
-          }
+    // Close in the ledger and on the session together; the counted cash goes to the safe
+    const closedSession = await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM pos_sessions WHERE id = ${session.id} FOR UPDATE`
+      const fresh = await tx.pOSSession.findUniqueOrThrow({ where: { id: session.id } })
+      if (fresh.status !== 'open') throw new Error('Session already closed')
+      const { expected } = await closeDrawer(tx, fresh, counted, user.id)
+      const expectedCash = expected !== null ? toDecimal(expected) : fresh.expectedCash
+      return tx.pOSSession.update({
+        where: { id: session.id },
+        data: {
+          status: 'closed',
+          closedAt: new Date(),
+          actualCash: toDecimal(counted),
+          closingBalance: toDecimal(counted),
+          expectedCash,
+          cashDifference: toDecimal(counted).sub(expectedCash),
+          notes: notes || null
         },
-        _count: {
-          select: {
-            orders: true
+        include: {
+          cashier: {
+            select: {
+              fullName: true,
+              employeeId: true
+            }
+          },
+          _count: {
+            select: {
+              orders: true
+            }
           }
         }
-      }
+      })
     })
+    const cashDifference = Number(closedSession.cashDifference)
 
-    console.log(`📱 POS session closed: ${session.sessionNumber} by ${cashier.fullName}`)
     if (cashDifference !== 0) {
       console.log(`   Cash difference: $${cashDifference.toFixed(2)} (${cashDifference > 0 ? 'over' : 'short'})`)
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
+import { completeOrder } from '@/lib/commerce/fulfilment';
 
 // PATCH - Update delivery status
 export async function PATCH(
@@ -75,19 +76,14 @@ export async function PATCH(
     if (status === 'delivered') {
       updateData.actualDeliveryTime = new Date();
 
-      // Update order status
-      await db.order.update({
-        where: { id: tracking.orderId },
-        data: {
-          orderStatus: 'delivered',
-          deliveredAt: new Date(),
-          // If payment was cash on delivery, mark as paid
-          ...(tracking.order.paymentMethod === 'cash' && {
-            paymentStatus: 'paid',
-            paidAt: new Date(),
-          }),
-        },
-      });
+      // Delivered: the cash collected stays on this driver's account until handed in
+      try {
+        await db.$transaction((tx) =>
+          completeOrder(tx, tracking.orderId, { actorId: user.id, actorRole: 'driver', driverId: driver.id })
+        );
+      } catch (error) {
+        return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+      }
 
       // Update driver stats
       await db.driver.update({

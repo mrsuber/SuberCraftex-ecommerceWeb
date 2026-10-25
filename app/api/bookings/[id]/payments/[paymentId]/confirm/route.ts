@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { cashAccountForStaff } from '@/lib/commerce/order-payments'
+import { toXaf } from '@/lib/money'
+import { recordBookingPayment } from '@/lib/services/booking-payments'
 import { getCurrentUser } from '@/lib/session'
 
 /**
@@ -65,43 +68,29 @@ export async function POST(
       )
     }
 
-    // Use transaction to update payment and booking status
+    // A pending payment left by the old payment page: staff confirm the cash they received
     const result = await db.$transaction(async (tx) => {
-      // Update payment status
-      const updatedPayment = await tx.bookingPayment.update({
-        where: { id: paymentId },
-        data: {
-          status: 'completed',
-          notes: payment.notes
-            ? `${payment.notes}\nPayment confirmed at ${new Date().toISOString()}`
-            : `Payment confirmed at ${new Date().toISOString()}`,
-        }
+      const { account } = await cashAccountForStaff(tx, user.id)
+      const claimed = await tx.bookingPayment.updateMany({
+        where: { id: paymentId, status: 'pending' },
+        data: { status: 'cancelled', notes: 'Replaced by the cash payment recorded by staff' },
       })
-
-      // Update booking status based on payment type
-      let newBookingStatus = payment.booking.status
-
-      if (payment.paymentType === 'down_payment') {
-        newBookingStatus = 'in_progress'
-      } else if (payment.paymentType === 'final_payment') {
-        newBookingStatus = 'completed'
-      } else if (payment.paymentType === 'partial_payment') {
-        newBookingStatus = 'payment_partial'
-      }
-
-      const updatedBooking = await tx.serviceBooking.update({
-        where: { id: id },
-        data: {
-          status: newBookingStatus,
-        }
+      if (claimed.count !== 1) throw new Error('Payment already confirmed')
+      const recorded = await recordBookingPayment(tx, {
+        bookingId: id,
+        type: payment.paymentType,
+        amount: toXaf(payment.amount),
+        method: 'cash',
+        into: account,
+        confirmedById: user.id,
       })
-
-      return { payment: updatedPayment, booking: updatedBooking }
+      const booking = await tx.serviceBooking.findUniqueOrThrow({ where: { id } })
+      return { payment: recorded, booking }
     })
 
     console.log(
       `✅ Payment confirmed for booking ${payment.booking.bookingNumber} - ` +
-      `Type: ${payment.paymentType}, Amount: $${Number(payment.amount).toFixed(2)}, ` +
+      `Type: ${payment.paymentType}, Amount: ${Number(payment.amount)} FCFA, ` +
       `New Status: ${result.booking.status}`
     )
 

@@ -24,7 +24,7 @@ type OrderConfirmationData = {
     postalCode: string;
     country: string;
   };
-  paymentMethod: 'card' | 'cash';
+  paymentMethod: 'mobile_payment' | 'cash' | 'card';
   paymentStatus: string;
   trackingUrl?: string;
 };
@@ -229,7 +229,7 @@ export const getOrderConfirmationTemplate = (data: OrderConfirmationData) => {
         <div class="info-section">
           <div class="info-label">Payment Method</div>
           <div class="info-value" style="margin-bottom: 12px;">
-            ${data.paymentMethod === 'card' ? '💳 Credit/Debit Card' : '💵 Cash on Delivery'}
+            ${data.paymentMethod === 'mobile_payment' ? '📱 Mobile Money (paid)' : '💵 Cash on delivery or pickup'}
           </div>
           <div class="info-label">Payment Status</div>
           <div class="info-value">
@@ -291,7 +291,7 @@ ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddre
 ${data.shippingAddress.country}
 
 PAYMENT INFORMATION:
-Payment Method: ${data.paymentMethod === 'card' ? 'Credit/Debit Card' : 'Cash on Delivery'}
+Payment Method: ${data.paymentMethod === 'mobile_payment' ? 'Mobile Money (paid)' : 'Cash on delivery or pickup'}
 Payment Status: ${data.paymentStatus === 'paid' ? 'Paid' : 'Payment on Delivery'}
 ${data.paymentMethod === 'cash' ? '\nNote: Please have the exact amount ready when the order arrives.' : ''}
 

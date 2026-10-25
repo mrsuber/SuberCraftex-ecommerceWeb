@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { randomBytes } from 'crypto'
+import { openDrawer } from '@/lib/commerce/pos-cash'
+import { parseXafOrZero, toDecimal } from '@/lib/money'
 import { getCurrentUser } from '@/lib/session'
 
 /**
@@ -57,32 +60,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { openingBalance = 0 } = body
+    const body = await request.json().catch(() => ({}))
+    let float: bigint
+    try {
+      float = parseXafOrZero(body.openingBalance, 'opening cash')
+    } catch (error) {
+      return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+    }
 
-    // Generate session number
-    const sessionNumber = `POS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+    const sessionNumber = `POS-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`
 
-    // Create new session
-    const session = await db.pOSSession.create({
-      data: {
-        sessionNumber,
-        cashierId: cashier.id,
-        openingBalance,
-        expectedCash: openingBalance,
-        status: 'open'
-      },
-      include: {
-        cashier: {
-          select: {
-            fullName: true,
-            employeeId: true
+    // The float moves into the drawer in the ledger in the same transaction
+    const session = await db.$transaction(async (tx) => {
+      const created = await tx.pOSSession.create({
+        data: {
+          sessionNumber,
+          cashierId: cashier.id,
+          openingBalance: toDecimal(float),
+          expectedCash: toDecimal(float),
+          status: 'open'
+        },
+        include: {
+          cashier: {
+            select: {
+              fullName: true,
+              employeeId: true
+            }
           }
         }
-      }
+      })
+      await openDrawer(tx, created, float, user.id)
+      return created
     })
-
-    console.log(`📱 POS session opened: ${sessionNumber} by ${cashier.fullName}`)
 
     return NextResponse.json({
       success: true,

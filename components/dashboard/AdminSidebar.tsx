@@ -108,6 +108,11 @@ const adminNavigation = [
     icon: Users,
   },
   {
+    name: "Finance",
+    href: "/dashboard/finance",
+    icon: CreditCard,
+  },
+  {
     name: "Investors",
     href: "/dashboard/investors",
     icon: TrendingUp,

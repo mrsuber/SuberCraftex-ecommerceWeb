@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RepairStatusTracker } from "@/components/repair/RepairStatusTracker";
+import { RepairPayCard } from "@/components/repair/RepairPayCard";
 import {
   ArrowLeft,
   Phone,
@@ -296,6 +297,12 @@ export default async function CustomerRepairDetailPage({ params }: PageProps) {
               <Badge variant={repair.paymentStatus === "paid" ? "default" : "secondary"}>
                 {repair.paymentStatus}
               </Badge>
+              {/* Pay online once a quote is approved and something is left to pay */}
+              {totalQuote !== null &&
+                totalQuote - totalPaid >= 100 &&
+                !["pending", "received", "diagnosing", "diagnosed", "quote_sent", "quote_rejected", "cancelled"].includes(repair.status) && (
+                  <RepairPayCard repairId={repair.id} balance={totalQuote - totalPaid} phone={user.phone} />
+                )}
             </CardContent>
           </Card>
 
