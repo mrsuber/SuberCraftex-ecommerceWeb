@@ -36,6 +36,13 @@ export function registerCollectionHandler(purpose: CollectionPurpose, handler: C
   handlers.set(purpose, handler)
 }
 
+/** Handlers live in ./handlers (which imports this file), so they are loaded on first use. */
+async function ensureHandlers() {
+  if (handlers.size > 0) return
+  const { registerPaymentHandlers } = await import('./handlers')
+  registerPaymentHandlers()
+}
+
 function handlerFor(purpose: CollectionPurpose): CollectionHandler {
   const handler = handlers.get(purpose)
   if (!handler) throw new Error(`No payment handler for ${purpose}`)
@@ -63,6 +70,7 @@ const LATE_CHECK_HOURS = 24
 const MIN_CHECK_INTERVAL_MS = 4000
 
 export async function startCollection(input: StartCollectionInput): Promise<PaymentCollection> {
+  await ensureHandlers()
   if (input.amount < MIN_MOBILE_MONEY_AMOUNT) {
     throw new MoneyInputError(`Mobile Money payments start at ${MIN_MOBILE_MONEY_AMOUNT} FCFA`)
   }
@@ -128,6 +136,7 @@ export async function startCollection(input: StartCollectionInput): Promise<Paym
 
 /** Ask PayWithCAMSOL for the status and apply it. Safe to call from anywhere, any number of times. */
 export async function refreshCollection(reference: string, options: { force?: boolean } = {}): Promise<PaymentCollection> {
+  await ensureHandlers()
   const collection = await db.paymentCollection.findUnique({ where: { reference } })
   if (!collection) throw new CollectionError('Payment not found')
   const lateWindow =
@@ -175,6 +184,7 @@ async function maybeExpire(collection: PaymentCollection): Promise<PaymentCollec
  * is ever counted, and the ledger reference collection:<id> makes double counting impossible.
  */
 export async function applyResult(collectionId: string, result: CollectionResult): Promise<PaymentCollection> {
+  await ensureHandlers()
   let newlyPaid = false
   const applied = await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM payment_collections WHERE id = ${collectionId} FOR UPDATE`

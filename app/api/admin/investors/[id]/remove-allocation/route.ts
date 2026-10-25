@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { investorLedgerLive } from '@/lib/investors/live'
+import { closeLot, InvestorEngineError } from '@/lib/investors/lots'
 import { getSession } from '@/lib/auth/session'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -69,6 +71,20 @@ export async function POST(
         { error: `Cannot remove allocation: ${allocation.quantitySold} units have already been sold. Only allocations with no sales can be removed.` },
         { status: 400 }
       )
+    }
+
+    // With balances in the ledger, the lot is closed and its capital goes back to free capital.
+    // The allocation is kept (marked empty) so the history stays complete.
+    if (await investorLedgerLive()) {
+      const lot = await db.productLot.findUnique({ where: { allocationId } })
+      if (!lot) return NextResponse.json({ error: 'No lot found for this allocation' }, { status: 404 })
+      try {
+        await db.$transaction((tx) => closeLot(tx, lot.id, 'buy_back', user.id, 'Allocation removed by admin'))
+        return NextResponse.json({ success: true })
+      } catch (error) {
+        if (error instanceof InvestorEngineError) return NextResponse.json({ error: error.message }, { status: 400 })
+        throw error
+      }
     }
 
     // Remove allocation and restore inventory + cash in a transaction

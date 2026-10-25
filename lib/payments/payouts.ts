@@ -32,6 +32,13 @@ export function registerPayoutHandler(reason: PayoutReason, handler: PayoutHandl
   handlers.set(reason, handler)
 }
 
+/** Handlers live in ./handlers (which imports this file), so they are loaded on first use. */
+async function ensureHandlers() {
+  if (handlers.size > 0) return
+  const { registerPaymentHandlers } = await import('./handlers')
+  registerPaymentHandlers()
+}
+
 export async function payoutFee(amount: Xaf): Promise<Xaf> {
   const percent = await getSetting('payouts.feePercent')
   return percent > 0 ? percentCeil(amount, percent) : 0n
@@ -75,6 +82,7 @@ export interface RequestPayoutInput {
 
 /** Reserve the money and create the payout. Runs inside the caller's transaction. */
 export async function requestPayout(tx: Tx, input: RequestPayoutInput): Promise<Payout> {
+  await ensureHandlers()
   if (input.amount < MIN_MOBILE_MONEY_AMOUNT) {
     throw new MoneyInputError(`Mobile Money payouts start at ${MIN_MOBILE_MONEY_AMOUNT} FCFA`)
   }
@@ -114,6 +122,7 @@ export async function requestPayout(tx: Tx, input: RequestPayoutInput): Promise<
 
 /** An admin approves a payout after checking the PayWithCAMSOL live balance covers it. */
 export async function approvePayout(payoutId: string, admin: { id: string; email?: string | null }) {
+  await ensureHandlers()
   const claimed = await db.payout.updateMany({
     where: { id: payoutId, status: 'awaiting_approval' },
     data: { status: 'pending', approvedById: admin.id, approvedAt: new Date() },
@@ -124,6 +133,7 @@ export async function approvePayout(payoutId: string, admin: { id: string; email
 }
 
 export async function rejectPayout(payoutId: string, admin: { id: string; email?: string | null }, reason: string) {
+  await ensureHandlers()
   const payout = await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM payouts WHERE id = ${payoutId} FOR UPDATE`
     const current = await tx.payout.findUniqueOrThrow({ where: { id: payoutId } })
@@ -136,6 +146,7 @@ export async function rejectPayout(payoutId: string, admin: { id: string; email?
 
 /** Send an approved payout to PayWithCAMSOL. Safe to repeat: the payout id is the Idempotency-Key. */
 export async function sendPayout(payoutId: string): Promise<Payout> {
+  await ensureHandlers()
   const claimed = await db.payout.updateMany({
     where: { id: payoutId, status: 'pending' },
     data: { status: 'processing', lastCheckedAt: new Date() },
@@ -173,6 +184,7 @@ export async function sendPayout(payoutId: string): Promise<Payout> {
 
 /** Ask PayWithCAMSOL how a sent payout is doing. */
 export async function refreshPayout(payoutId: string): Promise<Payout> {
+  await ensureHandlers()
   const payout = await db.payout.findUniqueOrThrow({ where: { id: payoutId } })
   if (payout.status === 'pending') return sendPayout(payout.id)
   if (!['processing', 'review'].includes(payout.status) || !payout.camsolReference) return payout

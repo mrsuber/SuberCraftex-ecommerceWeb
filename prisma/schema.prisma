@@ -1700,9 +1700,23 @@ model Equipment {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  // Depreciation: straight line from depreciationStart over usefulLifeMonths down to residualValue
+  usefulLifeMonths  Int?      @map("useful_life_months")
+  residualValue     Decimal?  @map("residual_value") @db.Decimal(12, 2)
+  depreciationStart DateTime? @map("depreciation_start")
+  // Shared costs: electricity by power x hours, rent by floor area
+  powerKw           Decimal?  @map("power_kw") @db.Decimal(8, 3)
+  floorAreaM2       Decimal?  @map("floor_area_m2") @db.Decimal(8, 2)
+  // Losses not yet recovered by later profits (whole FCFA)
+  carriedLoss       BigInt    @default(0) @map("carried_loss")
+  // Ownership is counted in units: 1 000 000 units = the whole machine
+  totalUnits        BigInt    @default(1000000) @map("total_units")
+
   // Relations
   investorAllocations InvestorEquipmentAllocation[]
   jobUsages           EquipmentJobUsage[]
+  holdings            EquipmentHolding[]
+  periods             EquipmentPeriod[]
 
   @@index([equipmentNumber])
   @@index([status])
@@ -1800,6 +1814,8 @@ model EquipmentJobUsage {
   profitDistributed  Boolean @default(false) @map("profit_distributed")
 
   notes     String?
+  hoursUsed Decimal? @map("hours_used") @db.Decimal(8, 2) // for the electricity share
+  periodId  String?  @map("period_id") // the monthly close that counted it
   jobDate   DateTime @default(now()) @map("job_date")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -3263,4 +3279,197 @@ model DriverCashHandover {
 
   @@index([driverId, createdAt])
   @@map("driver_cash_handovers")
+}
+
+// ============================================================================
+// INVESTOR ENGINE: products in pools, machines in units, all money in the ledger
+// ============================================================================
+
+// Units of one product (or variant) funded or brought by one investor. All lots of the same
+// product form a pool: every sale is shared across them in proportion to what each still
+// holds, so nobody's stock waits while someone else's sells. Units are counted in
+// thousandths so a single item can be shared. SuberCraftex's own units are whatever stock
+// the investor lots do not cover.
+model ProductLot {
+  id                 String    @id @default(uuid())
+  productId          String    @map("product_id")
+  variantId          String?   @map("variant_id")
+  investorId         String    @map("investor_id")
+  unitsMilli         BigInt    @map("units_milli") // still held, in thousandths of a unit
+  originalUnitsMilli BigInt    @map("original_units_milli")
+  unitCost           BigInt    @map("unit_cost") // capital per unit, whole FCFA
+  source             String // funded (money moved from free capital), in_kind (investor brought goods), migrated
+  status             String    @default("active") // proposed (in kind, waiting for the investor), active, closed, collected, bought_back
+  allocationId       String?   @unique @map("allocation_id") // the old InvestorProductAllocation it continues
+  agreementVersion   Int?      @map("agreement_version")
+  proposedValueNote  String?   @map("proposed_value_note")
+  acceptedAt         DateTime? @map("accepted_at") // investor accepted an in-kind valuation
+  createdById        String?   @map("created_by_id")
+  closedAt           DateTime? @map("closed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  sales LotSale[]
+
+  @@index([productId, variantId, status])
+  @@index([investorId])
+  @@map("product_lots")
+}
+
+// One lot's share of one sold order line
+model LotSale {
+  id              String    @id @default(uuid())
+  lotId           String    @map("lot_id")
+  orderId         String    @map("order_id")
+  orderItemId     String    @map("order_item_id")
+  investorId      String    @map("investor_id")
+  unitsMilli      BigInt    @map("units_milli")
+  revenue         BigInt
+  cost            BigInt
+  profit          BigInt // negative when sold below cost
+  investorShare   BigInt    @map("investor_share") // half the profit, or half the loss (negative)
+  capitalReturned BigInt    @map("capital_returned")
+  status          String    @default("pending") // pending (in the holding period), available, returned
+  availableAt     DateTime  @map("available_at")
+  releasedAt      DateTime? @map("released_at")
+  returnedAt      DateTime? @map("returned_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  lot ProductLot @relation(fields: [lotId], references: [id])
+
+  @@unique([lotId, orderItemId])
+  @@index([orderId])
+  @@index([investorId])
+  @@index([status, availableAt])
+  @@map("lot_sales")
+}
+
+// Who owns how much of a machine, in units (the machine has totalUnits, 1 000 000).
+// SuberCraftex is a co-owner for the part it paid for (holderType company).
+model EquipmentHolding {
+  id                 String    @id @default(uuid())
+  equipmentId        String    @map("equipment_id")
+  holderType         String    @map("holder_type") // investor or company
+  investorId         String?   @map("investor_id")
+  units              BigInt
+  costBasis          BigInt    @map("cost_basis") // what this holder paid for these units
+  status             String    @default("active") // active, exited
+  legacyAllocationId String?   @unique @map("legacy_allocation_id")
+  agreementVersion   Int?      @map("agreement_version")
+  acquiredAt         DateTime  @default(now()) @map("acquired_at")
+  exitedAt           DateTime? @map("exited_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@index([equipmentId, status])
+  @@index([investorId])
+  @@map("equipment_holdings")
+}
+
+// A machine's monthly statement: income, costs, depreciation, losses and who got what
+model EquipmentPeriod {
+  id             String   @id @default(uuid())
+  equipmentId    String   @map("equipment_id")
+  periodStart    DateTime @map("period_start")
+  periodEnd      DateTime @map("period_end")
+  revenue        BigInt
+  directCosts    BigInt   @map("direct_costs")
+  electricity    BigInt
+  rent           BigInt
+  depreciation   BigInt
+  profit         BigInt // after all costs and depreciation; negative for a loss
+  lossBroughtIn  BigInt   @map("loss_brought_in")
+  lossRecovered  BigInt   @map("loss_recovered")
+  lossCarriedOut BigInt   @map("loss_carried_out")
+  distributable  BigInt
+  companyShare   BigInt   @map("company_share")
+  investorPool   BigInt   @map("investor_pool")
+  details        Json     @default("{}") // per holder: units, profit, reserve
+  closedById     String?  @map("closed_by_id")
+  closedAt       DateTime @default(now()) @map("closed_at")
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@unique([equipmentId, periodStart])
+  @@map("equipment_periods")
+}
+
+// The month's electricity bill and workshop rent, shared across machines
+model SharedCost {
+  id          String   @id @default(uuid())
+  kind        String // electricity or rent
+  periodStart DateTime @map("period_start")
+  amount      BigInt
+  totalKwh    Decimal? @map("total_kwh") @db.Decimal(12, 2) // units on the electricity bill
+  totalAreaM2 Decimal? @map("total_area_m2") @db.Decimal(10, 2) // whole rented area
+  notes       String?
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([kind, periodStart])
+  @@map("shared_costs")
+}
+
+// The investor agreement, word for word, in every version ever published
+model InvestorAgreementVersion {
+  id          String   @id @default(uuid())
+  version     Int      @unique
+  title       String
+  bodyEn      String   @map("body_en") @db.Text
+  bodyFr      String   @map("body_fr") @db.Text
+  risksEn     String   @map("risks_en") @db.Text
+  risksFr     String   @map("risks_fr") @db.Text
+  rules       Json // the settings in force when it was published (profit split, notice, ...)
+  publishedAt DateTime @default(now()) @map("published_at")
+  createdById String?  @map("created_by_id")
+
+  acceptances InvestorAgreementAcceptance[]
+
+  @@map("investor_agreement_versions")
+}
+
+model InvestorAgreementAcceptance {
+  id                String   @id @default(uuid())
+  investorId        String   @map("investor_id")
+  versionId         String   @map("version_id")
+  typedName         String   @map("typed_name")
+  risksAcknowledged Json     @map("risks_acknowledged") // each risk ticked, as shown
+  language          String   @default("en")
+  ip                String?
+  userAgent         String?  @map("user_agent")
+  acceptedAt        DateTime @default(now()) @map("accepted_at")
+
+  version InvestorAgreementVersion @relation(fields: [versionId], references: [id])
+
+  @@unique([investorId, versionId])
+  @@index([investorId])
+  @@map("investor_agreement_acceptances")
+}
+
+// An investor leaving a product lot or a machine share
+model InvestorExit {
+  id              String    @id @default(uuid())
+  investorId      String    @map("investor_id")
+  kind            String // product or machine
+  lotId           String?   @map("lot_id")
+  holdingId       String?   @map("holding_id")
+  status          String    @default("requested") // requested, offered, agreed, completed, cancelled
+  option          String? // product: buy_back, sell, collect. machine: co_owner, company, sell
+  noticeEndsAt    DateTime  @map("notice_ends_at")
+  valuation       BigInt? // what the share is worth (book value + reserve, or appraisal)
+  valuationMethod String?   @map("valuation_method") // book_value or appraisal
+  price           BigInt? // agreed price
+  buyerInvestorId String?   @map("buyer_investor_id")
+  instalments     Int       @default(1)
+  notes           String?
+  requestedAt     DateTime  @default(now()) @map("requested_at")
+  completedAt     DateTime? @map("completed_at")
+  handledById     String?   @map("handled_by_id")
+
+  @@index([investorId])
+  @@index([status])
+  @@map("investor_exits")
 }

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { investorLedgerLive } from '@/lib/investors/live'
+import { debitManualWithdrawal } from '@/lib/investors/funds'
+import { toXaf } from '@/lib/money'
 
 class WithdrawalConfirmError extends Error {}
 import { getSession } from '@/lib/auth/session'
@@ -86,7 +89,10 @@ export async function POST(
         })
         if (claimed.count !== 1) throw new WithdrawalConfirmError('This withdrawal was already confirmed')
 
-        if (withdrawal.type === 'cash') {
+        if ((withdrawal.type === 'cash' || withdrawal.type === 'profit') && (await investorLedgerLive(tx))) {
+          await debitManualWithdrawal(tx, withdrawal, toXaf(finalAmount), user.id)
+          updatedInvestor = await tx.investor.findUniqueOrThrow({ where: { id: withdrawal.investorId } })
+        } else if (withdrawal.type === 'cash') {
           // Deduct from cash balance
           updatedInvestor = await tx.investor.update({
             where: { id: withdrawal.investorId },

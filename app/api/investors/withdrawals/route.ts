@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { investorLedgerLive } from '@/lib/investors/live'
+import { requestWithdrawal } from '@/lib/investors/funds'
+import { requestExit } from '@/lib/investors/exits'
+import { InvestorEngineError } from '@/lib/investors/lots'
+import { MoneyInputError, parseXaf } from '@/lib/money'
 import { getSession } from '@/lib/auth/session'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -222,6 +227,60 @@ export async function POST(request: NextRequest) {
 
     // Generate withdrawal request number
     const year = new Date().getFullYear()
+    // With balances in the ledger: money goes out by Mobile Money as a payout; products and
+    // machine shares are left through an exit request (notice, valuation, buyer)
+    if (await investorLedgerLive()) {
+      try {
+        if (type === 'cash' || type === 'profit') {
+          const { request: withdrawal, quote } = await requestWithdrawal({
+            investorId: investor.id,
+            userId: user.id,
+            from: type,
+            amount: parseXaf(amount),
+            phone: momoNumber,
+            name: momoName,
+            reason: requestReason,
+          })
+          return NextResponse.json(
+            {
+              id: withdrawal.id,
+              request_number: withdrawal.requestNumber,
+              type: withdrawal.type,
+              status: withdrawal.status,
+              amount: withdrawal.amount.toString(),
+              fee: Number(quote.fee),
+              total_from_account: Number(quote.fromWallet),
+              momo_number: withdrawal.momoNumber,
+              requested_at: withdrawal.requestedAt.toISOString(),
+            },
+            { status: 201 }
+          )
+        }
+        const lot = type === 'product'
+          ? await db.productLot.findFirst({ where: { investorId: investor.id, productId, variantId: variantId || null, status: 'active' } })
+          : null
+        const holding = type === 'equipment_share'
+          ? await db.equipmentHolding.findFirst({ where: { investorId: investor.id, equipmentId, status: 'active' } })
+          : null
+        const exit = await requestExit({
+          investorId: investor.id,
+          kind: type === 'product' ? 'product' : 'machine',
+          lotId: lot?.id,
+          holdingId: holding?.id,
+          notes: requestReason || investorNotes || null,
+        })
+        return NextResponse.json(
+          { id: exit.id, type, status: exit.status, valuation: Number(exit.valuation ?? 0), notice_ends_at: exit.noticeEndsAt.toISOString() },
+          { status: 201 }
+        )
+      } catch (error) {
+        if (error instanceof InvestorEngineError || error instanceof MoneyInputError) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+        throw error
+      }
+    }
+
     const count = await db.withdrawalRequest.count()
     const requestNumber = `WDR-${year}-${String(count + 1).padStart(4, '0')}`
 

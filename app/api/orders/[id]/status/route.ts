@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/api-auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
-import { completeOrder } from '@/lib/commerce/fulfilment';
+import { cancelOrRefundOrder, completeOrder } from '@/lib/commerce/fulfilment';
 
 const statusUpdateSchema = z.object({
   orderStatus: z.enum(['pending', 'paid', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'refunded']),
@@ -90,51 +90,21 @@ export async function PATCH(
       updateData.adminNotes = notes;
     }
 
-    // If cancelling, release inventory in a transaction
-    if (orderStatus === 'cancelled' && existingOrder.orderStatus !== 'cancelled') {
-      const updatedOrder = await db.$transaction(async (tx) => {
-        const order = await tx.order.update({
-          where: { id },
-          data: updateData,
-        });
-
-        // Release inventory for each order item
-        for (const item of existingOrder.orderItems) {
-          const updatedProduct = await tx.product.update({
-            where: { id: item.productId },
-            data: { inventoryCount: { increment: item.quantity } },
-          });
-
-          if (item.variantId) {
-            await tx.productVariant.update({
-              where: { id: item.variantId },
-              data: { inventoryCount: { increment: item.quantity } },
-            });
-          }
-
-          await tx.inventoryLog.create({
-            data: {
-              productId: item.productId,
-              variantId: item.variantId,
-              action: 'released',
-              quantityChange: item.quantity,
-              quantityAfter: updatedProduct.inventoryCount,
-              orderId: id,
-              userId: user.id,
-              notes: `Released from cancelled order ${existingOrder.orderNumber}`,
-            },
-          });
-        }
-
-        return order;
-      });
-
-      console.log(`✅ Order ${existingOrder.orderNumber} cancelled and inventory released by ${user.email}`);
-
-      return NextResponse.json({
-        success: true,
-        order: updatedOrder,
-      });
+    // Cancelling or refunding: stock back, money paid owed to the customer, investors' share undone
+    if ((orderStatus === 'cancelled' || orderStatus === 'refunded') && existingOrder.orderStatus !== orderStatus) {
+      try {
+        const updatedOrder = await db.$transaction((tx) =>
+          cancelOrRefundOrder(tx, id, {
+            mode: orderStatus === 'refunded' ? 'refund' : 'cancel',
+            actorId: user.id,
+            reason: notes ?? null,
+          })
+        );
+        console.log(`✅ Order ${existingOrder.orderNumber} ${orderStatus} by ${user.email}`);
+        return NextResponse.json({ success: true, order: updatedOrder });
+      } catch (error) {
+        return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+      }
     }
 
     // If delivering, process investor profit distribution in a transaction

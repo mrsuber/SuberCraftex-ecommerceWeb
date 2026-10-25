@@ -32,6 +32,15 @@ export async function POST(
       )
     }
 
+    // Withdrawals sent by Mobile Money are approved on Finance > Payouts to send
+    const payout = await db.payout.findFirst({ where: { relatedId: withdrawal.id, reason: 'investor_withdrawal' } })
+    if (payout) {
+      return NextResponse.json(
+        { error: 'This withdrawal is paid by Mobile Money. Send or reject it on Finance > Payouts to send.' },
+        { status: 400 }
+      )
+    }
+
     // Allow processing pending, approved, and disputed withdrawals
     if (!['pending', 'approved', 'disputed'].includes(withdrawal.status)) {
       return NextResponse.json(

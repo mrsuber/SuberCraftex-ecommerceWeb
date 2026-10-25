@@ -3,7 +3,9 @@ import { Accounts, credit, Tx } from '@/lib/ledger'
 import { cancelUnpaidOrder, handleLateOrderPayment, lockOrder, markOrderPaid, orderSaleCredits } from '@/lib/commerce/order-payments'
 import { sendOrderConfirmation } from '@/lib/commerce/order-emails'
 import { recordBookingPayment, recordRepairPayment } from '@/lib/services/booking-payments'
+import { creditDeposit, depositCredits, onWithdrawalPaid, onWithdrawalReturned } from '@/lib/investors/funds'
 import { registerCollectionHandler } from './collections'
+import { registerPayoutHandler } from './payouts'
 
 /**
  * What each kind of Mobile Money payment does once it is paid, failed or expired.
@@ -77,5 +79,19 @@ export function registerPaymentHandlers() {
         reference: c.providerReference,
       })
     },
+  })
+
+  registerCollectionHandler('investor_deposit', {
+    async credits(_tx, c) {
+      return depositCredits(c)
+    },
+    async onPaid(tx, c) {
+      await creditDeposit(tx, c)
+    },
+  })
+
+  registerPayoutHandler('investor_withdrawal', {
+    onSucceeded: onWithdrawalPaid,
+    onReturned: onWithdrawalReturned,
   })
 }

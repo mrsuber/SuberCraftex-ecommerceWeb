@@ -1,5 +1,7 @@
 import { Decimal } from '@prisma/client/runtime/library'
 import { Tx } from '@/lib/ledger'
+import { investorLedgerLive } from './live'
+import { distributeOrderPooled } from './lots'
 
 export interface SaleDistribution {
   investorId: string
@@ -12,10 +14,26 @@ export interface SaleDistribution {
 
 /**
  * Share the profit of a delivered order with the investors who funded its products.
- * (Moved unchanged from the order status route; replaced by the pooled engine in the
- * investor update.)
+ * Once investor balances are in the ledger, the pooled engine does it (lots.ts); before
+ * that, the original first-in-first-out logic below keeps running unchanged.
  */
 export async function distributeOrderToInvestors(tx: Tx, orderId: string, actorId: string | null): Promise<SaleDistribution[]> {
+  if (await investorLedgerLive(tx)) {
+    const pooled = await distributeOrderPooled(tx, orderId, actorId)
+    const names = await tx.investor.findMany({ where: { id: { in: pooled.map((p) => p.investorId) } }, select: { id: true, fullName: true } })
+    return pooled.map((p) => ({
+      investorId: p.investorId,
+      investorName: names.find((n) => n.id === p.investorId)?.fullName ?? '',
+      product: p.product,
+      quantity: p.units,
+      capitalReturned: String(p.capitalReturned),
+      profitShare: String(p.investorShare),
+    }))
+  }
+  return legacyDistribution(tx, orderId, actorId)
+}
+
+async function legacyDistribution(tx: Tx, orderId: string, actorId: string | null): Promise<SaleDistribution[]> {
   const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { orderItems: true } })
   const distributions: SaleDistribution[] = []
   for (const item of order.orderItems) {

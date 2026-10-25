@@ -66,7 +66,7 @@ export async function post(tx: Tx, request: PostRequest): Promise<{ id: string; 
   const inserted = await tx.$executeRaw`
     INSERT INTO ledger_transactions (id, reference, type, description, metadata, created_by_id, occurred_at, created_at)
     VALUES (${id}, ${request.reference}, ${request.type}, ${request.description},
-            ${JSON.stringify(request.metadata ?? {})}::jsonb, ${request.createdById ?? null},
+            ${JSON.stringify(request.metadata ?? {}, (_k, v) => (typeof v === 'bigint' ? Number(v) : v))}::jsonb, ${request.createdById ?? null},
             ${request.occurredAt ?? new Date()}, now())
     ON CONFLICT (reference) DO NOTHING`
   if (inserted === 0) {

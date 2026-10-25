@@ -48,3 +48,60 @@ export async function completeOrder(tx: Tx, orderId: string, options: CompleteOr
   const distributions = await distributeOrderToInvestors(tx, order.id, options.actorId)
   return { order: delivered, distributions, already: false }
 }
+
+/**
+ * Cancel an order, or refund one already delivered. Stock goes back on sale, money already
+ * paid becomes the customer's store credit (a refund owed for guests, paid out from the
+ * finance page), and for a delivered order the investors' share of the sale is undone.
+ */
+export async function cancelOrRefundOrder(
+  tx: Tx,
+  orderId: string,
+  options: { mode: 'cancel' | 'refund'; actorId: string | null; reason?: string | null }
+) {
+  const order = await lockOrder(tx, orderId)
+  if (order.orderStatus === 'cancelled' || order.orderStatus === 'refunded') return order
+  if (options.mode === 'cancel' && order.orderStatus === 'delivered') {
+    throw new Error('A delivered order is refunded, not cancelled')
+  }
+  const items = await tx.orderItem.findMany({ where: { orderId } })
+
+  if (order.orderStatus === 'delivered') {
+    const { returnOrderSales } = await import('@/lib/investors/lots')
+    const { investorLedgerLive } = await import('@/lib/investors/live')
+    if (await investorLedgerLive(tx)) await returnOrderSales(tx, orderId, options.actorId)
+  }
+
+  const { releaseStock } = await import('./pricing')
+  await releaseStock(tx, items, {
+    orderId,
+    userId: options.actorId,
+    notes: `${options.mode === 'refund' ? 'Returned' : 'Released'}: order ${order.orderNumber} ${options.mode === 'refund' ? 'refunded' : 'cancelled'}`,
+  })
+
+  if (order.paymentStatus === 'paid') {
+    const { Accounts, post } = await import('@/lib/ledger')
+    const { orderSaleCredits } = await import('./order-payments')
+    const { toXaf } = await import('@/lib/money')
+    const owed = order.userId ? Accounts.customerCredit(order.userId) : Accounts.refundDue(order.id)
+    const total = toXaf(order.totalAmount)
+    await post(tx, {
+      type: 'order_refunded',
+      reference: `order_refund:${order.id}`,
+      description: `Order ${order.orderNumber} ${options.mode === 'refund' ? 'refunded' : 'cancelled after payment'}: money owed to the customer`,
+      createdById: options.actorId,
+      metadata: { reason: options.reason },
+      postings: [...orderSaleCredits(order).map((p) => ({ ...p, amount: -p.amount })), { account: owed, amount: -total }],
+    })
+  }
+
+  return tx.order.update({
+    where: { id: orderId },
+    data: {
+      orderStatus: options.mode === 'refund' ? 'refunded' : 'cancelled',
+      paymentStatus: order.paymentStatus === 'paid' ? 'refunded' : order.paymentStatus,
+      cancelledAt: new Date(),
+      adminNotes: options.reason ? `${order.adminNotes ? `${order.adminNotes}\n` : ''}${options.reason}` : order.adminNotes,
+    },
+  })
+}

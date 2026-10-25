@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { investorLedgerLive } from '@/lib/investors/live'
+import { InvestorEngineError } from '@/lib/investors/lots'
+import { InsufficientFundsError } from '@/lib/ledger'
+import { MoneyInputError, parseXaf } from '@/lib/money'
+import { buyIntoMachine } from '@/lib/investors/machines'
 import { getSession } from '@/lib/auth/session'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -42,6 +47,20 @@ export async function POST(
         { error: 'Missing required fields: equipmentId, amountAllocated' },
         { status: 400 }
       )
+    }
+
+    // With balances in the ledger: free capital buys units of the machine
+    if (await investorLedgerLive()) {
+      try {
+        const holding = await db.$transaction((tx) =>
+          buyIntoMachine(tx, { investorId: investor.id, equipmentId, amount: parseXaf(amountAllocated), actorId: user.id })
+        )
+        return NextResponse.json({ holding: { ...holding, units: Number(holding.units), costBasis: Number(holding.costBasis) } }, { status: 201 })
+      } catch (error) {
+        if (error instanceof InvestorEngineError || error instanceof MoneyInputError) return NextResponse.json({ error: error.message }, { status: 400 })
+        if (error instanceof InsufficientFundsError) return NextResponse.json({ error: 'Not enough free capital' }, { status: 400 })
+        throw error
+      }
     }
 
     const amount = new Decimal(amountAllocated)

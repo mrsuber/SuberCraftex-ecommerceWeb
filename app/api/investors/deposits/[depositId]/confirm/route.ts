@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { investorLedgerLive } from '@/lib/investors/live'
+import { creditManualDeposit } from '@/lib/investors/funds'
 import { getSession } from '@/lib/auth/session'
 
 // POST /api/investors/deposits/[depositId]/confirm - Investor confirms or disputes a deposit
@@ -73,6 +75,22 @@ export async function POST(
         { error: 'Invalid action. Must be "confirm" or "dispute", or use confirmed: true/false' },
         { status: 400 }
       )
+    }
+
+    if (normalizedAction === 'confirm' && (await investorLedgerLive())) {
+      const updated = await db.$transaction(async (tx) => {
+        const claimed = await tx.investorDeposit.updateMany({
+          where: { id: depositId, confirmationStatus: 'pending_confirmation' },
+          data: { confirmationStatus: 'confirmed', confirmedAt: new Date(), investorNotes: normalizedNotes || null },
+        })
+        if (claimed.count !== 1) throw new Error('This deposit was already confirmed')
+        await creditManualDeposit(tx, deposit, user.id)
+        return tx.investorDeposit.findUniqueOrThrow({ where: { id: depositId } })
+      })
+      return NextResponse.json({
+        message: 'Deposit confirmed successfully. Funds have been added to your balance.',
+        deposit: updated,
+      })
     }
 
     if (normalizedAction === 'confirm') {

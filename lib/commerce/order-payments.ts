@@ -70,6 +70,12 @@ export async function markOrderPaid(tx: Tx, orderId: string, options: MarkPaidOp
   }
   const paid = await tx.order.update({ where: { id: order.id }, data })
 
+  // A till sale is handed over at once: share it with the investors whose stock it sold
+  if (order.isPosOrder) {
+    const { distributeOrderToInvestors } = await import('@/lib/investors/sales')
+    await distributeOrderToInvestors(tx, order.id, options.actorId ?? null)
+  }
+
   if (order.isPosOrder && order.posSession) {
     const amount = toDecimal(total)
     const zero = toDecimal(0n)

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { investorLedgerLive } from '@/lib/investors/live'
+import { InvestorEngineError } from '@/lib/investors/lots'
+import { InsufficientFundsError } from '@/lib/ledger'
+import { MoneyInputError, parseXaf } from '@/lib/money'
+import { fundLot } from '@/lib/investors/lots'
 import { getSession } from '@/lib/auth/session'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -55,6 +60,20 @@ export async function POST(
         { error: 'Quantity must be a positive integer' },
         { status: 400 }
       )
+    }
+
+    // With balances in the ledger: free capital moves into a lot of this product's pool
+    if (await investorLedgerLive()) {
+      try {
+        const lot = await db.$transaction((tx) =>
+          fundLot(tx, { investorId: investor.id, productId, variantId: variantId || null, quantity, unitCost: parseXaf(purchasePriceRaw, 'cost per unit'), actorId: user.id })
+        )
+        return NextResponse.json({ lot: { ...lot, unitsMilli: Number(lot.unitsMilli), originalUnitsMilli: Number(lot.originalUnitsMilli), unitCost: Number(lot.unitCost) } }, { status: 201 })
+      } catch (error) {
+        if (error instanceof InvestorEngineError || error instanceof MoneyInputError) return NextResponse.json({ error: error.message }, { status: 400 })
+        if (error instanceof InsufficientFundsError) return NextResponse.json({ error: 'Not enough free capital' }, { status: 400 })
+        throw error
+      }
     }
 
     const totalInvestment = purchasePrice.mul(quantity)

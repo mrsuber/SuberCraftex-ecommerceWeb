@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { investorLedgerLive } from '@/lib/investors/live'
 import { getSession } from '@/lib/auth/session'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -49,6 +50,8 @@ export async function POST(
       maintenanceCost = 0,
       taxCost = 0,
       otherExpenses = 0,
+      hoursUsed,
+      jobDate,
       notes,
     } = body
 
@@ -67,6 +70,39 @@ export async function POST(
       .add(otherExpenses)
 
     const netProfit = new Decimal(revenue).sub(totalExpenses)
+
+    // With balances in the ledger, a job is only recorded here: its income and costs are
+    // shared when the machine's month is closed, together with electricity, rent,
+    // depreciation and any loss carried. Jobs that lose money are recorded too.
+    if (await investorLedgerLive()) {
+      const hours = hoursUsed === undefined || hoursUsed === null || hoursUsed === '' ? null : Number(hoursUsed)
+      if (hours !== null && (!Number.isFinite(hours) || hours < 0 || hours > 744)) {
+        return NextResponse.json({ error: 'Hours used must be between 0 and 744' }, { status: 400 })
+      }
+      const job = await db.equipmentJobUsage.create({
+        data: {
+          equipmentId,
+          orderId: orderId || null,
+          bookingId: bookingId || null,
+          jobDescription,
+          revenue,
+          materialCost: materialCost || 0,
+          laborCost: laborCost || 0,
+          maintenanceCost,
+          taxCost,
+          otherExpenses,
+          totalExpenses,
+          netProfit,
+          companyProfit: 0,
+          investorPoolProfit: 0,
+          profitDistributed: false,
+          hoursUsed: hours,
+          jobDate: jobDate ? new Date(jobDate) : new Date(),
+          notes: notes || null,
+        },
+      })
+      return NextResponse.json({ job, distributions: [], note: 'Shared when the month is closed' }, { status: 201 })
+    }
 
     if (netProfit.lte(0)) {
       return NextResponse.json(
