@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAdmin } from '@/lib/auth/api-auth';
 import { db } from '@/lib/db';
+import { isSuperAdmin } from '@/lib/auth/session';
 import { z } from 'zod';
 
 const roleSchema = z.object({
@@ -31,6 +32,17 @@ export async function PATCH(
 
     if (!existingUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Making or unmaking an admin is a super admin decision
+    if ((role === 'admin' || existingUser.role === 'admin') && !isSuperAdmin(admin)) {
+      return NextResponse.json(
+        { error: 'Only a super admin can give or remove the admin role' },
+        { status: 403 }
+      );
+    }
+    if (existingUser.id === admin.id) {
+      return NextResponse.json({ error: 'You cannot change your own role' }, { status: 400 });
     }
 
     // Update user role and create associated profiles if needed

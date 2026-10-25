@@ -7,22 +7,22 @@ export const shippingAddressSchema = z.object({
   addressLine1: z.string().min(5, "Address is required"),
   addressLine2: z.string().optional(),
   city: z.string().min(2, "City is required"),
-  state: z.string().min(2, "State is required"),
-  postalCode: z.string().min(5, "Postal code is required"),
+  state: z.string().min(2, "Region is required"),
+  // Cameroon has no postal codes
+  postalCode: z.string().optional(),
   country: z.string().min(2, "Country is required"),
 });
 
 export const shippingMethodSchema = z.object({
-  method: z.enum(["standard", "express", "overnight"], {
+  method: z.enum(["in_store", "standard", "express", "overnight"], {
     required_error: "Please select a shipping method",
   }),
 });
 
 export const paymentMethodSchema = z.object({
-  method: z.enum(["card", "cash"], {
+  method: z.enum(["mobile_payment", "cash"], {
     required_error: "Please select a payment method",
   }),
-  saveCard: z.boolean().optional(),
 });
 
 export type ShippingAddress = z.infer<typeof shippingAddressSchema>;

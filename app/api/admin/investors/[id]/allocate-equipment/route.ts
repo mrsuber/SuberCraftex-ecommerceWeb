@@ -76,6 +76,15 @@ export async function POST(
       new Decimal(0)
     ).add(amount)
 
+    // A machine can never be funded past its price
+    if (totalAllocated.gt(equipment.purchasePrice)) {
+      const remaining = new Decimal(equipment.purchasePrice).sub(totalAllocated.sub(amount))
+      return NextResponse.json(
+        { error: `This machine is already funded up to ${totalAllocated.sub(amount).toString()} FCFA. At most ${remaining.toString()} FCFA more can be invested.` },
+        { status: 400 }
+      )
+    }
+
     // Calculate investment percentage
     const investmentPercentage = amount.div(equipment.purchasePrice).mul(100)
     const profitShare = investmentPercentage // Profit share matches investment percentage

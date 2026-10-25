@@ -12,7 +12,9 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -20,7 +22,6 @@
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "6.19.1",
-    "@stripe/stripe-js": "^5.1.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/postcss": "^4.1.18",
@@ -54,7 +55,6 @@
     "recharts": "^2.15.4",
     "sharp": "^0.33.5",
     "sonner": "^1.7.3",
-    "stripe": "^17.4.0",
     "tailwind-merge": "^2.6.0",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"
@@ -91,6 +91,7 @@
     "prettier": "^3.4.2",
     "tailwindcss": "^4.1.17",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { db } from '@/lib/db'
+import { MB, saveUpload, UploadError } from '@/lib/uploads'
 
 // POST /api/admin/investors/upload-receipt - Upload deposit receipt
 export async function POST(request: NextRequest) {
@@ -16,10 +16,10 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData()
-    const file = formData.get('file') as File
+    const file = formData.get('file')
     const investorId = formData.get('investorId') as string
 
-    if (!file) {
+    if (!(file instanceof File)) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
@@ -27,50 +27,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Investor ID is required' }, { status: 400 })
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file format. Only JPEG, PNG, WebP, and PDF are allowed.' },
-        { status: 400 }
-      )
+    const investor = await db.investor.findUnique({ where: { id: investorId }, select: { id: true } })
+    if (!investor) {
+      return NextResponse.json({ error: 'Investor not found' }, { status: 404 })
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: 'File too large. Maximum size is 10MB.' },
-        { status: 400 }
-      )
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now()
-    const extension = file.name.split('.').pop() || (file.type === 'application/pdf' ? 'pdf' : 'jpg')
-    const filename = `receipt_${timestamp}.${extension}`
-
-    // Create upload directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'receipts', investorId)
-    await mkdir(uploadDir, { recursive: true })
-
-    // Convert file to buffer and save locally
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const filePath = path.join(uploadDir, filename)
-
-    await writeFile(filePath, buffer)
-
-    // Generate public URL - use /api/uploads route to serve dynamically uploaded files
-    const publicUrl = `/api/uploads/receipts/${investorId}/${filename}`
-
-    console.log(`✅ Receipt uploaded: ${publicUrl}`)
+    // Receipts are private: only this investor and admins can open them
+    const saved = await saveUpload(file, {
+      folder: ['receipts', investor.id],
+      allowed: ['image', 'pdf'],
+      maxBytes: 10 * MB,
+      private: true,
+      prefix: 'receipt',
+    })
+    const publicUrl = saved.url
+    const filename = saved.filename
 
     return NextResponse.json({
       url: publicUrl,
       filename: filename,
     })
   } catch (error) {
+    if (error instanceof UploadError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('Error uploading receipt:', error)
     return NextResponse.json(
       { error: 'Failed to upload receipt' },

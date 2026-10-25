@@ -2,14 +2,25 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/auth/password'
 import { generateToken, setAuthCookie } from '@/lib/auth/jwt'
+import { clientIp, rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { email, password } = body
 
+    // Slow down password guessing: per address and per account
+    const ip = clientIp(request)
+    if (!rateLimit(`login:ip:${ip}`, 30, 15 * 60 * 1000) ||
+        (typeof email === 'string' && !rateLimit(`login:email:${email.toLowerCase()}`, 10, 15 * 60 * 1000))) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please wait 15 minutes and try again.' },
+        { status: 429 }
+      )
+    }
+
     // Validate input
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -35,6 +46,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
+      )
+    }
+
+    if (user.isSuspended) {
+      return NextResponse.json(
+        { error: 'This account has been suspended. Please contact SuberCraftex.', suspended: true },
+        { status: 403 }
       )
     }
 

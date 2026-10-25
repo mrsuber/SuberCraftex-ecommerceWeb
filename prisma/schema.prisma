@@ -36,6 +36,12 @@ model User {
   avatarUrl       String?   @map("avatar_url")
   emailVerified   Boolean   @default(false) @map("email_verified")
   emailVerifiedAt DateTime? @map("email_verified_at")
+  // Suspended users cannot log in, and their existing sessions stop working
+  isSuspended     Boolean   @default(false) @map("is_suspended")
+  suspendedAt     DateTime? @map("suspended_at")
+  suspendedReason String?   @map("suspended_reason")
+  // Super admins (admin role plus this flag) manage payment keys and money settings
+  isSuperAdmin    Boolean   @default(false) @map("is_super_admin")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

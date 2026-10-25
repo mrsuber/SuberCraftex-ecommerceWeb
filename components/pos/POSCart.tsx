@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
-import { Trash2, Minus, Plus, ShoppingCart, CreditCard, Smartphone, Printer } from 'lucide-react'
+import { Trash2, Minus, Plus, ShoppingCart, Smartphone, Printer } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 
 interface CartItem {
@@ -36,20 +36,19 @@ export default function POSCart({
   onOrderComplete,
 }: POSCartProps) {
   const [showCheckout, setShowCheckout] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile_payment'>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mobile_payment'>('cash')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
   const [amountTendered, setAmountTendered] = useState('')
-  const [taxRate, setTaxRate] = useState('10')
   const [discountAmount, setDiscountAmount] = useState('0')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const discount = parseFloat(discountAmount) || 0
-  const tax = (subtotal - discount) * (parseFloat(taxRate) / 100)
-  const total = subtotal - discount + tax
+  const discount = Math.max(0, Math.round(Number(discountAmount) || 0))
+  // Catalogue prices already include any VAT; the server prices the order the same way
+  const total = subtotal - discount
   const change = amountTendered ? parseFloat(amountTendered) - total : 0
 
   const handleCheckout = async () => {
@@ -78,14 +77,12 @@ export default function POSCart({
             productId: item.productId,
             variantId: item.variantId,
             quantity: item.quantity,
-            price: item.price,
           })),
           paymentMethod,
           amountTendered: paymentMethod === 'cash' ? parseFloat(amountTendered) : null,
           customerName: customerName || undefined,
           customerEmail: customerEmail || undefined,
           customerPhone: customerPhone || undefined,
-          taxRate: parseFloat(taxRate),
           discountAmount: discount,
         }),
       })
@@ -145,7 +142,7 @@ export default function POSCart({
           {/* Payment Method */}
           <div>
             <Label>Payment Method</Label>
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-2 gap-2 mt-2">
               <Button
                 type="button"
                 variant={paymentMethod === 'cash' ? 'default' : 'outline'}
@@ -154,15 +151,6 @@ export default function POSCart({
               >
                 <ShoppingCart className="w-5 h-5 mb-1" />
                 <span className="text-xs">Cash</span>
-              </Button>
-              <Button
-                type="button"
-                variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                onClick={() => setPaymentMethod('card')}
-                className="flex flex-col h-auto py-3"
-              >
-                <CreditCard className="w-5 h-5 mb-1" />
-                <span className="text-xs">Card</span>
               </Button>
               <Button
                 type="button"
@@ -208,24 +196,15 @@ export default function POSCart({
             </div>
           </div>
 
-          {/* Tax & Discount */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Discount */}
+          <div>
             <div>
-              <Label htmlFor="taxRate">Tax Rate (%)</Label>
-              <Input
-                id="taxRate"
-                type="number"
-                step="0.1"
-                value={taxRate}
-                onChange={(e) => setTaxRate(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="discount">Discount ($)</Label>
+              <Label htmlFor="discount">Discount (FCFA)</Label>
               <Input
                 id="discount"
                 type="number"
-                step="0.01"
+                step="1"
+                min="0"
                 value={discountAmount}
                 onChange={(e) => setDiscountAmount(e.target.value)}
               />
@@ -239,10 +218,11 @@ export default function POSCart({
               <Input
                 id="amountTendered"
                 type="number"
-                step="0.01"
+                step="1"
+                min="0"
                 value={amountTendered}
                 onChange={(e) => setAmountTendered(e.target.value)}
-                placeholder="0.00"
+                placeholder="0"
                 className="text-lg"
               />
               {change > 0 && (
@@ -265,10 +245,6 @@ export default function POSCart({
                 <span>-{formatCurrency(discount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm">
-              <span>Tax ({taxRate}%):</span>
-              <span>{formatCurrency(tax)}</span>
-            </div>
             <div className="flex justify-between text-xl font-bold pt-2 border-t">
               <span>Total:</span>
               <span>{formatCurrency(total)}</span>

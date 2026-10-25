@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getSession } from './session'
+import { findSessionUser, getSession } from './session'
 import { verifyToken } from './jwt'
 import { db } from '@/lib/db'
 
@@ -19,21 +19,7 @@ export async function verifyAuth(request: NextRequest) {
       const payload = await verifyToken(token)
 
       if (payload) {
-        // Fetch user from database
-        const user = await db.user.findUnique({
-          where: { id: payload.userId },
-          select: {
-            id: true,
-            email: true,
-            role: true,
-            fullName: true,
-            phone: true,
-            avatarUrl: true,
-            emailVerified: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        })
+        const user = await findSessionUser(payload.userId)
 
         if (user) {
           return {

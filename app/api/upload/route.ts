@@ -1,195 +1,201 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import crypto from 'crypto';
+import { getSession } from '@/lib/auth/session';
+import { db } from '@/lib/db';
+import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { DetectedKind, MB, safeSegment, saveUpload, UploadError } from '@/lib/uploads';
 
 /**
- * File upload API for products and service bookings
+ * File upload API.
  *
- * For products: /api/upload
- * For bookings: /api/upload?type=requirement&bookingId=xxx
- *
- * Supported types: requirement, material, progress (for bookings)
+ * Booking photos (type=requirement or material) can be sent without logging in, because
+ * guests can book; they are images only and rate limited. Every other type needs a
+ * logged-in user with the right role. The file's type comes from its bytes.
  */
+
+type Role = string;
+
+interface Target {
+  folder: string[];
+  allowed: DetectedKind[];
+  maxBytes: number;
+  private?: boolean;
+  roles: Role[] | 'any' | 'public';
+}
+
+const IMAGES: DetectedKind[] = ['image'];
+const MEDIA: DetectedKind[] = ['image', 'video'];
+const RECEIPTS: DetectedKind[] = ['image', 'pdf'];
+const STAFF = ['admin', 'tailor', 'technician', 'cashier', 'driver'];
+const MENTORS = ['admin', 'tailor', 'technician'];
+
+function maxFor(allowed: DetectedKind[]) {
+  return allowed.includes('video') ? 50 * MB : allowed.includes('pdf') ? 10 * MB : 5 * MB;
+}
+
+async function resolveTarget(type: string | null, form: FormData, investorIdOf: () => Promise<string | null>): Promise<Target | string> {
+  const bookingId = form.get('bookingId');
+  const deliveryId = form.get('deliveryId');
+
+  if (type && deliveryId) {
+    if (!['photo', 'signature'].includes(type)) return 'Invalid delivery upload type. Must be: photo or signature';
+    const id = safeSegment(deliveryId);
+    if (!id) return 'Invalid deliveryId';
+    return { folder: ['deliveries', id, type], allowed: IMAGES, maxBytes: 5 * MB, roles: ['admin', 'driver'] };
+  }
+
+  if (type && bookingId) {
+    if (!['requirement', 'material', 'progress'].includes(type)) {
+      return 'Invalid type. Must be: requirement, material, or progress';
+    }
+    const id = safeSegment(bookingId);
+    if (!id || !(await db.serviceBooking.findUnique({ where: { id }, select: { id: true } }))) {
+      return 'Booking not found';
+    }
+    const allowed = type === 'progress' ? MEDIA : IMAGES;
+    return {
+      folder: ['bookings', id, type],
+      allowed,
+      maxBytes: maxFor(allowed),
+      roles: type === 'progress' ? STAFF : 'public',
+    };
+  }
+
+  switch (type) {
+    case 'requirement':
+    case 'material':
+      // Photos attached while a guest fills in a booking form, before the booking exists
+      return { folder: ['intake', type], allowed: IMAGES, maxBytes: 5 * MB, roles: 'public' };
+    case 'banner':
+      return { folder: ['banners'], allowed: MEDIA, maxBytes: maxFor(MEDIA), roles: ['admin'] };
+    case 'design-option':
+      return { folder: ['design-options'], allowed: IMAGES, maxBytes: 5 * MB, roles: ['admin'] };
+    case 'blog-image':
+      return { folder: ['blog'], allowed: MEDIA, maxBytes: maxFor(MEDIA), roles: ['admin'] };
+    case 'apprentice-photo':
+      return { folder: ['apprentices'], allowed: IMAGES, maxBytes: 5 * MB, roles: ['admin'] };
+    case 'feedback':
+      return { folder: ['feedback'], allowed: MEDIA, maxBytes: maxFor(MEDIA), roles: 'any' };
+    case 'repair-issue-photo':
+      return { folder: ['repairs', 'issues'], allowed: IMAGES, maxBytes: 5 * MB, roles: 'any' };
+    case 'comment': {
+      const apprenticeId = safeSegment(form.get('apprenticeId'));
+      if (!apprenticeId) return 'Missing apprenticeId for upload type';
+      return {
+        folder: ['apprentices', apprenticeId, 'comments'],
+        allowed: IMAGES,
+        maxBytes: 5 * MB,
+        roles: [...MENTORS, 'apprentice'],
+      };
+    }
+    case 'assignment':
+    case 'submission': {
+      if (type === 'assignment') {
+        const apprenticeId = safeSegment(form.get('apprenticeId'));
+        if (!apprenticeId) return 'Missing apprenticeId or assignmentId for upload type';
+        return {
+          folder: ['apprentices', apprenticeId, 'assignments'],
+          allowed: MEDIA,
+          maxBytes: maxFor(MEDIA),
+          roles: MENTORS,
+        };
+      }
+      // The submission form sends apprenticeId; older callers sent assignmentId
+      const assignmentId = safeSegment(form.get('assignmentId'));
+      const owner = assignmentId ? ['assignments', assignmentId] : null;
+      const apprenticeId = safeSegment(form.get('apprenticeId'));
+      const folder = owner ?? (apprenticeId ? ['apprentices', apprenticeId] : null);
+      if (!folder) return 'Missing apprenticeId or assignmentId for upload type';
+      return {
+        folder: [...folder, 'submissions'],
+        allowed: MEDIA,
+        maxBytes: maxFor(MEDIA),
+        roles: [...MENTORS, 'apprentice'],
+      };
+    }
+    case 'document': {
+      const apprenticeId = safeSegment(form.get('apprenticeId'));
+      if (!apprenticeId) return 'Missing apprenticeId for upload type';
+      return {
+        folder: ['apprentices', apprenticeId, 'documents'],
+        allowed: ['pdf', 'docx', 'image'],
+        maxBytes: 10 * MB,
+        roles: [...MENTORS, 'apprentice'],
+      };
+    }
+    case 'technician-photo':
+      return { folder: ['technicians'], allowed: IMAGES, maxBytes: 5 * MB, roles: ['admin'] };
+    case 'investor-receipt': {
+      const investorId = await investorIdOf();
+      if (!investorId) return 'Investor profile not found';
+      return {
+        folder: ['receipts', investorId],
+        allowed: RECEIPTS,
+        maxBytes: 10 * MB,
+        private: true,
+        roles: ['investor'],
+      };
+    }
+    case 'admin-withdrawal-receipt':
+      return {
+        folder: ['withdrawal-receipts'],
+        allowed: RECEIPTS,
+        maxBytes: 10 * MB,
+        private: true,
+        roles: ['admin'],
+      };
+    case null:
+    case '':
+    case 'product':
+      // Product, category, service and staff photos from the admin dashboard
+      return { folder: ['products'], allowed: MEDIA, maxBytes: maxFor(MEDIA), roles: ['admin'] };
+    default:
+      return `Unknown upload type: ${type}`;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-
-    console.log('📤 Upload request received');
-    console.log('File object:', file ? {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    } : 'null');
-
-    if (!file) {
-      console.error('❌ No file in formData');
+    const file = formData.get('file');
+    if (!(file instanceof File)) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type - be more lenient with type detection
-    const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-    const allowedTypes = [...allowedImageTypes, ...allowedVideoTypes];
-    let fileType = file.type;
-
-    // If file.type is empty or generic, try to infer from filename
-    if (!fileType || fileType === 'application/octet-stream') {
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      if (ext === 'jpg' || ext === 'jpeg') fileType = 'image/jpeg';
-      else if (ext === 'png') fileType = 'image/png';
-      else if (ext === 'gif') fileType = 'image/gif';
-      else if (ext === 'webp') fileType = 'image/webp';
-      else if (ext === 'mp4') fileType = 'video/mp4';
-      else if (ext === 'webm') fileType = 'video/webm';
-      else if (ext === 'mov') fileType = 'video/quicktime';
-      console.log(`📝 Inferred file type from extension: ${fileType}`);
+    const user = await getSession();
+    const type = (formData.get('type') as string | null) ?? null;
+    const target = await resolveTarget(type, formData, async () => {
+      if (!user) return null;
+      const investor = await db.investor.findUnique({ where: { userId: user.id }, select: { id: true } });
+      return investor?.id ?? null;
+    });
+    if (typeof target === 'string') {
+      return NextResponse.json({ error: target }, { status: 400 });
     }
 
-    const isVideo = allowedVideoTypes.includes(fileType) || fileType.startsWith('video/');
-    const isImage = allowedImageTypes.includes(fileType);
-
-    if (!isImage && !isVideo) {
-      console.error(`❌ Invalid file type: ${fileType}`);
-      return NextResponse.json({
-        error: `Invalid file type: ${fileType}. Only images (JPEG, PNG, WebP, GIF) and videos (MP4, WebM, MOV) are allowed`
-      }, { status: 400 });
-    }
-
-    // Validate file size - 5MB for images, 50MB for videos
-    const maxImageSize = 5 * 1024 * 1024;
-    const maxVideoSize = 50 * 1024 * 1024;
-    const maxSize = isVideo ? maxVideoSize : maxImageSize;
-
-    if (file.size > maxSize) {
-      console.error(`❌ File too large: ${file.size} bytes`);
-      return NextResponse.json({
-        error: `File too large. Maximum size is ${isVideo ? '50MB' : '5MB'}`
-      }, { status: 400 });
-    }
-
-    // Get optional parameters for booking uploads
-    const type = formData.get('type') as string | null;
-    const bookingId = formData.get('bookingId') as string | null;
-
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomId = crypto.randomUUID();
-    const ext = file.name.split('.').pop() || 'jpg';
-    const filename = `${timestamp}-${randomId}.${ext}`;
-
-    let uploadsDir: string;
-    let url: string;
-
-    // Get delivery-specific parameters
-    const deliveryId = formData.get('deliveryId') as string | null;
-
-    // Determine upload path based on type
-    // Note: We use /api/uploads/ path to serve files dynamically since
-    // Next.js doesn't serve files added to public/ after build time
-    if (type && deliveryId) {
-      // Delivery-specific upload: /public/uploads/deliveries/{deliveryId}/{type}/
-      if (!['photo', 'signature'].includes(type)) {
-        return NextResponse.json({
-          error: 'Invalid delivery upload type. Must be: photo or signature'
-        }, { status: 400 });
-      }
-
-      uploadsDir = join(
-        process.cwd(),
-        'public',
-        'uploads',
-        'deliveries',
-        deliveryId,
-        type
-      );
-      url = `/api/uploads/deliveries/${deliveryId}/${type}/${filename}`;
-    } else if (type && bookingId) {
-      // Booking-specific upload: /public/uploads/bookings/{bookingId}/{type}/
-      if (!['requirement', 'material', 'progress'].includes(type)) {
-        return NextResponse.json({
-          error: 'Invalid type. Must be: requirement, material, or progress'
-        }, { status: 400 });
-      }
-
-      uploadsDir = join(
-        process.cwd(),
-        'public',
-        'uploads',
-        'bookings',
-        bookingId,
-        type
-      );
-      url = `/api/uploads/bookings/${bookingId}/${type}/${filename}`;
-    } else if (type === 'banner') {
-      // Banner upload: /public/uploads/banners/
-      uploadsDir = join(process.cwd(), 'public', 'uploads', 'banners');
-      url = `/api/uploads/banners/${filename}`;
-    } else if (type === 'design-option') {
-      // Design option image: /public/uploads/design-options/
-      uploadsDir = join(process.cwd(), 'public', 'uploads', 'design-options');
-      url = `/api/uploads/design-options/${filename}`;
-    } else if (type === 'blog-image') {
-      // Blog featured image: /public/uploads/blog/
-      uploadsDir = join(process.cwd(), 'public', 'uploads', 'blog');
-      url = `/api/uploads/blog/${filename}`;
-    } else if (type === 'apprentice-photo') {
-      // Apprentice profile photo: /public/uploads/apprentices/
-      uploadsDir = join(process.cwd(), 'public', 'uploads', 'apprentices');
-      url = `/api/uploads/apprentices/${filename}`;
-    } else if (type === 'feedback') {
-      // Feedback attachments: /public/uploads/feedback/
-      uploadsDir = join(process.cwd(), 'public', 'uploads', 'feedback');
-      url = `/api/uploads/feedback/${filename}`;
-    } else if (type === 'assignment' || type === 'submission') {
-      // Assignment/submission photos
-      const apprenticeId = formData.get('apprenticeId') as string | null;
-      const assignmentId = formData.get('assignmentId') as string | null;
-
-      if (type === 'assignment' && apprenticeId) {
-        // Assignment instruction photos
-        uploadsDir = join(process.cwd(), 'public', 'uploads', 'apprentices', apprenticeId, 'assignments');
-        url = `/api/uploads/apprentices/${apprenticeId}/assignments/${filename}`;
-      } else if (type === 'submission' && assignmentId) {
-        // Submission photos for completed work
-        uploadsDir = join(process.cwd(), 'public', 'uploads', 'assignments', assignmentId, 'submissions');
-        url = `/api/uploads/assignments/${assignmentId}/submissions/${filename}`;
-      } else {
-        return NextResponse.json({
-          error: 'Missing apprenticeId or assignmentId for upload type'
-        }, { status: 400 });
+    if (target.roles === 'public') {
+      const key = user ? `upload:user:${user.id}` : `upload:ip:${clientIp(request)}`;
+      if (!rateLimit(key, user ? 60 : 20, 10 * 60 * 1000)) {
+        return NextResponse.json({ error: 'Too many uploads. Please wait a few minutes.' }, { status: 429 });
       }
     } else {
-      // Product upload: /public/uploads/products/
-      uploadsDir = join(process.cwd(), 'public', 'uploads', 'products');
-      url = `/api/uploads/products/${filename}`;
+      if (!user) {
+        return NextResponse.json({ error: 'Please log in to upload files' }, { status: 401 });
+      }
+      if (target.roles !== 'any' && !target.roles.includes(user.role)) {
+        return NextResponse.json({ error: 'You are not allowed to upload this kind of file' }, { status: 403 });
+      }
+      if (!rateLimit(`upload:user:${user.id}`, 120, 10 * 60 * 1000)) {
+        return NextResponse.json({ error: 'Too many uploads. Please wait a few minutes.' }, { status: 429 });
+      }
     }
 
-    // Create uploads directory if it doesn't exist
-    await mkdir(uploadsDir, { recursive: true });
-
-    // Save file
-    const filepath = join(uploadsDir, filename);
-    await writeFile(filepath, buffer);
-
-    console.log(`✅ Image uploaded: ${url}`);
-
-    return NextResponse.json({
-      success: true,
-      url,
-      filename,
-      size: file.size,
-      type: file.type,
-    }, { status: 201 });
+    const saved = await saveUpload(file, target);
+    return NextResponse.json({ success: true, ...saved }, { status: 201 });
   } catch (error) {
+    if (error instanceof UploadError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error uploading file:', error);
-    return NextResponse.json({
-      error: 'Failed to upload file'
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
   }
 }

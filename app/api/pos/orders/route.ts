@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { randomBytes } from 'crypto'
+import { MoneyInputError, parseXafOrZero, toDecimal } from '@/lib/money'
+import { OutOfStockError, parseLines, priceLines, PricingError, reserveStock, subtotalOf } from '@/lib/commerce/pricing'
 import { Prisma } from '@prisma/client'
 
 /**
@@ -52,7 +55,6 @@ export async function POST(request: NextRequest) {
       customerEmail,
       customerPhone,
       customerNotes,
-      taxRate = 0, // Tax rate as percentage
       discountAmount = 0,
     } = body
 
@@ -70,24 +72,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate totals
-    let subtotal = new Prisma.Decimal(0)
-
-    for (const item of items) {
-      const itemTotal = new Prisma.Decimal(item.price).mul(item.quantity)
-      subtotal = subtotal.add(itemTotal)
+    if (!['cash', 'mobile_payment'].includes(paymentMethod)) {
+      return NextResponse.json(
+        { error: 'Payment method must be cash or mobile money' },
+        { status: 400 }
+      )
     }
 
-    const discountDec = new Prisma.Decimal(discountAmount)
-    const taxAmount = subtotal.sub(discountDec).mul(taxRate / 100)
-    const totalAmount = subtotal.sub(discountDec).add(taxAmount)
+    // Prices come from the catalogue, never from the till
+    const lines = parseLines(items)
+    const discount = parseXafOrZero(discountAmount, 'discount')
 
     // Generate order number
-    const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+    const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`
 
     // Create order in transaction
     const order = await db.$transaction(async (tx) => {
-      // Create order
+      const priced = await priceLines(tx, lines)
+      const subtotal = subtotalOf(priced)
+      if (discount > subtotal) {
+        throw new PricingError('Discount cannot be more than the order subtotal')
+      }
+      // Catalogue prices already include any VAT, so nothing is added on top
+      const totalAmount = subtotal - discount
+      const tendered = amountTendered === undefined || amountTendered === null || amountTendered === ''
+        ? null
+        : parseXafOrZero(amountTendered, 'amount tendered')
+      if (paymentMethod === 'cash' && tendered !== null && tendered < totalAmount) {
+        throw new PricingError('Amount tendered is less than the total')
+      }
+
       const newOrder = await tx.order.create({
         data: {
           orderNumber,
@@ -102,76 +116,41 @@ export async function POST(request: NextRequest) {
           paymentStatus: 'pending',
           paymentMethod,
           shippingMethod: 'in_store',
-          subtotal,
-          taxAmount,
-          discountAmount: discountDec,
+          subtotal: toDecimal(subtotal),
+          taxAmount: 0,
+          discountAmount: toDecimal(discount),
           shippingCost: 0,
-          totalAmount,
-          amountTendered: amountTendered ? new Prisma.Decimal(amountTendered) : null,
-          changeGiven: amountTendered ? new Prisma.Decimal(amountTendered).sub(totalAmount) : null,
+          totalAmount: toDecimal(totalAmount),
+          amountTendered: tendered !== null ? toDecimal(tendered) : null,
+          changeGiven: tendered !== null ? toDecimal(tendered - totalAmount) : null,
           shippingAddress: Prisma.JsonNull,
           billingAddress: Prisma.JsonNull,
+          orderItems: {
+            create: priced.map((line) => ({
+              productId: line.productId,
+              variantId: line.variantId,
+              productName: line.name,
+              productSku: line.sku,
+              productImage: line.image,
+              variantOptions: line.variantOptions ?? Prisma.JsonNull,
+              quantity: line.quantity,
+              price: toDecimal(line.unitPrice),
+              total: toDecimal(line.total),
+            })),
+          },
         }
       })
 
-      // Create order items
-      for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-          include: {
-            variants: item.variantId ? {
-              where: { id: item.variantId }
-            } : false
-          }
-        })
-
-        if (!product) {
-          throw new Error(`Product ${item.productId} not found`)
-        }
-
-        const variant = item.variantId ? product.variants?.[0] : null
-
-        await tx.orderItem.create({
-          data: {
-            orderId: newOrder.id,
-            productId: item.productId,
-            variantId: item.variantId || null,
-            productName: product.name,
-            productSku: variant?.sku || product.sku,
-            productImage: variant?.imageUrl || product.featuredImage,
-            variantOptions: variant?.options || Prisma.JsonNull,
-            quantity: item.quantity,
-            price: new Prisma.Decimal(item.price),
-            total: new Prisma.Decimal(item.price).mul(item.quantity),
-          }
-        })
-
-        // Decrement inventory
-        if (item.variantId && variant) {
-          await tx.productVariant.update({
-            where: { id: item.variantId },
-            data: {
-              inventoryCount: {
-                decrement: item.quantity
-              }
-            }
-          })
-        } else {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: {
-              inventoryCount: {
-                decrement: item.quantity
-              }
-            }
-          })
-        }
-      }
+      await reserveStock(tx, priced, {
+        orderId: newOrder.id,
+        userId: user.id,
+        notes: `Sold at POS (${orderNumber})`,
+      })
 
       return newOrder
     })
 
-    console.log(`🛒 POS order created: ${orderNumber} - Total: $${Number(totalAmount).toFixed(2)}`)
+    console.log(`🛒 POS order created: ${orderNumber} - Total: ${Number(order.totalAmount)} FCFA`)
 
     return NextResponse.json({
       success: true,
@@ -186,6 +165,12 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 })
   } catch (error: any) {
+    if (error instanceof OutOfStockError) {
+      return NextResponse.json({ error: error.message, outOfStockItems: error.items }, { status: 400 })
+    }
+    if (error instanceof PricingError || error instanceof MoneyInputError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
     console.error('Error creating POS order:', error)
 
     if (error.message && error.message.includes('not found')) {

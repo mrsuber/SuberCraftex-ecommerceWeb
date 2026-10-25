@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
-import { ArrowLeft, CreditCard, Banknote, Package, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Smartphone, Banknote, Package, CheckCircle2 } from "lucide-react";
+import { useShippingRates } from "@/hooks/use-shipping-rates";
 import Image from "next/image";
 import type { ShippingAddress } from "@/lib/validations/checkout";
 import { useState } from "react";
@@ -14,15 +15,16 @@ import { useRouter } from "next/navigation";
 
 interface OrderReviewProps {
   shippingData: ShippingAddress;
-  shippingMethod: "standard" | "express" | "overnight";
-  paymentMethod: "card" | "cash";
+  shippingMethod: "in_store" | "standard" | "express" | "overnight";
+  paymentMethod: "mobile_payment" | "cash";
   onBack: () => void;
 }
 
-const shippingCosts = {
-  standard: 0,
-  express: 10,
-  overnight: 25,
+const shippingLabels = {
+  in_store: "Shop Pickup",
+  standard: "Standard Delivery",
+  express: "Express Delivery",
+  overnight: "Next Day Delivery",
 };
 
 export function OrderReview({
@@ -37,10 +39,12 @@ export function OrderReview({
   const clearCart = useCartStore((state) => state.clearCart);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const rates = useShippingRates();
+
+  // For display only: the server prices the order itself from the catalogue
   const subtotal = total;
-  const shipping = shippingCosts[shippingMethod];
-  const tax = subtotal * 0.08;
-  const grandTotal = subtotal + shipping + tax;
+  const shipping = shippingMethod === "in_store" ? 0 : rates?.[shippingMethod] ?? 0;
+  const grandTotal = subtotal + shipping;
 
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
@@ -49,21 +53,14 @@ export function OrderReview({
       // Prepare order data
       const orderData = {
         items: items.map((item) => ({
-          id: item.product.id,
-          name: item.product.name,
-          sku: item.product.sku || "N/A",
-          image: item.product.featured_image,
+          productId: item.product.id,
+          variantId: item.variant_id,
           quantity: item.quantity,
-          price: item.product.price,
         })),
         shippingAddress: shippingData,
         billingAddress: shippingData, // Using same as shipping
         shippingMethod,
         paymentMethod,
-        subtotal,
-        shippingCost: shipping,
-        taxAmount: tax,
-        totalAmount: grandTotal,
       };
 
       // Create order via API
@@ -171,7 +168,7 @@ export function OrderReview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="capitalize font-medium">{shippingMethod} Shipping</div>
+            <div className="font-medium">{shippingLabels[shippingMethod]}</div>
             <div className="text-sm text-muted-foreground">
               {shipping === 0 ? "Free" : formatPrice(shipping)}
             </div>
@@ -181,8 +178,8 @@ export function OrderReview({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {paymentMethod === "card" ? (
-                <CreditCard className="h-5 w-5" />
+              {paymentMethod === "mobile_payment" ? (
+                <Smartphone className="h-5 w-5" />
               ) : (
                 <Banknote className="h-5 w-5" />
               )}
@@ -191,12 +188,14 @@ export function OrderReview({
           </CardHeader>
           <CardContent>
             <div className="font-medium">
-              {paymentMethod === "card" ? "Credit / Debit Card" : "Cash on Delivery"}
+              {paymentMethod === "mobile_payment" ? "Mobile Money" : "Cash"}
             </div>
             <div className="text-sm text-muted-foreground">
-              {paymentMethod === "card"
-                ? "Secure payment via Stripe"
-                : "Pay when you receive"}
+              {paymentMethod === "mobile_payment"
+                ? "Approve the payment request on your phone"
+                : shippingMethod === "in_store"
+                  ? "Pay when you pick up"
+                  : "Pay when you receive"}
             </div>
           </CardContent>
         </Card>
@@ -217,10 +216,6 @@ export function OrderReview({
             <span className="font-medium">
               {shipping === 0 ? "Free" : formatPrice(shipping)}
             </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Tax (8%)</span>
-            <span className="font-medium">{formatPrice(tax)}</span>
           </div>
           <Separator />
           <div className="flex justify-between text-lg font-bold">

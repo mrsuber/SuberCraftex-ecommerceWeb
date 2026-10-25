@@ -19,6 +19,7 @@ interface CalendarEvent {
   status: string;
   color?: string;
   createdByRole: string;
+  createdBy?: string;
   isCompleted: boolean;
   apprentice?: {
     fullName: string;

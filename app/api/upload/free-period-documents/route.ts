@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/auth/api-auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
+import { MB, saveUpload, UploadError } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -22,57 +20,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
-    // Validate file types
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "application/pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // docx
-    ];
+    if (files.length > 10) {
+      return NextResponse.json({ error: "At most 10 files at a time" }, { status: 400 });
+    }
 
     const uploadedUrls: string[] = [];
 
     for (const file of files) {
-      // Validate file type
-      if (!allowedTypes.includes(file.type)) {
-        return NextResponse.json(
-          { error: `Invalid file type: ${file.type}. Allowed: JPG, PNG, PDF, DOCX` },
-          { status: 400 }
-        );
+      if (!(file instanceof File)) {
+        return NextResponse.json({ error: "No files provided" }, { status: 400 });
       }
-
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        return NextResponse.json(
-          { error: `File too large: ${file.name}. Max size: 5MB` },
-          { status: 400 }
-        );
-      }
-
-      // Generate unique filename
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(7);
-      const extension = file.name.split(".").pop();
-      const filename = `${timestamp}-${randomString}.${extension}`;
-
-      // Create upload directory if it doesn't exist
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "free-periods");
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true });
-      }
-
-      // Save file
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const filepath = path.join(uploadDir, filename);
-      await writeFile(filepath, buffer);
-
-      // Store public URL
-      const publicUrl = `/uploads/free-periods/${filename}`;
-      uploadedUrls.push(publicUrl);
+      // Private: only the apprentice who asked and admins can open these
+      const saved = await saveUpload(file, {
+        folder: ["free-periods"],
+        allowed: ["image", "pdf", "docx"],
+        maxBytes: 5 * MB,
+        private: true,
+      });
+      uploadedUrls.push(saved.url);
     }
-
-    console.log(`✅ Uploaded ${uploadedUrls.length} file(s) for free period request`);
 
     return NextResponse.json({
       success: true,
@@ -80,6 +46,9 @@ export async function POST(request: NextRequest) {
       count: uploadedUrls.length,
     });
   } catch (error) {
+    if (error instanceof UploadError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Error uploading files:", error);
     return NextResponse.json(
       { error: "Failed to upload files" },

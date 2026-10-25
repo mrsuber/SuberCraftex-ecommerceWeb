@@ -66,3 +66,9 @@ temp/
 
 # KYC uploads
 public/uploads/
+
+# uploaded files (never commit; private ones hold KYC documents)
+/private-uploads/
+/public/uploads/
+.env*.backup
+.env.production

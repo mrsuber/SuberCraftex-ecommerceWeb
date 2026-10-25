@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+
+class WithdrawalConfirmError extends Error {}
 import { getSession } from '@/lib/auth/session'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -77,6 +79,13 @@ export async function POST(
         let updatedInvestor
         let transaction
 
+        // Claim the withdrawal first, so two confirmations at once cannot both deduct
+        const claimed = await tx.withdrawalRequest.updateMany({
+          where: { id: withdrawal.id, status: 'awaiting_investor_confirmation' },
+          data: { status: 'processing' },
+        })
+        if (claimed.count !== 1) throw new WithdrawalConfirmError('This withdrawal was already confirmed')
+
         if (withdrawal.type === 'cash') {
           // Deduct from cash balance
           updatedInvestor = await tx.investor.update({
@@ -90,6 +99,9 @@ export async function POST(
               },
             },
           })
+          if (updatedInvestor.cashBalance.lt(0)) {
+            throw new WithdrawalConfirmError('Insufficient balance for this withdrawal. Please contact SuberCraftex.')
+          }
 
           transaction = await tx.investorTransaction.create({
             data: {
@@ -117,6 +129,9 @@ export async function POST(
               },
             },
           })
+          if (updatedInvestor.profitBalance.lt(0)) {
+            throw new WithdrawalConfirmError('Insufficient balance for this withdrawal. Please contact SuberCraftex.')
+          }
 
           transaction = await tx.investorTransaction.create({
             data: {
@@ -291,6 +306,9 @@ export async function POST(
       })
     }
   } catch (error) {
+    if (error instanceof WithdrawalConfirmError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
     console.error('Error processing withdrawal confirmation:', error)
     return NextResponse.json(
       { error: 'Failed to process confirmation' },

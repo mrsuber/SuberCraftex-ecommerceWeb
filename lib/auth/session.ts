@@ -2,6 +2,35 @@ import { redirect } from 'next/navigation'
 import { getAuthToken, verifyToken } from './jwt'
 import { db } from '@/lib/db'
 
+export const SESSION_USER_SELECT = {
+  id: true,
+  email: true,
+  role: true,
+  fullName: true,
+  phone: true,
+  avatarUrl: true,
+  emailVerified: true,
+  isSuperAdmin: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
+
+/** The signed-in user for a token's user id, or null when the account is suspended. */
+export async function findSessionUser(userId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { ...SESSION_USER_SELECT, isSuspended: true },
+  })
+  if (!user || user.isSuspended) return null
+  const { isSuspended: _suspended, ...rest } = user
+  return rest
+}
+
+/** Super admins manage payment keys and money settings. */
+export function isSuperAdmin(user: { role: string; isSuperAdmin?: boolean } | null | undefined) {
+  return !!user && user.role === 'admin' && user.isSuperAdmin === true
+}
+
 /**
  * Get the current authenticated user from the session
  * @returns User object or null if not authenticated
@@ -20,21 +49,7 @@ export async function getSession() {
       return null
     }
 
-    // Fetch user from database
-    const user = await db.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        fullName: true,
-        phone: true,
-        avatarUrl: true,
-        emailVerified: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    })
+    const user = await findSessionUser(payload.userId)
 
     return user
   } catch (error) {

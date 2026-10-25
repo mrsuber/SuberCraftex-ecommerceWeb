@@ -48,10 +48,11 @@ export async function POST(
       )
     }
 
-    // Check authorization
-    if (payment.booking.userId !== user.id && user.role !== 'admin') {
+    // Only staff confirm money they received (cash at the shop). Customers never confirm
+    // their own payment: Mobile Money payments are confirmed by PayWithCAMSOL.
+    if (!['admin', 'tailor', 'cashier'].includes(user.role)) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Only SuberCraftex staff can confirm a payment' },
         { status: 403 }
       )
     }

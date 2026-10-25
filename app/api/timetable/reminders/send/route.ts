@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email/mailer";
 import { format } from "date-fns";
+import { isCronRequest } from "@/lib/cron-auth";
+import { getSession } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/timetable/reminders/send - Send email reminders for upcoming events
 export async function POST(request: NextRequest) {
   try {
+    // Sends email to every attendee: only the scheduler or an admin may trigger it
+    if (!isCronRequest(request)) {
+      const user = await getSession();
+      if (!user || user.role !== "admin") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
     // Get the time window for reminders (default: next 24 hours)
     const { searchParams } = new URL(request.url);
     const hoursAhead = parseInt(searchParams.get("hoursAhead") || "24");

@@ -36,19 +36,23 @@ export async function POST(
       );
     }
 
-    // For now, we'll add a suspended field to track this
-    // You can extend the User model to include a 'suspended' boolean field
-    // Or use emailVerified = false as a suspension mechanism
+    if (typeof suspended !== 'boolean') {
+      return NextResponse.json({ error: 'suspended must be true or false' }, { status: 400 });
+    }
 
     const updatedUser = await db.user.update({
       where: { id },
-      data: {
-        emailVerified: !suspended, // Unverify email to suspend
-      },
+      data: suspended
+        ? {
+            isSuspended: true,
+            suspendedAt: new Date(),
+            suspendedReason: typeof body.reason === 'string' ? body.reason.slice(0, 500) : null,
+          }
+        : { isSuspended: false, suspendedAt: null, suspendedReason: null },
       select: {
         id: true,
         email: true,
-        emailVerified: true,
+        isSuspended: true,
       },
     });
 

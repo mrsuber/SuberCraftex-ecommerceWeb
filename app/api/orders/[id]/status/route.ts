@@ -48,12 +48,25 @@ export async function PATCH(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Prevent drivers from delivering to themselves
-    if (user.role === 'driver' && existingOrder.userId === user.id) {
-      return NextResponse.json(
-        { error: 'Delivery agents cannot deliver to themselves. Another agent must complete this delivery.' },
-        { status: 403 }
-      );
+    if (user.role === 'driver') {
+      // Prevent drivers from delivering to themselves
+      if (existingOrder.userId === user.id) {
+        return NextResponse.json(
+          { error: 'Delivery agents cannot deliver to themselves. Another agent must complete this delivery.' },
+          { status: 403 }
+        );
+      }
+      // Drivers only move their own deliveries forward; everything else is an admin decision
+      const driver = await db.driver.findUnique({ where: { userId: user.id }, select: { id: true } });
+      if (!driver || existingOrder.shippingTracking?.driverId !== driver.id) {
+        return NextResponse.json({ error: 'This delivery is not assigned to you' }, { status: 403 });
+      }
+      if (!['shipped', 'out_for_delivery', 'delivered'].includes(orderStatus)) {
+        return NextResponse.json(
+          { error: 'Drivers can only mark a delivery as shipped, out for delivery or delivered' },
+          { status: 403 }
+        );
+      }
     }
 
     // Prepare update data

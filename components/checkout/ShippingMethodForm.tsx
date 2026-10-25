@@ -6,31 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { shippingMethodSchema, type ShippingMethod } from "@/lib/validations/checkout";
-import { ArrowLeft, ArrowRight, Package, Truck, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, Package, Truck, Zap } from "lucide-react";
+import { useShippingRates } from "@/hooks/use-shipping-rates";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 
 const shippingOptions = [
   {
+    value: "in_store" as const,
+    label: "Shop Pickup",
+    description: "Pick up within 12 hours",
+    icon: MapPin,
+  },
+  {
     value: "standard" as const,
-    label: "Standard Shipping",
+    label: "Standard Delivery",
     description: "5-7 business days",
-    price: 0,
     icon: Package,
   },
   {
     value: "express" as const,
-    label: "Express Shipping",
+    label: "Express Delivery",
     description: "2-3 business days",
-    price: 5000,
     icon: Truck,
   },
   {
     value: "overnight" as const,
-    label: "Overnight Shipping",
-    description: "1 business day",
-    price: 12000,
+    label: "Next Day Delivery",
+    description: "Next business day",
     icon: Zap,
   },
 ];
@@ -45,6 +49,7 @@ export function ShippingMethodForm({ defaultValues, onSubmit, onBack }: Shipping
   const [selectedMethod, setSelectedMethod] = useState<string | null>(
     defaultValues?.method || null
   );
+  const rates = useShippingRates();
 
   const {
     handleSubmit,
@@ -105,7 +110,7 @@ export function ShippingMethodForm({ defaultValues, onSubmit, onBack }: Shipping
                       </div>
                     </div>
                     <div className="text-lg font-bold">
-                      {option.price === 0 ? "Free" : formatCurrency(option.price)}
+                      {rates === null ? "…" : rates[option.value] === 0 ? "Free" : formatCurrency(rates[option.value])}
                     </div>
                   </div>
                 </button>

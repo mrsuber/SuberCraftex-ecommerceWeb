@@ -4,24 +4,22 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { paymentMethodSchema, type PaymentMethod } from "@/lib/validations/checkout";
-import { ArrowLeft, ArrowRight, CreditCard, Banknote } from "lucide-react";
+import { ArrowLeft, ArrowRight, Smartphone, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const paymentOptions = [
   {
-    value: "card" as const,
-    label: "Credit / Debit Card",
-    description: "Secure payment via Stripe",
-    icon: CreditCard,
+    value: "mobile_payment" as const,
+    label: "Mobile Money",
+    description: "MTN Mobile Money or Orange Money: approve the payment on your phone",
+    icon: Smartphone,
   },
   {
     value: "cash" as const,
-    label: "Cash on Delivery",
-    description: "Pay when you receive",
+    label: "Cash",
+    description: "Pay when you receive or pick up your order",
     icon: Banknote,
   },
 ];
@@ -40,7 +38,6 @@ export function PaymentForm({ defaultValues, onSubmit, onBack }: PaymentFormProp
   const {
     handleSubmit,
     setValue,
-    register,
     formState: { errors },
   } = useForm<PaymentMethod>({
     resolver: zodResolver(paymentMethodSchema),
@@ -104,24 +101,11 @@ export function PaymentForm({ defaultValues, onSubmit, onBack }: PaymentFormProp
             <p className="text-sm text-destructive">{errors.method.message}</p>
           )}
 
-          {/* Save Card Option */}
-          {selectedMethod === "card" && (
-            <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-lg">
-              <Checkbox id="saveCard" {...register("saveCard")} />
-              <Label
-                htmlFor="saveCard"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Save card for future purchases
-              </Label>
-            </div>
-          )}
-
-          {/* Security Note */}
           <div className="p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">
-              🔒 Your payment information is encrypted and secure. We use Stripe for
-              payment processing and never store your card details.
+              {selectedMethod === "mobile_payment"
+                ? "After you place the order, you will receive a payment request on your phone. Approve it with your Mobile Money PIN to complete the order."
+                : "SuberCraftex charges no payment fees. Prices already include any taxes."}
             </p>
           </div>
 

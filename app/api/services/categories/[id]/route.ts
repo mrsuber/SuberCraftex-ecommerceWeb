@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireApiAdmin } from '@/lib/auth/api-auth'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://subercraftex.com'
 
@@ -24,6 +25,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const admin = await requireApiAdmin()
+    if (!admin) {
+      return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 401 })
+    }
     const { id } = await params
     const body = await req.json()
     const { name, slug, description, icon, imageUrl, sortOrder, isActive } = body
@@ -86,6 +91,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const admin = await requireApiAdmin()
+    if (!admin) {
+      return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 401 })
+    }
     const { id } = await params
 
     // Check if category exists

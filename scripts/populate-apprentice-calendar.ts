@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -145,7 +145,7 @@ async function populateApprenticeCalendar() {
 
       for (const eventData of eventsToCreate) {
         await prisma.calendarEvent.create({
-          data: eventData
+          data: eventData as Prisma.CalendarEventUncheckedCreateInput
         });
       }
 

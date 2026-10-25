@@ -112,6 +112,22 @@ export async function POST(
       }
     }
 
+    // Units funded by investors can never be more than the units on the shelf
+    const alreadyFunded = await db.investorProductAllocation.aggregate({
+      where: { productId, variantId: variantId || null, quantityRemaining: { gt: 0 } },
+      _sum: { quantityRemaining: true },
+    })
+    const physical = variant ? variant.inventoryCount : product.inventoryCount
+    const funded = alreadyFunded._sum.quantityRemaining ?? 0
+    if (funded + quantity > physical) {
+      return NextResponse.json(
+        {
+          error: `Only ${Math.max(0, physical - funded)} unit(s) of this item are not yet funded by investors (in stock: ${physical}, already funded: ${funded}).`,
+        },
+        { status: 400 }
+      )
+    }
+
     // Create allocation and update balances in a transaction
     const result = await db.$transaction(async (tx) => {
       // Create product allocation
