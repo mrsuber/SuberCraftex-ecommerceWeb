@@ -2185,18 +2185,18 @@ model Apprentice {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user                 User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignments          ApprenticeAssignment[]
-  certificates         ApprenticeCertificate[]
-  repairRequests       RepairRequest[] // For device_repair track apprentices
-  enrollments          ApprenticeEnrollment[] // Track multiple curriculum enrollments
-  timetableEvents      TimetableEventAttendee[] // Timetable events apprentice is attending
-  reminderLogs         ReminderLog[] // Email reminders sent to apprentice
-  calendarEvents       CalendarEvent[] // Calendar events for apprentice
-  eventEditRequests    EventEditRequest[] // Edit requests for calendar events
-  freePeriodRequests   FreePeriodRequest[] // Free period requests
-  calendarReminders    CalendarReminder[] // Calendar reminders
-  eventCompletionLogs  EventCompletionLog[] // Event completion tracking
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments         ApprenticeAssignment[]
+  certificates        ApprenticeCertificate[]
+  repairRequests      RepairRequest[] // For device_repair track apprentices
+  enrollments         ApprenticeEnrollment[] // Track multiple curriculum enrollments
+  timetableEvents     TimetableEventAttendee[] // Timetable events apprentice is attending
+  reminderLogs        ReminderLog[] // Email reminders sent to apprentice
+  calendarEvents      CalendarEvent[] // Calendar events for apprentice
+  eventEditRequests   EventEditRequest[] // Edit requests for calendar events
+  freePeriodRequests  FreePeriodRequest[] // Free period requests
+  calendarReminders   CalendarReminder[] // Calendar reminders
+  eventCompletionLogs EventCompletionLog[] // Event completion tracking
 
   @@index([mentorId])
   @@index([department])
@@ -2207,8 +2207,8 @@ model Apprentice {
 
 // Apprentice Enrollment (for tracking multiple curricula per apprentice)
 model ApprenticeEnrollment {
-  id           String   @id @default(uuid())
-  apprenticeId String   @map("apprentice_id")
+  id           String       @id @default(uuid())
+  apprenticeId String       @map("apprentice_id")
   serviceTrack ServiceTrack @map("service_track")
 
   // Status tracking
@@ -2276,8 +2276,8 @@ model AssignmentTemplate {
   serviceTrack ServiceTrack @default(tailoring) @map("service_track")
 
   // Additional Resources & Cross-References
-  requiredReading  String[] @default([]) @map("required_reading")
-  crossReferences  String[] @default([]) @map("cross_references")
+  requiredReading String[] @default([]) @map("required_reading")
+  crossReferences String[] @default([]) @map("cross_references")
 
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
@@ -2295,8 +2295,8 @@ model AssignmentTemplate {
 }
 
 model ApprenticeAssignment {
-  id           String @id @default(uuid())
-  apprenticeId String @map("apprentice_id")
+  id           String  @id @default(uuid())
+  apprenticeId String  @map("apprentice_id")
   enrollmentId String? @map("enrollment_id") // Links assignment to a specific curriculum enrollment
 
   // Template Reference (null for custom assignments)
@@ -2336,9 +2336,9 @@ model ApprenticeAssignment {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  apprentice     Apprentice              @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
-  enrollment     ApprenticeEnrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
-  template       AssignmentTemplate?     @relation(fields: [templateId], references: [id])
+  apprentice     Apprentice            @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  enrollment     ApprenticeEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  template       AssignmentTemplate?   @relation(fields: [templateId], references: [id])
   comments       AssignmentComment[]
   calendarEvents CalendarEvent[] // Calendar events linked to this assignment
 
@@ -2440,8 +2440,8 @@ model TimetableEvent {
   location  String?
 
   // Recurrence
-  isRecurring       Boolean  @default(false) @map("is_recurring")
-  recurrencePattern String? @map("recurrence_pattern") // 'daily', 'weekly', 'monthly'
+  isRecurring       Boolean   @default(false) @map("is_recurring")
+  recurrencePattern String?   @map("recurrence_pattern") // 'daily', 'weekly', 'monthly'
   recurrenceEnd     DateTime? @map("recurrence_end")
 
   // Organization
@@ -2499,9 +2499,9 @@ model ReminderLog {
   // Email details
   emailTo      String  @map("email_to")
   emailSubject String  @map("email_subject")
-  emailBody    String  @db.Text @map("email_body")
+  emailBody    String  @map("email_body") @db.Text
   emailStatus  String  @default("sent") @map("email_status") // 'sent', 'failed', 'bounced'
-  errorMessage String? @db.Text @map("error_message")
+  errorMessage String? @map("error_message") @db.Text
 
   // Metadata
   sentAt    DateTime @default(now()) @map("sent_at")
@@ -2545,14 +2545,14 @@ enum CalendarEventType {
 }
 
 enum CalendarEventStatus {
-  pending          // Waiting approval (for apprentice-created or edit requests)
-  approved         // Approved by admin/mentor
-  rejected         // Rejected
-  scheduled        // Confirmed and scheduled
-  in_progress      // Currently happening
-  completed        // Successfully completed
-  incomplete       // Passed due date, not completed
-  cancelled        // Cancelled
+  pending // Waiting approval (for apprentice-created or edit requests)
+  approved // Approved by admin/mentor
+  rejected // Rejected
+  scheduled // Confirmed and scheduled
+  in_progress // Currently happening
+  completed // Successfully completed
+  incomplete // Passed due date, not completed
+  cancelled // Cancelled
 }
 
 enum EventEditRequestType {
@@ -2586,22 +2586,22 @@ model CalendarEvent {
   recurrenceEnd     DateTime? @map("recurrence_end")
 
   // Ownership & Attribution
-  apprenticeId   String            @map("apprentice_id") // Who this event belongs to
-  createdBy      String            @map("created_by") // User ID who created it
-  createdByRole  EventCreatorRole  @map("created_by_role")
-  assignmentId   String?           @map("assignment_id") // Link to curriculum assignment if applicable
+  apprenticeId  String           @map("apprentice_id") // Who this event belongs to
+  createdBy     String           @map("created_by") // User ID who created it
+  createdByRole EventCreatorRole @map("created_by_role")
+  assignmentId  String?          @map("assignment_id") // Link to curriculum assignment if applicable
 
   // Metadata
   color       String? // Hex color for UI
   location    String?
-  notes       String? @db.Text
+  notes       String?  @db.Text
   attachments String[] @default([]) // File URLs
 
   // Completion Tracking
-  isCompleted       Boolean   @default(false) @map("is_completed")
-  completedAt       DateTime? @map("completed_at")
-  completionNotes   String?   @db.Text @map("completion_notes")
-  completionEvidence String[] @default([]) @map("completion_evidence") // Photos/files
+  isCompleted        Boolean   @default(false) @map("is_completed")
+  completedAt        DateTime? @map("completed_at")
+  completionNotes    String?   @map("completion_notes") @db.Text
+  completionEvidence String[]  @default([]) @map("completion_evidence") // Photos/files
 
   // Soft Delete (never truly delete - for statistics)
   isDeleted Boolean   @default(false) @map("is_deleted")
@@ -2613,13 +2613,13 @@ model CalendarEvent {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  apprentice      Apprentice            @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
-  assignment      ApprenticeAssignment? @relation(fields: [assignmentId], references: [id])
-  editRequests    EventEditRequest[]
-  conflicts       EventConflict[]       @relation("event1")
-  conflictsAs2    EventConflict[]       @relation("event2")
-  reminders       CalendarReminder[]
-  completionLog   EventCompletionLog?
+  apprentice    Apprentice            @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  assignment    ApprenticeAssignment? @relation(fields: [assignmentId], references: [id])
+  editRequests  EventEditRequest[]
+  conflicts     EventConflict[]       @relation("event1")
+  conflictsAs2  EventConflict[]       @relation("event2")
+  reminders     CalendarReminder[]
+  completionLog EventCompletionLog?
 
   @@index([apprenticeId])
   @@index([createdBy])
@@ -2632,21 +2632,21 @@ model CalendarEvent {
 }
 
 model EventEditRequest {
-  id       String                 @id @default(uuid())
-  eventId  String                 @map("event_id")
-  apprenticeId String              @map("apprentice_id")
-  requestType EventEditRequestType @map("request_type")
+  id           String               @id @default(uuid())
+  eventId      String               @map("event_id")
+  apprenticeId String               @map("apprentice_id")
+  requestType  EventEditRequestType @map("request_type")
 
   // Requested changes (JSON)
-  requestedChanges Json    @map("requested_changes") // {newStartTime, newEndTime, newTitle, etc}
-  reason           String  @db.Text
+  requestedChanges Json     @map("requested_changes") // {newStartTime, newEndTime, newTitle, etc}
+  reason           String   @db.Text
   attachments      String[] @default([]) // Supporting documents
 
   // Review
-  status       RequestStatus @default(pending)
-  reviewedBy   String?       @map("reviewed_by") // Admin/Mentor user ID
-  reviewedAt   DateTime?     @map("reviewed_at")
-  reviewNotes  String?       @db.Text @map("review_notes")
+  status      RequestStatus @default(pending)
+  reviewedBy  String?       @map("reviewed_by") // Admin/Mentor user ID
+  reviewedAt  DateTime?     @map("reviewed_at")
+  reviewNotes String?       @map("review_notes") @db.Text
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
@@ -2663,8 +2663,8 @@ model EventEditRequest {
 }
 
 model FreePeriodRequest {
-  id           String   @id @default(uuid())
-  apprenticeId String   @map("apprentice_id")
+  id           String @id @default(uuid())
+  apprenticeId String @map("apprentice_id")
 
   // Time Range
   startDate DateTime @map("start_date")
@@ -2675,10 +2675,10 @@ model FreePeriodRequest {
   attachments String[] @default([]) // Documents/images for proof
 
   // Review
-  status       RequestStatus @default(pending)
-  reviewedBy   String?       @map("reviewed_by")
-  reviewedAt   DateTime?     @map("reviewed_at")
-  reviewNotes  String?       @db.Text @map("review_notes")
+  status      RequestStatus @default(pending)
+  reviewedBy  String?       @map("reviewed_by")
+  reviewedAt  DateTime?     @map("reviewed_at")
+  reviewNotes String?       @map("review_notes") @db.Text
 
   // Link to created calendar event if approved
   calendarEventId String? @unique @map("calendar_event_id")
@@ -2698,10 +2698,10 @@ model FreePeriodRequest {
 }
 
 model EventConflict {
-  id           String   @id @default(uuid())
-  event1Id     String   @map("event1_id")
-  event2Id     String   @map("event2_id")
-  conflictType String   @map("conflict_type") // 'time_overlap', 'double_booking'
+  id           String @id @default(uuid())
+  event1Id     String @map("event1_id")
+  event2Id     String @map("event2_id")
+  conflictType String @map("conflict_type") // 'time_overlap', 'double_booking'
 
   // Auto-resolved when one event is deleted/rescheduled
   isResolved Boolean   @default(false) @map("is_resolved")
@@ -2727,15 +2727,15 @@ model CalendarReminder {
   reminderType ReminderType @map("reminder_type")
 
   // Scheduling
-  scheduledFor DateTime @map("scheduled_for")
+  scheduledFor DateTime  @map("scheduled_for")
   sentAt       DateTime? @map("sent_at")
 
   // Email details
   emailTo      String  @map("email_to")
   emailSubject String  @map("email_subject")
-  emailBody    String  @db.Text @map("email_body")
+  emailBody    String  @map("email_body") @db.Text
   emailStatus  String  @default("pending") @map("email_status") // 'pending', 'sent', 'failed'
-  errorMessage String? @db.Text @map("error_message")
+  errorMessage String? @map("error_message") @db.Text
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
@@ -2752,17 +2752,17 @@ model CalendarReminder {
 }
 
 model EventCompletionLog {
-  id       String @id @default(uuid())
-  eventId  String @unique @map("event_id")
+  id           String @id @default(uuid())
+  eventId      String @unique @map("event_id")
   apprenticeId String @map("apprentice_id")
 
   // Completion Status
-  wasCompleted     Boolean   @default(false) @map("was_completed")
-  completedOnTime  Boolean   @default(false) @map("completed_on_time")
-  completedAt      DateTime? @map("completed_at")
+  wasCompleted    Boolean   @default(false) @map("was_completed")
+  completedOnTime Boolean   @default(false) @map("completed_on_time")
+  completedAt     DateTime? @map("completed_at")
 
   // Evidence
-  completionNotes    String?  @db.Text @map("completion_notes")
+  completionNotes    String?  @map("completion_notes") @db.Text
   completionEvidence String[] @default([]) @map("completion_evidence")
 
   // Discipline Scoring
@@ -3055,4 +3055,187 @@ model RepairPayment {
   @@index([paymentType])
   @@index([createdAt])
   @@map("repair_payments")
+}
+
+// ============================================================================
+// LEDGER: double-entry book of every franc that moves
+// ============================================================================
+// Every money movement is one LedgerTransaction whose entries add up to zero (debits
+// positive, credits negative). Balances are the sum of an account's entries. Each
+// transaction has a unique reference, so the same business event is never counted twice.
+
+enum LedgerAccountKind {
+  asset // what SuberCraftex holds: PayWithCAMSOL, cash drawers, driver cash, safe, bank
+  liability // what it owes: investor capital and profit, wallets, salaries, deposits
+  equity // opening balances, the company's own reserves
+  income // sales, fees earned
+  expense // costs, profit shares paid out
+}
+
+model LedgerAccount {
+  id            String            @id @default(uuid())
+  key           String            @unique // e.g. LIAB:INVESTOR_FREE:<investorId>
+  kind          LedgerAccountKind
+  name          String
+  ownerType     String?           @map("owner_type") // investor, user, employee, apprentice, driver, equipment, lot, pos_session
+  ownerId       String?           @map("owner_id")
+  /// Sum of entries: debits positive, credits negative
+  balance       BigInt            @default(0)
+  allowNegative Boolean           @default(false) @map("allow_negative")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  entries LedgerEntry[]
+
+  @@index([ownerType, ownerId])
+  @@index([kind])
+  @@map("ledger_accounts")
+}
+
+model LedgerTransaction {
+  id          String   @id @default(uuid())
+  reference   String   @unique // idempotency: one business event is posted once
+  type        String
+  description String
+  metadata    Json     @default("{}")
+  createdById String?  @map("created_by_id")
+  occurredAt  DateTime @default(now()) @map("occurred_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  reversesId  String?  @unique @map("reverses_id") // set on a reversal: the transaction it cancels
+
+  entries LedgerEntry[]
+
+  @@index([type])
+  @@index([occurredAt])
+  @@map("ledger_transactions")
+}
+
+model LedgerEntry {
+  id            String   @id @default(uuid())
+  transactionId String   @map("transaction_id")
+  accountId     String   @map("account_id")
+  amount        BigInt // + debit, - credit
+  balanceAfter  BigInt   @map("balance_after")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  transaction LedgerTransaction @relation(fields: [transactionId], references: [id])
+  account     LedgerAccount     @relation(fields: [accountId], references: [id])
+
+  @@index([accountId, createdAt])
+  @@index([transactionId])
+  @@map("ledger_entries")
+}
+
+// ============================================================================
+// MOBILE MONEY: PayWithCAMSOL collections and payouts
+// ============================================================================
+
+enum CollectionStatus {
+  pending // prompt sent, waiting for the payer to approve
+  succeeded // PayWithCAMSOL reported Processing or Completed: paid
+  failed // declined, cancelled or refused
+  expired // not approved in time; anything it held (stock) was released
+}
+
+enum CollectionPurpose {
+  order
+  pos_order
+  booking
+  repair
+  investor_deposit
+  apprentice_fee
+}
+
+model PaymentCollection {
+  id                String            @id @default(uuid())
+  reference         String            @unique // ours, e.g. SCX-<uuid>
+  purpose           CollectionPurpose
+  targetId          String            @map("target_id") // order, booking, repair, investor or invoice id
+  userId            String?           @map("user_id")
+  amount            BigInt
+  phone             String // 237XXXXXXXXX
+  provider          String? // MTN or ORANGE
+  status            CollectionStatus  @default(pending)
+  providerReference String?           @unique @map("provider_reference") // PayWithCAMSOL refillId
+  providerStatus    String?           @map("provider_status")
+  failureReason     String?           @map("failure_reason")
+  metadata          Json              @default("{}")
+  expiresAt         DateTime?         @map("expires_at")
+  lastCheckedAt     DateTime?         @map("last_checked_at")
+  completedAt       DateTime?         @map("completed_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([purpose, targetId])
+  @@index([userId])
+  @@map("payment_collections")
+}
+
+enum PayoutStatus {
+  awaiting_approval // money reserved; an admin checks the PayWithCAMSOL balance, then sends or rejects
+  pending // approved, about to be sent
+  processing // sent to PayWithCAMSOL
+  succeeded
+  failed // money returned to the wallet
+  rejected // refused by an admin; money returned to the wallet
+  review // PayWithCAMSOL is reviewing it
+}
+
+enum PayoutReason {
+  investor_withdrawal
+  salary
+  customer_refund
+}
+
+model Payout {
+  id               String       @id @default(uuid()) // also the Idempotency-Key sent to PayWithCAMSOL
+  reason           PayoutReason
+  /// The ledger account the money was reserved from (a wallet)
+  sourceAccountKey String       @map("source_account_key")
+  userId           String       @map("user_id")
+  recipientName    String?      @map("recipient_name")
+  amount           BigInt // what reaches the phone
+  fee              BigInt       @default(0) // PayWithCAMSOL's charge, on top
+  feePaidByCompany Boolean      @default(false) @map("fee_paid_by_company")
+  phone            String
+  provider         String
+  relatedId        String?      @map("related_id") // e.g. the withdrawal request
+  status           PayoutStatus @default(awaiting_approval)
+  camsolReference  String?      @unique @map("camsol_reference")
+  failureReason    String?      @map("failure_reason")
+  approvedById     String?      @map("approved_by_id") // null when sent automatically under the limit
+  approvedAt       DateTime?    @map("approved_at")
+  rejectedById     String?      @map("rejected_by_id")
+  resolvedById     String?      @map("resolved_by_id")
+  lastCheckedAt    DateTime?    @map("last_checked_at")
+  completedAt      DateTime?    @map("completed_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@index([reason, relatedId])
+  @@map("payouts")
+}
+
+// ============================================================================
+// AUDIT LOG: every admin action on money and settings
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  actorEmail String?  @map("actor_email")
+  action     String // e.g. payments.keys.saved, payout.approved
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  details    Json     @default("{}")
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([targetType, targetId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

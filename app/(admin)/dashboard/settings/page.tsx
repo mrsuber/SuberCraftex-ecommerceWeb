@@ -1,10 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileMoneySettings } from "@/components/admin/MobileMoneySettings";
+import { PaymentKeysSettings } from "@/components/admin/settings/PaymentKeysSettings";
+import { AccountantSettings, BusinessSettings } from "@/components/admin/settings/BusinessSettings";
+import { isSuperAdmin, requireAdmin } from "@/lib/auth/session";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,262 +11,48 @@ export const metadata = {
   description: "Manage store settings",
 };
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await requireAdmin();
+  const superAdmin = isSuperAdmin(user);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="text-muted-foreground">
-          Manage your store configuration and preferences
+          Payments, money rules, delivery prices and contacts. Every change is recorded in the audit log.
         </p>
       </div>
 
-      {/* Settings Tabs */}
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="investor">Investor</TabsTrigger>
-          <TabsTrigger value="payment">Payment</TabsTrigger>
-          <TabsTrigger value="shipping">Shipping</TabsTrigger>
-          <TabsTrigger value="email">Email</TabsTrigger>
+      <Tabs defaultValue="payments" className="space-y-6">
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="rules">Money rules</TabsTrigger>
+          <TabsTrigger value="delivery">Delivery</TabsTrigger>
+          <TabsTrigger value="accountant">Accountant</TabsTrigger>
+          <TabsTrigger value="manual">Manual Mobile Money</TabsTrigger>
         </TabsList>
 
-        {/* General Settings */}
-        <TabsContent value="general" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Store Information</CardTitle>
-              <CardDescription>
-                Basic information about your store
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="storeName">Store Name</Label>
-                <Input
-                  id="storeName"
-                  defaultValue="SuberCraftex"
-                  placeholder="Your store name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="storeDescription">Store Description</Label>
-                <Input
-                  id="storeDescription"
-                  defaultValue="Premium e-commerce platform"
-                  placeholder="Brief description"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="storeEmail">Contact Email</Label>
-                <Input
-                  id="storeEmail"
-                  type="email"
-                  defaultValue="support@subercraftex.com"
-                  placeholder="contact@example.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="storePhone">Phone Number</Label>
-                <Input
-                  id="storePhone"
-                  type="tel"
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex justify-end">
-                <Button>Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Currency & Locale</CardTitle>
-              <CardDescription>
-                Set your store&apos;s currency and regional settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Input id="currency" defaultValue="XAF" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Input id="timezone" defaultValue="America/New_York" />
-              </div>
-
-              <Separator />
-
-              <div className="flex justify-end">
-                <Button>Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="payments" className="space-y-6">
+          <PaymentKeysSettings canEdit={superAdmin} />
         </TabsContent>
 
-        {/* Investor Settings */}
-        <TabsContent value="investor" className="space-y-6">
+        <TabsContent value="rules" className="space-y-6">
+          <BusinessSettings only={["checkout.", "payouts.", "investors.", "tax.", "payroll.", "apprentices."]} />
+        </TabsContent>
+
+        <TabsContent value="delivery" className="space-y-6">
+          <BusinessSettings only={["shipping."]} />
+        </TabsContent>
+
+        <TabsContent value="accountant" className="space-y-6">
+          <AccountantSettings />
+        </TabsContent>
+
+        {/* The number customers and investors can still send money to by hand, if needed */}
+        <TabsContent value="manual" className="space-y-6">
           <MobileMoneySettings />
-        </TabsContent>
-
-        {/* Payment Settings */}
-        <TabsContent value="payment" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Methods</CardTitle>
-              <CardDescription>
-                Configure payment processors
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="stripeKey">Stripe Publishable Key</Label>
-                <Input
-                  id="stripeKey"
-                  type="password"
-                  placeholder="pk_test_..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="stripeSecret">Stripe Secret Key</Label>
-                <Input
-                  id="stripeSecret"
-                  type="password"
-                  placeholder="sk_test_..."
-                />
-              </div>
-
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  🔒 Payment keys are stored securely and encrypted. Never share
-                  your secret keys.
-                </p>
-              </div>
-
-              <Separator />
-
-              <div className="flex justify-end">
-                <Button>Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Shipping Settings */}
-        <TabsContent value="shipping" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipping Rates</CardTitle>
-              <CardDescription>
-                Configure shipping options and rates
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="standardShipping">Standard Shipping</Label>
-                <Input
-                  id="standardShipping"
-                  type="number"
-                  defaultValue="0"
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="expressShipping">Express Shipping</Label>
-                <Input
-                  id="expressShipping"
-                  type="number"
-                  defaultValue="10"
-                  placeholder="10.00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="overnightShipping">Overnight Shipping</Label>
-                <Input
-                  id="overnightShipping"
-                  type="number"
-                  defaultValue="25"
-                  placeholder="25.00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="freeShippingThreshold">
-                  Free Shipping Threshold
-                </Label>
-                <Input
-                  id="freeShippingThreshold"
-                  type="number"
-                  defaultValue="50"
-                  placeholder="50.00"
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex justify-end">
-                <Button>Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Email Settings */}
-        <TabsContent value="email" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Notifications</CardTitle>
-              <CardDescription>
-                Configure email settings and templates
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fromEmail">From Email</Label>
-                <Input
-                  id="fromEmail"
-                  type="email"
-                  defaultValue="noreply@subercraftex.com"
-                  placeholder="noreply@example.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fromName">From Name</Label>
-                <Input
-                  id="fromName"
-                  defaultValue="SuberCraftex"
-                  placeholder="Your Store Name"
-                />
-              </div>
-
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Email notifications are sent via Resend. Configure your API key
-                  in environment variables.
-                </p>
-              </div>
-
-              <Separator />
-
-              <div className="flex justify-end">
-                <Button>Save Changes</Button>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
