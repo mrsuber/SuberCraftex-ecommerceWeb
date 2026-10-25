@@ -11,6 +11,9 @@ import { markInvestorLedgerLive } from '@/lib/investors/live'
 import { previewMigration, runMigration } from '@/lib/investors/migration'
 import { requestWithdrawal } from '@/lib/investors/funds'
 import { setSetting } from '@/lib/settings'
+import { investorPortfolio, investorStatement, statementCsv } from '@/lib/investors/portfolio'
+import { acceptAgreement, acceptedCurrentVersion, currentAgreement } from '@/lib/investors/agreement'
+import { RISK_KEYS } from '@/lib/investors/agreement-text'
 import { makeProduct, makeUser, resetDb, uid } from './helpers/db'
 
 async function books() {
@@ -340,5 +343,41 @@ describe('moving existing balances into the ledger', () => {
     expect(await db.investorAgreementAcceptance.count()).toBe(1)
     await expect(runMigration(admin)).rejects.toThrow(/already/)
     await books()
+  })
+})
+
+describe('what the investor sees', () => {
+  beforeEach(async () => {
+    await resetDb()
+    await db.$transaction((tx) => markInvestorLedgerLive(tx))
+    await setSetting('investors.profitHoldDays', 0)
+  })
+
+  it('shows balances, lots and every movement from the ledger', async () => {
+    const { investor } = await makeInvestor(300_000n)
+    const product = await makeProduct({ inventoryCount: 10 })
+    await db.$transaction((tx) => fundLot(tx, { investorId: investor.id, productId: product.id, quantity: 10, unitCost: 15000n, actorId: 'a' }))
+    const p = await investorPortfolio(investor.id)
+    expect(p.balances.free).toBe(150_000)
+    expect(p.balances.inProducts).toBe(150_000)
+    expect(p.lots).toHaveLength(1)
+    expect(p.lots[0].unitsLeft).toBe(10)
+    const rows = await investorStatement(investor.id)
+    expect(rows.length).toBeGreaterThanOrEqual(3)
+    const csv = statementCsv(rows)
+    expect(csv.split('\n')[0]).toContain('Balance after')
+    expect(csv.split('\n')).toHaveLength(rows.length + 1)
+  })
+
+  it('records an agreement only with every risk ticked and the full name typed', async () => {
+    const { investor } = await makeInvestor()
+    const current = await currentAgreement()
+    const base = { investorId: investor.id, versionId: current.id, language: 'en' as const }
+    await expect(acceptAgreement({ ...base, typedName: 'Someone Else', risks: [...RISK_KEYS] })).rejects.toThrow(/full name/)
+    await expect(acceptAgreement({ ...base, typedName: investor.fullName, risks: RISK_KEYS.slice(1) })).rejects.toThrow(/every risk/)
+    await acceptAgreement({ ...base, typedName: `  ${investor.fullName.toUpperCase()} `, risks: [...RISK_KEYS] })
+    expect(await acceptedCurrentVersion(db, investor.id)).toBe(current.version)
+    const row = await db.investorAgreementAcceptance.findFirstOrThrow({ where: { investorId: investor.id } })
+    expect(Object.keys(row.risksAcknowledged as object).sort()).toEqual([...RISK_KEYS].sort())
   })
 })

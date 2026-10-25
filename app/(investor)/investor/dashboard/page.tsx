@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { db } from '@/lib/db'
 import InvestorDashboardClient from '@/components/investor/InvestorDashboardClient'
+import { InvestorPortfolio } from '@/components/investor/InvestorPortfolio'
+import { investorLedgerLive } from '@/lib/investors/live'
 
 export default async function InvestorDashboardPage() {
   const user = await getSession()
@@ -84,6 +86,17 @@ export default async function InvestorDashboardPage() {
   // Dashboard is ONLY accessible after admin approves KYC verification
   if (!investor.isVerified || investor.kycStatus !== 'approved') {
     redirect('/investor/verify')
+  }
+
+  // On the new ledger, the portfolio shows everything from it
+  if (await investorLedgerLive()) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-4">
+          <InvestorPortfolio />
+        </div>
+      </div>
+    )
   }
 
   // Serialize dates and decimals for client component

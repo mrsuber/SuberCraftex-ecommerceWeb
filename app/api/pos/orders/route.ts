@@ -93,6 +93,21 @@ export async function POST(request: NextRequest) {
       if (discount > subtotal) {
         throw new PricingError('Discount cannot be more than the order subtotal')
       }
+      // A discount that sells investors' units below their cost needs an admin and a reason
+      if (discount > 0n && subtotal > 0n) {
+        for (const line of priced) {
+          const lots = await tx.productLot.findMany({ where: { productId: line.productId, variantId: line.variantId, status: 'active', unitsMilli: { gt: 0 } } })
+          if (lots.length === 0) continue
+          const highestCost = lots.reduce((m, l) => (l.unitCost > m ? l.unitCost : m), 0n)
+          const lineAfterDiscount = line.total - (discount * line.total) / subtotal
+          if (lineAfterDiscount < highestCost * BigInt(line.quantity)) {
+            if (user.role !== 'admin' || !String(body.belowCostReason ?? '').trim()) {
+              throw new PricingError(`This discount sells ${line.name} below what investors paid for it. A manager must approve it with a reason.`)
+            }
+          }
+        }
+      }
+
       // Catalogue prices already include any VAT, so nothing is added on top
       const totalAmount = subtotal - discount
       const tendered = amountTendered === undefined || amountTendered === null || amountTendered === ''
@@ -112,6 +127,7 @@ export async function POST(request: NextRequest) {
           customerPhone: customerPhone || null,
           guestEmail: customerEmail || null,
           customerNotes: customerNotes || null,
+          adminNotes: body.belowCostReason ? `Below cost approved: ${String(body.belowCostReason).slice(0, 300)}` : null,
           orderStatus: 'pending',
           paymentStatus: 'pending',
           paymentMethod,

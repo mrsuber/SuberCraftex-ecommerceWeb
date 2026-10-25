@@ -299,6 +299,16 @@ export async function distributeOrderPooled(tx: Tx, orderId: string, actorId: st
       const investorShare = profit >= 0n ? (profit * percent) / 100n : -((-profit * percent) / 100n)
       const capitalReturned = profit >= 0n ? cost : cost + investorShare
 
+      // A sale below cost always shows why it was allowed
+      let belowCostReason: string | null = null
+      if (profit < 0n) {
+        const fromOrder = order.adminNotes?.match(/Below cost approved: (.*)/)?.[1] ?? null
+        const fromPrice = fromOrder
+          ? null
+          : await tx.auditLog.findFirst({ where: { action: 'product.below_cost_price', targetId: item.productId }, orderBy: { createdAt: 'desc' } })
+        belowCostReason = fromOrder ?? ((fromPrice?.details as { reason?: string } | undefined)?.reason ?? 'price below cost')
+      }
+
       const taken = await tx.productLot.updateMany({
         where: { id: lot.id, unitsMilli: { gte: share.unitsMilli } },
         data: { unitsMilli: { decrement: share.unitsMilli } },
@@ -318,7 +328,7 @@ export async function distributeOrderPooled(tx: Tx, orderId: string, actorId: st
       await post(tx, {
         type: 'lot_sale',
         reference: `lot_sale:${lot.id}:${item.id}`,
-        description: `Sold ${Number(share.unitsMilli) / 1000} x ${item.productName} (order ${order.orderNumber})`,
+        description: `Sold ${Number(share.unitsMilli) / 1000} x ${item.productName} (order ${order.orderNumber})${belowCostReason ? `, below cost: ${belowCostReason}` : ''}`,
         createdById: actorId,
         metadata: { lotId: lot.id, orderId, orderItemId: item.id, revenue: share.revenue, cost, profit },
         postings,
@@ -369,7 +379,7 @@ export async function distributeOrderPooled(tx: Tx, orderId: string, actorId: st
           investorShare: toDecimal(investorShare),
           capitalReturned: toDecimal(capitalReturned),
           description: `Sale of ${Number(share.unitsMilli) / 1000} x ${item.productName}`,
-          notes: `Order: ${order.orderNumber}${profit < 0n ? ' (sold below cost: loss shared)' : ''}`,
+          notes: `Order: ${order.orderNumber}${belowCostReason ? ` (sold below cost, loss shared: ${belowCostReason})` : ''}`,
         },
       })
       await mirrorInvestor(tx, lot.investorId, {

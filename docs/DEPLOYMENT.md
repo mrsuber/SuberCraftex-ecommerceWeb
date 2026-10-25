@@ -96,6 +96,20 @@ pm2 logs subercraftex --lines 50
 5. **Rotate secrets that were committed to git** in `.env.local.backup` (removed in this
    release, but still in the git history): `JWT_SECRET` (this logs everyone out once), the
    SMTP password and the database password.
+6. **Move investor balances to the ledger** (after the deploy is running, at a quiet hour).
+   Until this is done, investors keep the old screens and the old profit logic.
+   1. Take a database backup (step 1 of the first section).
+   2. As a super admin, open **Dashboard → Investor engine → Move to the ledger**. It lists
+      every investor's free capital, profit and money in products and machines, and anything
+      that does not add up (units funded beyond real stock, machines funded beyond 100%).
+   3. Fix what you can (for example, correct stock counts), then press **Move**. Every balance
+      comes over unchanged; units funded beyond stock are reduced and their capital returned
+      to free capital. It runs once and cannot be repeated.
+   4. In **Agreement**, check version 2 reads correctly. Investors are asked to accept it the
+      next time they invest new money.
+   5. Each month, enter the electricity bill and rent in **Shared bills**, then close each
+      machine's month in **Machines: monthly close**. Profit is held for the days set in
+      Settings, then released by the daily job.
 
 ## Tests
 

@@ -118,6 +118,11 @@ const adminNavigation = [
     icon: TrendingUp,
   },
   {
+    name: "Investor engine",
+    href: "/dashboard/investor-engine",
+    icon: HardDrive,
+  },
+  {
     name: "Pending Deposits",
     href: "/dashboard/pending-deposits",
     icon: Wallet,

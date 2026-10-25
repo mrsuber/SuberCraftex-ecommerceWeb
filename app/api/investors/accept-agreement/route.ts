@@ -25,6 +25,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Once accounts are on the new ledger, the versioned agreement (with each risk ticked and
+    // the investor's name typed) is the only way to accept: /api/investors/agreement
+    const { investorLedgerLive } = await import('@/lib/investors/live')
+    const { acceptedCurrentVersion } = await import('@/lib/investors/agreement')
+    if (await investorLedgerLive()) {
+      if (await acceptedCurrentVersion(db, investor.id)) return NextResponse.json({ success: true, alreadyAccepted: true })
+      return NextResponse.json(
+        { error: 'A new investor agreement must be read and accepted on the SuberCraftex website.', needsNewAgreement: true },
+        { status: 409 }
+      )
+    }
+
     if (investor.agreementAccepted) {
       // Already accepted — return success so the app can proceed to dashboard
       return NextResponse.json({ success: true, alreadyAccepted: true })

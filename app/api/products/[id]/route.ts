@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { audit } from '@/lib/audit';
+import { isSuperAdmin } from '@/lib/auth/session';
 import { serializeProduct } from "@/lib/utils";
 import { requireApiAuth } from "@/lib/auth/api-auth";
 
@@ -148,6 +150,32 @@ export async function PATCH(
       }
     }
 
+    // Investors' units: the price cannot drop below what they cost without a super admin and a
+    // reason (it would sell their stock at a loss), and stock cannot drop below what they funded
+    const lots = await db.productLot.findMany({ where: { productId: id, variantId: null, status: 'active', unitsMilli: { gt: 0 } } });
+    if (lots.length > 0) {
+      const highestCost = lots.reduce((m, l) => (l.unitCost > m ? l.unitCost : m), 0n);
+      if (body.price !== undefined && Number(body.price) < Number(highestCost)) {
+        if (!isSuperAdmin(user) || !String(body.belowCostReason ?? '').trim()) {
+          return NextResponse.json(
+            {
+              error: `Investors hold units of this product at up to ${highestCost} FCFA each. A lower price sells them at a loss: a super admin must give a reason (belowCostReason).`,
+              needsBelowCostReason: true,
+            },
+            { status: 400 }
+          );
+        }
+        await audit({ actor: user, action: 'product.below_cost_price', targetType: 'product', targetId: id, details: { price: body.price, highestCost, reason: body.belowCostReason } });
+      }
+      const fundedUnits = Number(lots.reduce((s, l) => s + l.unitsMilli, 0n)) / 1000;
+      if (body.inventoryCount !== undefined && Number(body.inventoryCount) < Math.ceil(fundedUnits)) {
+        return NextResponse.json(
+          { error: `Investors hold ${fundedUnits} unit(s) of this product: stock cannot go below that. Record lost or damaged investor stock from the investor's page.` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update product
     const product = await db.product.update({
       where: { id },
@@ -212,6 +240,16 @@ export async function DELETE(
 
     if (!product) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    // Investor capital is never deleted with a product
+    const investorLots = await db.productLot.count({ where: { productId: id } });
+    const investorAllocations = await db.investorProductAllocation.count({ where: { OR: [{ productId: id }, { variant: { productId: id } }] } });
+    if (investorLots > 0 || investorAllocations > 0) {
+      return NextResponse.json(
+        { error: 'Investors have (or had) capital in this product. Set it as inactive instead, so their records stay complete.' },
+        { status: 400 }
+      );
     }
 
     // Check if product has been ordered - cannot delete products with order history

@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { db } from '@/lib/db'
 import InvestorDetailClient from '@/components/admin/InvestorDetailClient'
+import { InvestorLedgerPanel } from '@/components/admin/investors/InvestorLedgerPanel'
+import { investorLedgerLive } from '@/lib/investors/live'
 
 export default async function InvestorDetailPage({
   params,
@@ -252,11 +254,21 @@ export default async function InvestorDetailPage({
     currentValue: e.currentValue.toString(),
   }))
 
+  const live = await investorLedgerLive()
+
   return (
-    <InvestorDetailClient
-      investor={serializedInvestor}
-      products={serializedProducts}
-      equipment={serializedEquipment}
-    />
+    <>
+      {live && (
+        <InvestorLedgerPanel
+          investorId={id}
+          products={products.map((p) => ({ id: p.id, name: p.name, variants: p.variants.map((v) => ({ id: v.id, name: v.name })) }))}
+        />
+      )}
+      <InvestorDetailClient
+        investor={serializedInvestor}
+        products={serializedProducts}
+        equipment={serializedEquipment}
+      />
+    </>
   )
 }
