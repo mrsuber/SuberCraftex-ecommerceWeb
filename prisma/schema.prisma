@@ -55,6 +55,10 @@ model User {
   cashier            Cashier?
   tailor             Tailor?
   investor           Investor?
+  staffPay           StaffPay?
+  payrollLines       PayrollLine[]
+  salaryAdvances     SalaryAdvance[]
+  staffCharges       StaffCharge[]
   apprentice         Apprentice?
   technician         Technician?
   inventoryLogs      InventoryLog[]
@@ -1813,12 +1817,14 @@ model EquipmentJobUsage {
   investorPoolProfit Decimal @map("investor_pool_profit") @db.Decimal(12, 2) // 50% to be split
   profitDistributed  Boolean @default(false) @map("profit_distributed")
 
-  notes     String?
-  hoursUsed Decimal? @map("hours_used") @db.Decimal(8, 2) // for the electricity share
-  periodId  String?  @map("period_id") // the monthly close that counted it
-  jobDate   DateTime @default(now()) @map("job_date")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  notes          String?
+  hoursUsed      Decimal? @map("hours_used") @db.Decimal(8, 2) // for the electricity share
+  /// Employee who ran the machine; their hourly cost becomes the job's labour cost
+  operatorUserId String?  @map("operator_user_id")
+  periodId       String?  @map("period_id") // the monthly close that counted it
+  jobDate        DateTime @default(now()) @map("job_date")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
   equipment Equipment       @relation(fields: [equipmentId], references: [id])
@@ -3207,6 +3213,7 @@ enum PayoutStatus {
 enum PayoutReason {
   investor_withdrawal
   salary
+  salary_advance
   customer_refund
 }
 
@@ -3472,4 +3479,150 @@ model InvestorExit {
   @@index([investorId])
   @@index([status])
   @@map("investor_exits")
+}
+
+// ---------------------------------------------------------------- payroll
+
+/// What one employee is paid. Any user can be staff: drivers, cashiers, tailors, technicians,
+/// machine operators, admins. The salary is paid into their salary wallet each month.
+model StaffPay {
+  id             String    @id @default(uuid())
+  userId         String    @unique @map("user_id")
+  jobTitle       String    @map("job_title")
+  monthlySalary  BigInt    @map("monthly_salary") // gross, XAF
+  /// Number salary withdrawals are sent to (defaults to the user's phone)
+  payoutPhone    String?   @map("payout_phone")
+  /// Codes of payroll deductions that apply to this person (empty = all enabled ones)
+  deductionCodes String[]  @default([]) @map("deduction_codes")
+  incomeTax      Boolean   @default(true) @map("income_tax")
+  isActive       Boolean   @default(true) @map("is_active")
+  startedAt      DateTime  @default(now()) @map("started_at")
+  endedAt        DateTime? @map("ended_at")
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@map("staff_pay")
+}
+
+enum PayrollRunStatus {
+  draft // prepared, can be edited
+  approved // salaries paid into wallets
+  cancelled
+}
+
+/// One month's salaries. Prepared as a draft, checked, then approved once by an admin.
+model PayrollRun {
+  id            String           @id @default(uuid())
+  periodStart   DateTime         @unique @map("period_start") @db.Date
+  status        PayrollRunStatus @default(draft)
+  totalGross    BigInt           @default(0) @map("total_gross")
+  totalNet      BigInt           @default(0) @map("total_net")
+  totalEmployer BigInt           @default(0) @map("total_employer")
+  preparedById  String           @map("prepared_by_id")
+  approvedById  String?          @map("approved_by_id")
+  approvedAt    DateTime?        @map("approved_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  lines PayrollLine[]
+
+  @@map("payroll_runs")
+}
+
+/// One employee's payslip in a run. Amounts are fixed when the run is approved.
+model PayrollLine {
+  id               String   @id @default(uuid())
+  runId            String   @map("run_id")
+  userId           String   @map("user_id")
+  fullName         String   @map("full_name")
+  jobTitle         String   @map("job_title")
+  baseSalary       BigInt   @map("base_salary")
+  /// Days not worked and unpaid this month
+  unpaidDays       Int      @default(0) @map("unpaid_days")
+  bonus            BigInt   @default(0)
+  bonusNote        String?  @map("bonus_note")
+  gross            BigInt
+  /// [{ code, label, amount }] taken from the salary
+  deductions       Json     @default("[]")
+  /// [{ code, label, amount }] paid by SuberCraftex on top
+  employerCharges  Json     @default("[]") @map("employer_charges")
+  advanceRecovered BigInt   @default(0) @map("advance_recovered")
+  chargesRecovered BigInt   @default(0) @map("charges_recovered")
+  net              BigInt
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  run  PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id])
+
+  @@unique([runId, userId])
+  @@index([userId])
+  @@map("payroll_lines")
+}
+
+enum SalaryAdvanceStatus {
+  requested
+  approved // paid out, being taken back from salaries
+  rejected
+  repaid
+}
+
+/// Money paid before pay day, taken back from the following salaries.
+model SalaryAdvance {
+  id              String              @id @default(uuid())
+  userId          String              @map("user_id")
+  amount          BigInt
+  reason          String
+  status          SalaryAdvanceStatus @default(requested)
+  /// Most taken back from one salary
+  monthlyRecovery BigInt              @map("monthly_recovery")
+  recovered       BigInt              @default(0)
+  /// mobile_money or cash
+  paidBy          String?             @map("paid_by")
+  payoutId        String?             @map("payout_id")
+  decidedById     String?             @map("decided_by_id")
+  decidedAt       DateTime?           @map("decided_at")
+  decisionNote    String?             @map("decision_note")
+  requestedAt     DateTime            @default(now()) @map("requested_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("salary_advances")
+}
+
+enum StaffChargeStatus {
+  proposed // waiting for the employee to accept or dispute
+  acknowledged // accepted: taken from the next salaries
+  disputed // the employee does not agree: an admin must decide
+  recovered
+  withdrawn
+}
+
+/// Money an employee owes (cash short after deliveries, damage). Never taken from a salary
+/// unless the employee accepted it, or a super admin decided a dispute.
+model StaffCharge {
+  id                String            @id @default(uuid())
+  userId            String            @map("user_id")
+  kind              String // driver_shortage, damage, other
+  amount            BigInt
+  reason            String
+  status            StaffChargeStatus @default(proposed)
+  recovered         BigInt            @default(0)
+  /// Ledger account the recovered money settles (for a driver shortage: the cash they hold)
+  settlesAccountKey String?           @map("settles_account_key")
+  employeeNote      String?           @map("employee_note")
+  createdById       String            @map("created_by_id")
+  respondedAt       DateTime?         @map("responded_at")
+  decidedById       String?           @map("decided_by_id")
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("staff_charges")
 }

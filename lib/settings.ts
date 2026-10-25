@@ -13,6 +13,31 @@ export interface ShippingRates {
   overnight: number
 }
 
+/** A payroll contribution: a share of gross salary, up to a monthly ceiling (0 = none) */
+export interface PayrollDeduction {
+  code: string
+  label: string
+  employeePercent: number
+  employerPercent: number
+  monthlyCeiling: number
+  enabled: boolean
+}
+
+/** Income tax on salaries, worked out on the yearly salary and taken monthly */
+export interface PayrollIncomeTax {
+  enabled: boolean
+  /** Part of gross allowed as professional costs before tax (Cameroon: 30%) */
+  professionalCostPercent: number
+  /** Taken off the yearly taxable salary (Cameroon: 500 000) */
+  annualAbatement: number
+  /** No tax when the monthly gross is below this */
+  exemptBelowMonthly: number
+  /** Yearly bands: upTo 0 means no upper limit */
+  annualBrackets: { upTo: number; percent: number }[]
+  /** Added on top of the tax, as a percent of it (Cameroon: 10% council surcharge) */
+  surchargePercent: number
+}
+
 export interface SettingTypes {
   'shipping.rates': ShippingRates
   /** Minutes an unpaid Mobile Money order holds its stock before it expires */
@@ -41,6 +66,12 @@ export interface SettingTypes {
   'payroll.standardMonthlyHours': number
   /** Day of the month salaries are prepared */
   'payroll.payDay': number
+  'payroll.deductions': PayrollDeduction[]
+  'payroll.incomeTax': PayrollIncomeTax
+  /** Most of one month's salary an employee can get as an advance, in percent */
+  'payroll.advanceMaxPercent': number
+  /** Most of a salary (after deductions) that advances and accepted charges may take, in percent */
+  'payroll.maxRecoveryPercent': number
   /** Days after an apprentice instalment is due before a reminder, and before new work pauses */
   'apprentices.reminderDays': number
   'apprentices.pauseAfterDays': number
@@ -63,6 +94,29 @@ export const SETTING_DEFAULTS: SettingTypes = {
   'investors.buyoutMaxInstalments': 3,
   'payroll.standardMonthlyHours': 173,
   'payroll.payDay': 28,
+  // Cameroon rates as known in 2026. The accountant must confirm them before the first run.
+  'payroll.deductions': [
+    { code: 'CNPS_PENSION', label: 'CNPS pension', employeePercent: 4.2, employerPercent: 4.2, monthlyCeiling: 750000, enabled: true },
+    { code: 'CNPS_FAMILY', label: 'CNPS family allowances', employeePercent: 0, employerPercent: 7, monthlyCeiling: 750000, enabled: true },
+    { code: 'CNPS_ACCIDENT', label: 'CNPS work accidents', employeePercent: 0, employerPercent: 1.75, monthlyCeiling: 0, enabled: true },
+    { code: 'CFC', label: 'Crédit Foncier', employeePercent: 1, employerPercent: 1.5, monthlyCeiling: 0, enabled: false },
+    { code: 'FNE', label: 'National Employment Fund', employeePercent: 0, employerPercent: 1, monthlyCeiling: 0, enabled: false },
+  ],
+  'payroll.incomeTax': {
+    enabled: false,
+    professionalCostPercent: 30,
+    annualAbatement: 500000,
+    exemptBelowMonthly: 62000,
+    annualBrackets: [
+      { upTo: 2000000, percent: 10 },
+      { upTo: 3000000, percent: 15 },
+      { upTo: 5000000, percent: 25 },
+      { upTo: 0, percent: 35 },
+    ],
+    surchargePercent: 10,
+  },
+  'payroll.advanceMaxPercent': 50,
+  'payroll.maxRecoveryPercent': 33,
   'apprentices.reminderDays': 7,
   'apprentices.pauseAfterDays': 30,
   'company.accountant': { name: '', firm: '', email: '', phone: '', notes: '' },

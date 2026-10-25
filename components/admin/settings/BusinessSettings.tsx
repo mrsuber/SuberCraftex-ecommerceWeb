@@ -108,6 +108,78 @@ export function BusinessSettings({ only }: { only?: string[] }) {
         </div>
       );
     }
+    if (s.key === "payroll.deductions") {
+      const rows: any[] = value ?? [];
+      const set = (i: number, k: string, v: unknown) =>
+        setDraft((d) => ({ ...d, [s.key]: rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)) }));
+      return (
+        <div key={s.key} className="space-y-2">
+          <Label className="flex items-center gap-2">{s.label} {locked && <Lock className="h-3 w-3" />}</Label>
+          <p className="text-xs text-muted-foreground">Percent of gross salary, up to the monthly ceiling (0 = no ceiling). Have the accountant confirm every rate.</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-xs text-muted-foreground"><th>On</th><th>Code</th><th>Name</th><th>Employee %</th><th>Employer %</th><th>Ceiling</th></tr></thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}>
+                    <td><Switch checked={!!r.enabled} disabled={locked} onCheckedChange={(v) => set(i, "enabled", v)} /></td>
+                    <td><Input className="w-28" disabled={locked} value={r.code} onChange={(e) => set(i, "code", e.target.value)} /></td>
+                    <td><Input disabled={locked} value={r.label} onChange={(e) => set(i, "label", e.target.value)} /></td>
+                    <td><Input className="w-20" type="number" step="0.01" disabled={locked} value={r.employeePercent} onChange={(e) => set(i, "employeePercent", Number(e.target.value))} /></td>
+                    <td><Input className="w-20" type="number" step="0.01" disabled={locked} value={r.employerPercent} onChange={(e) => set(i, "employerPercent", Number(e.target.value))} /></td>
+                    <td><Input className="w-28" type="number" disabled={locked} value={r.monthlyCeiling} onChange={(e) => set(i, "monthlyCeiling", Number(e.target.value))} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!locked && (
+            <Button type="button" size="sm" variant="outline" onClick={() => setDraft((d) => ({ ...d, [s.key]: [...rows, { code: "", label: "", employeePercent: 0, employerPercent: 0, monthlyCeiling: 0, enabled: false }] }))}>
+              Add a contribution
+            </Button>
+          )}
+        </div>
+      );
+    }
+    if (s.key === "payroll.incomeTax") {
+      const v = value ?? {};
+      const set = (k: string, x: unknown) => setDraft((d) => ({ ...d, [s.key]: { ...d[s.key], [k]: x } }));
+      const bands: any[] = v.annualBrackets ?? [];
+      const setBand = (i: number, k: string, x: number) => set("annualBrackets", bands.map((b, j) => (j === i ? { ...b, [k]: x } : b)));
+      const num = (k: string, label: string) => (
+        <div className="space-y-1">
+          <Label className="text-xs">{label}</Label>
+          <Input type="number" disabled={locked} value={v[k] ?? 0} onChange={(e) => set(k, Number(e.target.value))} />
+        </div>
+      );
+      return (
+        <div key={s.key} className="space-y-3 rounded-lg border p-3">
+          <div className="flex items-center justify-between gap-4">
+            <Label className="flex items-center gap-2">{s.label} {locked && <Lock className="h-3 w-3" />}</Label>
+            <Switch checked={!!v.enabled} disabled={locked} onCheckedChange={(x) => set("enabled", x)} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Taxable yearly salary = gross × (100 − professional costs)% − employee contributions − abatement. Tax by band, plus the surcharge on the tax. Off until the accountant confirms it.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-4">
+            {num("professionalCostPercent", "Professional costs %")}
+            {num("annualAbatement", "Yearly abatement")}
+            {num("exemptBelowMonthly", "No tax below (monthly)")}
+            {num("surchargePercent", "Surcharge on tax %")}
+          </div>
+          <div className="space-y-1">
+            {bands.map((b, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="w-24">Up to (yearly)</span>
+                <Input className="w-36" type="number" disabled={locked || i === bands.length - 1} value={i === bands.length - 1 ? "" : b.upTo} placeholder="no limit" onChange={(e) => setBand(i, "upTo", Number(e.target.value))} />
+                <Input className="w-20" type="number" step="0.5" disabled={locked} value={b.percent} onChange={(e) => setBand(i, "percent", Number(e.target.value))} />
+                <span>%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
     if (typeof value === "boolean") {
       return (
         <div key={s.key} className="flex items-center justify-between gap-4">

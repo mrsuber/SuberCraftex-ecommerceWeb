@@ -35,6 +35,7 @@ interface Data {
 const REASON: Record<string, string> = {
   investor_withdrawal: "Investor withdrawal",
   salary: "Salary",
+  salary_advance: "Salary advance",
   customer_refund: "Refund",
 };
 

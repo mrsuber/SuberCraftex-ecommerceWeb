@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { investorLedgerLive } from '@/lib/investors/live'
 import { getSession } from '@/lib/auth/session'
 import { Decimal } from '@prisma/client/runtime/library'
+import { hourlyCost } from '@/lib/payroll'
 
 // POST /api/admin/equipment/[id]/job-usage - Record equipment job usage and distribute profit
 export async function POST(
@@ -46,7 +47,8 @@ export async function POST(
       jobDescription,
       revenue,
       materialCost,
-      laborCost,
+      laborCost: enteredLaborCost,
+      operatorUserId,
       maintenanceCost = 0,
       taxCost = 0,
       otherExpenses = 0,
@@ -60,6 +62,18 @@ export async function POST(
         { error: 'Missing required fields: jobDescription, revenue' },
         { status: 400 }
       )
+    }
+
+    // With an operator and hours, labour costs the operator's hourly salary cost (unless typed in)
+    let laborCost = enteredLaborCost
+    let laborNote: string | null = null
+    if (operatorUserId && (enteredLaborCost === undefined || enteredLaborCost === null || enteredLaborCost === '')) {
+      const rate = await hourlyCost(db, operatorUserId)
+      const hours = Number(hoursUsed)
+      if (rate === null) return NextResponse.json({ error: 'The operator has no salary set in Payroll' }, { status: 400 })
+      if (!Number.isFinite(hours) || hours <= 0) return NextResponse.json({ error: 'Give the hours worked to cost the operator' }, { status: 400 })
+      laborCost = Math.round(Number(rate) * hours)
+      laborNote = `Labour: ${hours} h × ${rate} FCFA`
     }
 
     // Calculate totals
@@ -97,8 +111,9 @@ export async function POST(
           investorPoolProfit: 0,
           profitDistributed: false,
           hoursUsed: hours,
+          operatorUserId: operatorUserId || null,
           jobDate: jobDate ? new Date(jobDate) : new Date(),
-          notes: notes || null,
+          notes: [notes, laborNote].filter(Boolean).join(' · ') || null,
         },
       })
       return NextResponse.json({ job, distributions: [], note: 'Shared when the month is closed' }, { status: 201 })

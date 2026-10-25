@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Package, MapPin, Heart, Settings, LayoutDashboard, Calendar, TrendingUp, GraduationCap, MessageSquare } from "lucide-react";
+import { LogOut, Package, MapPin, Heart, Settings, LayoutDashboard, Calendar, TrendingUp, GraduationCap, MessageSquare, Wallet } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +22,8 @@ export default async function AccountPage() {
   if (!user) {
     redirect("/login");
   }
+
+  const onPayroll = await db.staffPay.findUnique({ where: { userId: user.id }, select: { id: true } });
 
   // Fetch user orders (both logged-in and guest orders with matching email)
   const orders = await db.order.findMany({
@@ -80,6 +82,15 @@ export default async function AccountPage() {
                     <Link href="/apprentice/dashboard" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
                       <GraduationCap className="h-5 w-5" />
                       <span>Apprentice Dashboard</span>
+                    </Link>
+                    <Separator />
+                  </>
+                )}
+                {onPayroll && (
+                  <>
+                    <Link href="/account/salary" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
+                      <Wallet className="h-5 w-5" />
+                      <span>Salary</span>
                     </Link>
                     <Separator />
                   </>

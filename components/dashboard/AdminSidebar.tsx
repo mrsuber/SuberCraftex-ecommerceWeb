@@ -33,6 +33,7 @@ import {
   Smartphone,
   HardDrive,
   CalendarDays,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -111,6 +112,11 @@ const adminNavigation = [
     name: "Finance",
     href: "/dashboard/finance",
     icon: CreditCard,
+  },
+  {
+    name: "Payroll",
+    href: "/dashboard/payroll",
+    icon: Banknote,
   },
   {
     name: "Investors",

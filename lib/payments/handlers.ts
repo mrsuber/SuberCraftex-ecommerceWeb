@@ -4,6 +4,7 @@ import { cancelUnpaidOrder, handleLateOrderPayment, lockOrder, markOrderPaid, or
 import { sendOrderConfirmation } from '@/lib/commerce/order-emails'
 import { recordBookingPayment, recordRepairPayment } from '@/lib/services/booking-payments'
 import { creditDeposit, depositCredits, onWithdrawalPaid, onWithdrawalReturned } from '@/lib/investors/funds'
+import { advancePayoutReturned } from '@/lib/payroll'
 import { registerCollectionHandler } from './collections'
 import { registerPayoutHandler } from './payouts'
 
@@ -93,5 +94,9 @@ export function registerPaymentHandlers() {
   registerPayoutHandler('investor_withdrawal', {
     onSucceeded: onWithdrawalPaid,
     onReturned: onWithdrawalReturned,
+  })
+
+  registerPayoutHandler('salary_advance', {
+    onReturned: (tx, payout, reason) => (payout.relatedId ? advancePayoutReturned(tx, payout.relatedId, reason) : Promise.resolve()),
   })
 }

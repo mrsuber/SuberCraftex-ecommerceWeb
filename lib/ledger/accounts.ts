@@ -115,6 +115,8 @@ export const Accounts = {
   /** Half of a product loss carried by the investor, recovered by SuberCraftex */
   investorLossShare: () => income('INVESTOR_LOSS_SHARE', 'Investors’ share of losses'),
   cashOver: () => income('CASH_OVER', 'Cash counted over'),
+  /** Damage or other charges an employee accepted, taken from their salary */
+  staffRecoveries: () => income('STAFF_RECOVERIES', 'Charges recovered from staff'),
 
   // ------------------------------------------------------------- expenses
   investorProfitShare: () => expense('INVESTOR_PROFIT_SHARE', 'Investors’ share of profit'),

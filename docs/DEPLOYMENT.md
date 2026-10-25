@@ -110,6 +110,18 @@ pm2 logs subercraftex --lines 50
    5. Each month, enter the electricity bill and rent in **Shared bills**, then close each
       machine's month in **Machines: monthly close**. Profit is held for the days set in
       Settings, then released by the daily job.
+7. **Payroll.** Before the first pay run:
+   1. Ask the accountant to check **Settings → Salaries**: the CNPS rates and ceiling, the
+      other contributions (Crédit Foncier and the National Employment Fund are off by
+      default) and income tax (off by default). Turn on only what they confirm.
+   2. In **Dashboard → Payroll → Staff and salaries**, set each employee's job title,
+      monthly gross salary and Mobile Money number.
+   3. On pay day the daily job reminds admins. **Monthly pay → Prepare**, check each payslip
+      (unpaid days, bonuses), then **Approve and pay**. Net salaries go into each salary
+      wallet; employees withdraw from **Account → Salary**, and each withdrawal is approved
+      in **Finance** like any payout.
+   4. Each month, pay the contributions and tax held (ledger accounts "… owed") to CNPS and
+      the tax office, and record the payment.
 
 ## Tests
 
