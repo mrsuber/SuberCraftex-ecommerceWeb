@@ -36,7 +36,7 @@ const faqCategories = [
       },
       {
         q: "What payment methods do you accept?",
-        a: "We accept major credit/debit cards (Visa, Mastercard, American Express), mobile money, and other local payment options. All payments are processed securely.",
+        a: "We accept MTN Mobile Money and Orange Money (through PayWithCAMSOL), and cash at the shop or on delivery. We do not take card payments.",
       },
     ],
   },

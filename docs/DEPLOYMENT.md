@@ -128,6 +128,12 @@ pm2 logs subercraftex --lines 50
    days late. At 30 days late, new assignments and enrolments pause. A certificate needs
    every fee paid. Apprentices pay by Mobile Money from their dashboard; cash taken at the
    shop is recorded there with a receipt.
+9. **Calendar.** Everyone signed in has **Account → My calendar**; admins plan shifts,
+   meetings, training, leave and machine maintenance in **Dashboard → Schedule**. It also
+   shows apprentice classes, bookings, fittings, repairs, deliveries, pay day, fees due and
+   investor exits. "Add to my phone" gives each person a private subscription link for
+   Google Calendar, Apple Calendar or Outlook. Set `NEXT_PUBLIC_APP_URL` to the public site
+   address so the link is correct. Changing `JWT_SECRET` revokes every link.
 
 ## Tests
 

@@ -179,13 +179,11 @@ export function Footer() {
             © {new Date().getFullYear()} SuberCraftex. All rights reserved.
           </p>
           <div className="flex space-x-4 text-sm text-muted-foreground">
-            <span>Visa</span>
+            <span>MTN Mobile Money</span>
             <span>•</span>
-            <span>Mastercard</span>
+            <span>Orange Money</span>
             <span>•</span>
-            <span>American Express</span>
-            <span>•</span>
-            <span>PayPal</span>
+            <span>Cash</span>
           </div>
         </div>
       </div>

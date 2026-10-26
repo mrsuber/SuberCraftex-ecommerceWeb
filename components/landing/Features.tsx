@@ -14,7 +14,7 @@ const features = [
   {
     icon: Shield,
     title: "Secure Payments",
-    description: "PCI-compliant payment processing with Stripe. Your data is safe.",
+    description: "Pay with MTN Mobile Money, Orange Money or cash. Your data is safe.",
     delay: 0.2,
   },
   {

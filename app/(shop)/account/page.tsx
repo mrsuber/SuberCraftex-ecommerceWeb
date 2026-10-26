@@ -99,6 +99,10 @@ export default async function AccountPage() {
                   <Package className="h-5 w-5" />
                   <span>Orders</span>
                 </Link>
+                <Link href="/account/calendar" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
+                  <Calendar className="h-5 w-5" />
+                  <span>My calendar</span>
+                </Link>
                 <Link href="/bookings" className="flex items-center gap-3 p-3 rounded-lg border-2 border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all font-medium cursor-pointer">
                   <Calendar className="h-5 w-5" />
                   <span>Bookings</span>

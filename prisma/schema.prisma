@@ -59,6 +59,7 @@ model User {
   payrollLines       PayrollLine[]
   salaryAdvances     SalaryAdvance[]
   staffCharges       StaffCharge[]
+  scheduleEvents     ScheduleEventAttendee[]
   apprentice         Apprentice?
   technician         Technician?
   inventoryLogs      InventoryLog[]
@@ -3733,4 +3734,59 @@ model ApprenticeFeePayment {
 
   @@index([apprenticeId])
   @@map("apprentice_fee_payments")
+}
+
+// ---------------------------------------------------------------- unified calendar
+
+enum ScheduleEventKind {
+  shift
+  meeting
+  training
+  maintenance // a machine out of use
+  leave
+  delivery_run
+  other
+}
+
+/// A calendar event for anyone: staff shifts, meetings, training, leave, machine maintenance.
+/// Apprentice timetables, bookings, fittings, repairs, deliveries and money dates are read
+/// from their own tables into the same calendar.
+model ScheduleEvent {
+  id          String            @id @default(uuid())
+  title       String
+  description String?           @db.Text
+  kind        ScheduleEventKind @default(other)
+  startTime   DateTime          @map("start_time")
+  endTime     DateTime          @map("end_time")
+  isAllDay    Boolean           @default(false) @map("is_all_day")
+  location    String?
+  /// Everyone with these roles sees it (e.g. ["driver"]); attendees are added on top
+  roles       String[]          @default([])
+  /// Machine it concerns (maintenance)
+  equipmentId String?           @map("equipment_id")
+  createdById String            @map("created_by_id")
+  cancelledAt DateTime?         @map("cancelled_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  attendees ScheduleEventAttendee[]
+
+  @@index([startTime])
+  @@index([endTime])
+  @@map("schedule_events")
+}
+
+model ScheduleEventAttendee {
+  id       String @id @default(uuid())
+  eventId  String @map("event_id")
+  userId   String @map("user_id")
+  /// invited, accepted, declined
+  response String @default("invited")
+
+  event ScheduleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@map("schedule_event_attendees")
 }

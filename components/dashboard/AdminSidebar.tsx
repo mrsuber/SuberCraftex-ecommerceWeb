@@ -150,6 +150,11 @@ const adminNavigation = [
     icon: Receipt,
   },
   {
+    name: "Schedule",
+    href: "/dashboard/schedule",
+    icon: CalendarDays,
+  },
+  {
     name: "Calendar",
     href: "/dashboard/calendar",
     icon: CalendarDays,
