@@ -36,6 +36,7 @@ const REASON: Record<string, string> = {
   investor_withdrawal: "Investor withdrawal",
   salary: "Salary",
   salary_advance: "Salary advance",
+  apprentice_refund: "Apprentice fee refund",
   customer_refund: "Refund",
 };
 

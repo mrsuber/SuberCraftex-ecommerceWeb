@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { FeeError, assertNotPausedForFees } from '@/lib/apprentices/fees';
 import { requireApiAuth } from '@/lib/auth/api-auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
@@ -111,6 +112,14 @@ export async function POST(
     // Check if apprentice is active
     if (apprentice.status !== 'active' && apprentice.status !== 'pending') {
       return NextResponse.json({ error: 'Cannot create assignments for inactive apprentices' }, { status: 400 });
+    }
+
+    // Unpaid fees long overdue pause new work (Settings → Apprentice fees)
+    try {
+      await assertNotPausedForFees(id);
+    } catch (e) {
+      if (e instanceof FeeError) return NextResponse.json({ error: e.message }, { status: 409 });
+      throw e;
     }
 
     const body = await request.json();

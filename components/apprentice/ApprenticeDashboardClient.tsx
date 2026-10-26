@@ -48,6 +48,7 @@ import {
 import { format } from 'date-fns'
 import { AssignmentSubmissionForm } from './AssignmentSubmissionForm'
 import { AssignmentComments } from '@/components/dashboard/AssignmentComments'
+import { ApprenticeFees } from './ApprenticeFees'
 
 interface Assignment {
   id: string
@@ -312,6 +313,10 @@ export default function ApprenticeDashboardClient({ apprentice }: ApprenticeDash
         </div>
 
         {/* Tabs */}
+        <div className="mb-6">
+          <ApprenticeFees />
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>

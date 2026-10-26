@@ -122,6 +122,12 @@ pm2 logs subercraftex --lines 50
       in **Finance** like any payout.
    4. Each month, pay the contributions and tax held (ledger accounts "… owed") to CNPS and
       the tax office, and record the payment.
+8. **Apprentice fees.** In **Dashboard → Apprentice fees**, add the fee plans (registration,
+   tuition, number of instalments), then give each apprentice their plan. The daily job turns
+   instalments that fall due into income or fees owed, and emails one reminder when one is 7
+   days late. At 30 days late, new assignments and enrolments pause. A certificate needs
+   every fee paid. Apprentices pay by Mobile Money from their dashboard; cash taken at the
+   shop is recorded there with a receipt.
 
 ## Tests
 

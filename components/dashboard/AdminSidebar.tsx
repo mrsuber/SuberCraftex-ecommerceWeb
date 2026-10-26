@@ -34,6 +34,7 @@ import {
   HardDrive,
   CalendarDays,
   Banknote,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -142,6 +143,11 @@ const adminNavigation = [
     name: "Apprentices",
     href: "/dashboard/apprentices",
     icon: GraduationCap,
+  },
+  {
+    name: "Apprentice fees",
+    href: "/dashboard/apprentice-fees",
+    icon: Receipt,
   },
   {
     name: "Calendar",

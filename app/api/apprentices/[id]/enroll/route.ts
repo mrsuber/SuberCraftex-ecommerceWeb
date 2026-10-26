@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireApiAuth } from "@/lib/auth/api-auth";
 import { ServiceTrack } from "@prisma/client";
+import { FeeError, assertNotPausedForFees } from "@/lib/apprentices/fees";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,14 @@ export async function POST(
         { error: "Apprentice not found" },
         { status: 404 }
       );
+    }
+
+    // Unpaid fees long overdue pause new work
+    try {
+      await assertNotPausedForFees(id);
+    } catch (e) {
+      if (e instanceof FeeError) return NextResponse.json({ error: e.message }, { status: 409 });
+      throw e;
     }
 
     // Check if already enrolled in this curriculum

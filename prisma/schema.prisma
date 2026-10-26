@@ -2212,7 +2212,7 @@ model Apprentice {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignments         ApprenticeAssignment[]
   certificates        ApprenticeCertificate[]
   repairRequests      RepairRequest[] // For device_repair track apprentices
@@ -2224,6 +2224,9 @@ model Apprentice {
   freePeriodRequests  FreePeriodRequest[] // Free period requests
   calendarReminders   CalendarReminder[] // Calendar reminders
   eventCompletionLogs EventCompletionLog[] // Event completion tracking
+  feeSchedules        ApprenticeFeeSchedule[]
+  feeInstalments      ApprenticeFeeInstalment[]
+  feePayments         ApprenticeFeePayment[]
 
   @@index([mentorId])
   @@index([department])
@@ -3214,6 +3217,7 @@ enum PayoutReason {
   investor_withdrawal
   salary
   salary_advance
+  apprentice_refund
   customer_refund
 }
 
@@ -3625,4 +3629,108 @@ model StaffCharge {
 
   @@index([userId, status])
   @@map("staff_charges")
+}
+
+// ---------------------------------------------------------------- apprentice fees
+
+/// A price list for training: a registration fee paid at the start, then equal instalments.
+model ApprenticeFeePlan {
+  id              String        @id @default(uuid())
+  name            String
+  /// Track it is for; empty = any track
+  serviceTrack    ServiceTrack? @map("service_track")
+  registrationFee BigInt        @default(0) @map("registration_fee")
+  /// Total of the instalments after registration
+  tuition         BigInt
+  instalments     Int           @default(1)
+  intervalMonths  Int           @default(1) @map("interval_months")
+  description     String?
+  isActive        Boolean       @default(true) @map("is_active")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  schedules ApprenticeFeeSchedule[]
+
+  @@map("apprentice_fee_plans")
+}
+
+enum FeeScheduleStatus {
+  active
+  completed // everything paid
+  cancelled // the apprentice left; future instalments dropped
+}
+
+/// The fees one apprentice owes for one plan, copied from the plan when it was given.
+model ApprenticeFeeSchedule {
+  id             String            @id @default(uuid())
+  apprenticeId   String            @map("apprentice_id")
+  planId         String            @map("plan_id")
+  enrollmentId   String?           @map("enrollment_id")
+  planName       String            @map("plan_name")
+  total          BigInt
+  discount       BigInt            @default(0)
+  discountReason String?           @map("discount_reason")
+  status         FeeScheduleStatus @default(active)
+  startDate      DateTime          @map("start_date")
+  createdById    String            @map("created_by_id")
+  cancelledAt    DateTime?         @map("cancelled_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  apprentice  Apprentice                @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+  plan        ApprenticeFeePlan         @relation(fields: [planId], references: [id])
+  instalments ApprenticeFeeInstalment[]
+
+  @@index([apprenticeId, status])
+  @@map("apprentice_fee_schedules")
+}
+
+enum FeeInstalmentStatus {
+  scheduled // not due yet
+  invoiced // due: counted as income, owed until paid
+  paid
+  waived
+  cancelled
+}
+
+model ApprenticeFeeInstalment {
+  id           String              @id @default(uuid())
+  scheduleId   String              @map("schedule_id")
+  apprenticeId String              @map("apprentice_id")
+  label        String
+  dueDate      DateTime            @map("due_date") @db.Date
+  amount       BigInt
+  paid         BigInt              @default(0)
+  status       FeeInstalmentStatus @default(scheduled)
+  invoicedAt   DateTime?           @map("invoiced_at")
+  remindedAt   DateTime?           @map("reminded_at")
+  waivedReason String?             @map("waived_reason")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  schedule   ApprenticeFeeSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  apprentice Apprentice            @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([apprenticeId, status])
+  @@index([status, dueDate])
+  @@map("apprentice_fee_instalments")
+}
+
+/// Money an apprentice paid, with its receipt number.
+model ApprenticeFeePayment {
+  id                  String   @id @default(uuid())
+  apprenticeId        String   @map("apprentice_id")
+  receiptNumber       String   @unique @map("receipt_number")
+  amount              BigInt
+  /// cash, mobile_money, refund
+  method              String
+  collectionReference String?  @unique @map("collection_reference")
+  payoutId            String?  @map("payout_id")
+  receivedById        String?  @map("received_by_id")
+  note                String?
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  apprentice Apprentice @relation(fields: [apprenticeId], references: [id], onDelete: Cascade)
+
+  @@index([apprenticeId])
+  @@map("apprentice_fee_payments")
 }

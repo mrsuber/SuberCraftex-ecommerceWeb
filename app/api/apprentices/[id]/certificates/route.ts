@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { FeeError, assertFeesPaid } from '@/lib/apprentices/fees';
 import { requireApiAdmin, requireApiAuth } from '@/lib/auth/api-auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
@@ -37,6 +38,14 @@ export async function GET(
 
     if (!apprentice) {
       return NextResponse.json({ error: 'Apprentice not found' }, { status: 404 });
+    }
+
+    // A certificate needs every fee paid
+    try {
+      await assertFeesPaid(id);
+    } catch (e) {
+      if (e instanceof FeeError) return NextResponse.json({ error: e.message }, { status: 409 });
+      throw e;
     }
 
     // Non-admins can only view their own certificates or their mentees' certificates
