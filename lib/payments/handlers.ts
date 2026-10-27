@@ -5,6 +5,7 @@ import { sendOrderConfirmation } from '@/lib/commerce/order-emails'
 import { recordBookingPayment, recordRepairPayment } from '@/lib/services/booking-payments'
 import { creditDeposit, depositCredits, onWithdrawalPaid, onWithdrawalReturned } from '@/lib/investors/funds'
 import { advancePayoutReturned } from '@/lib/payroll'
+import { purchasePayoutReturned, purchasePayoutSent } from '@/lib/finance/purchases'
 import { apprenticeFeeHandler, refundPaid } from '@/lib/apprentices/fees'
 import { registerCollectionHandler } from './collections'
 import { registerPayoutHandler } from './payouts'
@@ -101,6 +102,11 @@ export function registerPaymentHandlers() {
 
   registerPayoutHandler('apprentice_refund', {
     onSucceeded: (tx, payout) => refundPaid(tx, payout),
+  })
+
+  registerPayoutHandler('stock_purchase', {
+    onSucceeded: purchasePayoutSent,
+    onReturned: purchasePayoutReturned,
   })
 
   registerPayoutHandler('salary_advance', {

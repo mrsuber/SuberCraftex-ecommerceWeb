@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency } from "@/lib/currency";
 import { CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { PayoutsToSend } from "./PayoutsToSend";
+import { StockPurchases } from "./StockPurchases";
 
 interface Group {
   label: string;
@@ -155,6 +156,7 @@ export function FinanceClient({ superAdmin }: { superAdmin: boolean }) {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="payouts">Payouts to send</TabsTrigger>
+          <TabsTrigger value="restocking">Restocking</TabsTrigger>
           <TabsTrigger value="payments">Mobile Money payments</TabsTrigger>
           <TabsTrigger value="drivers">Driver cash</TabsTrigger>
         </TabsList>
@@ -169,6 +171,10 @@ export function FinanceClient({ superAdmin }: { superAdmin: boolean }) {
 
         <TabsContent value="payouts">
           <PayoutsToSend onChange={load} />
+        </TabsContent>
+
+        <TabsContent value="restocking">
+          <StockPurchases onChange={load} />
         </TabsContent>
 
         <TabsContent value="payments">

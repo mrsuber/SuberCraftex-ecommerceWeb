@@ -65,6 +65,8 @@ export const Accounts = {
   /** The shop's own Mobile Money number, for money customers send by hand (not through PayWithCAMSOL) */
   shopMobileMoney: () => asset('SHOP_MOMO', 'Shop Mobile Money number'),
   bank: () => asset('BANK', 'Bank account'),
+  /** Money handed to a buyer for a restocking purchase, until the goods are recorded */
+  purchaseAdvance: (purchaseId: string) => asset(`PURCHASE_ADVANCE:${purchaseId}`, 'Money with the buyer', ['purchase', purchaseId]),
   /** Money advanced to an employee, taken back from a later salary */
   employeeAdvance: (employeeId: string) => asset(`ADVANCE:${employeeId}`, 'Salary advance', ['employee', employeeId]),
   /** Apprentice fees invoiced and not yet paid */
@@ -73,6 +75,9 @@ export const Accounts = {
   // ------------------------------------------------------------- investors
   /** Capital not invested anywhere right now: withdrawable, or reinvested by the team */
   investorFree: (investorId: string) => liability(`INVESTOR_FREE:${investorId}`, 'Free capital', ['investor', investorId]),
+  /** An investor's capital at the market for a restocking purchase (reserved: cannot be withdrawn) */
+  investorPurchase: (purchaseId: string, investorId: string) =>
+    liability(`INVESTOR_PURCHASE:${purchaseId}:${investorId}`, 'Capital at the market', ['investor', investorId]),
   /** Capital in one product lot (units an investor funded or brought) */
   investorLot: (lotId: string) => liability(`INVESTOR_LOT:${lotId}`, 'Capital in products', ['lot', lotId]),
   /** Capital in a machine share, at book value */
@@ -126,6 +131,8 @@ export const Accounts = {
   salaries: () => expense('SALARIES', 'Salaries'),
   employerContributions: () => expense('EMPLOYER_CONTRIBUTIONS', 'Employer contributions'),
   cashShort: () => expense('CASH_SHORT', 'Cash counted short'),
+  /** Goods bought to restock (stock itself is not valued in the books) */
+  stockPurchases: () => expense('STOCK_PURCHASES', 'Stock bought'),
   stockLoss: () => expense('STOCK_LOSS', 'Investor stock lost or damaged in our care'),
   refunds: () => expense('REFUNDS', 'Refunds'),
 }

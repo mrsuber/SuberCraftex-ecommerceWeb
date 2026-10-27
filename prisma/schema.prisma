@@ -3223,6 +3223,7 @@ enum PayoutReason {
   salary
   salary_advance
   apprentice_refund
+  stock_purchase
   customer_refund
 }
 
@@ -3321,6 +3322,8 @@ model ProductLot {
   proposedValueNote  String?   @map("proposed_value_note")
   acceptedAt         DateTime? @map("accepted_at") // investor accepted an in-kind valuation
   createdById        String?   @map("created_by_id")
+  /// The restocking purchase these units came from, if any
+  purchaseId         String?   @map("purchase_id")
   closedAt           DateTime? @map("closed_at")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
@@ -3804,4 +3807,83 @@ model ScheduleEventAttendee {
   @@unique([eventId, userId])
   @@index([userId])
   @@map("schedule_event_attendees")
+}
+
+// ---------------------------------------------------------------- restocking
+
+enum StockPurchaseStatus {
+  waiting_payout // the money is being sent to the buyer's phone
+  open // the buyer has the money and is at the market
+  received // goods recorded in stock; change returned
+  cancelled // nothing bought; money back
+}
+
+/// Money taken to the market to restock, funded by investors' free capital and/or
+/// SuberCraftex's own money. Investors' parts are reserved while the buyer is out.
+model StockPurchase {
+  id             String              @id @default(uuid())
+  number         String              @unique // P-2026-0001
+  status         StockPurchaseStatus @default(open)
+  /// Where the money came from: safe, bank, shop_momo, or camsol (sent to the buyer's phone)
+  source         String
+  buyerName      String              @map("buyer_name")
+  buyerPhone     String?             @map("buyer_phone")
+  payoutId       String?             @map("payout_id")
+  /// Money handed to the buyer
+  amount         BigInt
+  companyAmount  BigInt              @default(0) @map("company_amount")
+  /// Filled when the goods are recorded
+  spent          BigInt?
+  transport      BigInt              @default(0)
+  changeReturned BigInt?             @map("change_returned")
+  changeInto     String?             @map("change_into")
+  receiptUrls    String[]            @default([]) @map("receipt_urls")
+  notes          String?
+  createdById    String              @map("created_by_id")
+  receivedById   String?             @map("received_by_id")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  receivedAt     DateTime?           @map("received_at")
+  cancelledAt    DateTime?           @map("cancelled_at")
+
+  fundings StockPurchaseFunding[]
+  lines    StockPurchaseLine[]
+
+  @@index([status])
+  @@map("stock_purchases")
+}
+
+model StockPurchaseFunding {
+  id         String  @id @default(uuid())
+  purchaseId String  @map("purchase_id")
+  investorId String  @map("investor_id")
+  amount     BigInt
+  /// Filled when the goods are recorded: capital now in the goods, and what came back
+  used       BigInt?
+  returned   BigInt?
+
+  purchase StockPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@unique([purchaseId, investorId])
+  @@index([investorId])
+  @@map("stock_purchase_fundings")
+}
+
+model StockPurchaseLine {
+  id             String  @id @default(uuid())
+  purchaseId     String  @map("purchase_id")
+  productId      String  @map("product_id")
+  variantId      String? @map("variant_id")
+  productName    String  @map("product_name")
+  quantity       Int
+  /// What the market charged for the line
+  lineTotal      BigInt  @map("line_total")
+  /// Its share of transport and market costs, by value
+  transportShare BigInt  @map("transport_share")
+  /// Landed cost of one unit (line total + transport share) / quantity, rounded
+  unitCost       BigInt  @map("unit_cost")
+
+  purchase StockPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("stock_purchase_lines")
 }

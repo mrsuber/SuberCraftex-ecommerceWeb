@@ -17,7 +17,8 @@ import { MobileMoneyPay } from "@/components/payments/MobileMoneyPay";
 
 interface Portfolio {
   investor: { id: string; investorNumber: string; fullName: string; status: string; suspendedReason: string | null; suspendedAt: string | null };
-  balances: { free: number; profitAvailable: number; profitPending: number; exitDue: number; inProducts: number; inMachines: number; reserves: number };
+  balances: { free: number; profitAvailable: number; profitPending: number; exitDue: number; inProducts: number; inMachines: number; reserves: number; atMarket: number };
+  purchases: any[];
   lots: any[];
   proposals: any[];
   machines: any[];
@@ -145,7 +146,7 @@ export function InvestorPortfolio() {
         {card("Free capital", b.free, "Withdraw it, or SuberCraftex reinvests it")}
         {card("Profit available", b.profitAvailable, b.profitAvailable < 0 ? "Below zero after a return: recovered from your next earnings" : "Ready to withdraw")}
         {card("Profit pending", b.profitPending, "Becomes available when the return period ends")}
-        {card("Invested", b.inProducts + b.inMachines + b.reserves, `${formatCurrency(b.inProducts)} in products, ${formatCurrency(b.inMachines)} in machines, ${formatCurrency(b.reserves)} in machine reserves`)}
+        {card("Invested", b.inProducts + b.inMachines + b.reserves + b.atMarket, `${formatCurrency(b.inProducts)} in products, ${formatCurrency(b.inMachines)} in machines, ${formatCurrency(b.reserves)} in machine reserves${b.atMarket > 0 ? `, ${formatCurrency(b.atMarket)} at the market buying stock` : ""}`)}
       </div>
       {b.exitDue > 0 && <p className="text-sm">SuberCraftex still owes you {formatCurrency(b.exitDue)} from an exit, paid in instalments.</p>}
 
@@ -177,6 +178,7 @@ export function InvestorPortfolio() {
           <TabsTrigger value="products">Products ({data.lots.filter((l) => l.status === "active").length})</TabsTrigger>
           <TabsTrigger value="machines">Machines ({data.machines.filter((m) => m.status === "active").length})</TabsTrigger>
           <TabsTrigger value="statement">Statement</TabsTrigger>
+          {data.purchases.length > 0 && <TabsTrigger value="purchases">Restocking ({data.purchases.length})</TabsTrigger>}
           {data.exits.length > 0 && <TabsTrigger value="exits">Leaving ({data.exits.length})</TabsTrigger>}
         </TabsList>
 
@@ -302,6 +304,43 @@ export function InvestorPortfolio() {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="purchases">
+          <Card>
+            <CardHeader>
+              <CardDescription>
+                SuberCraftex takes investors&apos; free capital to the market to restock. Your part of each purchase buys your share of every line, at the price paid
+                plus a share of transport. What is not spent comes back to your free capital.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {data.purchases.map((p) => (
+                <div key={p.id} className="rounded-lg border p-3 text-sm space-y-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium">{p.number} · {new Date(p.date).toLocaleDateString()}</span>
+                    <Badge variant={p.status === "received" ? "default" : "secondary"}>{p.status === "received" ? "received" : p.status === "cancelled" ? "cancelled" : "at the market"}</Badge>
+                  </div>
+                  <div>
+                    Your part: {formatCurrency(p.yourAmount)} of {formatCurrency(p.total)}
+                    {p.yourUsed !== null && ` · in goods ${formatCurrency(p.yourUsed)} · back to free capital ${formatCurrency(p.yourReturned)}`}
+                  </div>
+                  {p.lines.length > 0 && (
+                    <div className="text-muted-foreground">
+                      {p.lines.map((l: any, i: number) => (
+                        <div key={i}>{l.quantity} × {l.product}: {formatCurrency(l.lineTotal)} + {formatCurrency(l.transportShare)} transport = {formatCurrency(l.unitCost)} each</div>
+                      ))}
+                    </div>
+                  )}
+                  {p.receipts.length > 0 && (
+                    <div className="flex flex-wrap gap-3">
+                      {p.receipts.map((r: string, i: number) => <a key={r} className="underline" href={r} target="_blank" rel="noreferrer">Receipt {i + 1}</a>)}
+                    </div>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>

@@ -20,6 +20,13 @@ async function canRead(user: SessionUser, parts: string[], url: string): Promise
     });
     return !!match;
   }
+  if (folder === 'purchase-receipts') {
+    const match = await db.stockPurchase.findFirst({
+      where: { receiptUrls: { has: url }, fundings: { some: { investorId: (await db.investor.findUnique({ where: { userId: user.id }, select: { id: true } }))?.id ?? '-' } } },
+      select: { id: true },
+    });
+    return !!match;
+  }
   if (folder === 'free-periods') {
     const match = await db.freePeriodRequest.findFirst({
       where: { attachments: { has: url }, apprentice: { userId: user.id } },

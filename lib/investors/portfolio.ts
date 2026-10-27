@@ -92,6 +92,13 @@ export async function investorPortfolio(investorId: string) {
   )
 
   const exits = await db.investorExit.findMany({ where: { investorId }, orderBy: { requestedAt: 'desc' } })
+  const fundings = await db.stockPurchaseFunding.findMany({
+    where: { investorId },
+    include: { purchase: { include: { lines: true } } },
+    orderBy: { purchase: { createdAt: 'desc' } },
+    take: 50,
+  })
+  const atMarket = fundings.filter((f) => ['open', 'waiting_payout'].includes(f.purchase.status)).reduce((s, f) => s + f.amount, 0n)
   const agreement = await currentAgreement()
   const acceptedVersion = await acceptedCurrentVersion(db, investorId)
 
@@ -115,7 +122,23 @@ export async function investorPortfolio(investorId: string) {
       inProducts: lotRows.filter((l) => l.status === 'active').reduce((s, l) => s + l.capital, 0),
       inMachines: machineRows.filter((m) => m.status === 'active').reduce((s, m) => s + m.capital, 0),
       reserves: machineRows.filter((m) => m.status === 'active').reduce((s, m) => s + m.reserve, 0),
+      atMarket: n(atMarket),
     },
+    purchases: fundings.map((f) => ({
+      id: f.purchase.id,
+      number: f.purchase.number,
+      status: f.purchase.status,
+      date: f.purchase.createdAt,
+      receivedAt: f.purchase.receivedAt,
+      yourAmount: n(f.amount),
+      yourUsed: f.used !== null ? n(f.used) : null,
+      yourReturned: f.returned !== null ? n(f.returned) : null,
+      total: n(f.purchase.amount),
+      spent: f.purchase.spent !== null ? n(f.purchase.spent) : null,
+      transport: n(f.purchase.transport),
+      receipts: f.purchase.receiptUrls,
+      lines: f.purchase.lines.map((l) => ({ product: l.productName, quantity: l.quantity, lineTotal: n(l.lineTotal), transportShare: n(l.transportShare), unitCost: n(l.unitCost) })),
+    })),
     lots: lotRows.filter((l) => l.status !== 'proposed'),
     proposals: lotRows.filter((l) => l.status === 'proposed'),
     machines: machineRows,
@@ -138,7 +161,9 @@ export async function investorPortfolio(investorId: string) {
 export async function investorStatement(investorId: string, take = 200) {
   const lots = await db.productLot.findMany({ where: { investorId }, select: { id: true } })
   const holdings = await db.equipmentHolding.findMany({ where: { investorId }, select: { id: true } })
+  const purchases = await db.stockPurchaseFunding.findMany({ where: { investorId }, select: { purchaseId: true } })
   const keys = [
+    ...purchases.map((p) => Accounts.investorPurchase(p.purchaseId, investorId).key),
     Accounts.investorFree(investorId).key,
     Accounts.investorProfit(investorId).key,
     Accounts.investorProfitPending(investorId).key,

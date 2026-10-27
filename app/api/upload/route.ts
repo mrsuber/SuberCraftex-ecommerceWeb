@@ -135,6 +135,9 @@ async function resolveTarget(type: string | null, form: FormData, investorIdOf: 
         roles: ['investor'],
       };
     }
+    case 'purchase-receipt':
+      // Market receipts for a restocking purchase: admins upload, funding investors can read
+      return { folder: ['purchase-receipts'], allowed: RECEIPTS, maxBytes: 10 * MB, private: true, roles: ['admin'] };
     case 'admin-withdrawal-receipt':
       return {
         folder: ['withdrawal-receipts'],
