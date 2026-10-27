@@ -74,6 +74,27 @@ function Migration({ superAdmin }: { superAdmin: boolean }) {
     }
   };
 
+  const missed: any[] = preview.missedSales ?? [];
+  const recordMissed = async () => {
+    if (!confirm(`Record ${missed.length} sale(s) that were never shared? Each investor gets the capital of the units sold plus their share of the profit, exactly as listed. This is written to their history.`)) return;
+    setRunning(true);
+    try {
+      const out = await send("/api/admin/investors/missed-sales", "POST");
+      toast.success(`${out.sales} sale(s) recorded`);
+      load();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setRunning(false);
+    }
+  };
+  const missedByInvestor = new Map<string, { name: string; units: number; capital: number; profit: number }>();
+  for (const sale of missed) {
+    for (const sh of sale.shares) {
+      const t = missedByInvestor.get(sh.investorNumber) ?? { name: sh.investorName, units: 0, capital: 0, profit: 0 };
+      missedByInvestor.set(sh.investorNumber, { ...t, units: t.units + sh.units, capital: t.capital + sh.capitalReturned, profit: t.profit + sh.investorShare });
+    }
+  }
   const problems = preview.investors.filter((i: any) => i.problems.length > 0);
   const over = preview.products.filter((p: any) => p.overFundedUnits > 0);
   const overMachines = preview.machines.filter((m: any) => m.overFunded);
@@ -103,11 +124,60 @@ function Migration({ superAdmin }: { superAdmin: boolean }) {
             <p className="text-sm">Open: {preview.openWithdrawals} withdrawal(s), {preview.openDeposits} deposit(s) on the old flow. They keep working and are recorded in the ledger when confirmed.</p>
           )}
           {!preview.live && superAdmin && (
-            <Button onClick={run} disabled={running}>{running ? "Moving…" : "Move investor balances to the ledger"}</Button>
+            <Button onClick={run} disabled={running || missed.length > 0}>{running ? "Moving…" : "Move investor balances to the ledger"}</Button>
           )}
+          {!preview.live && missed.length > 0 && <p className="text-sm text-amber-700">Record the sales below first: moving now would give investors only the cost of units that were actually sold.</p>}
           {!preview.live && !superAdmin && <p className="text-sm text-muted-foreground">Only a super admin can run this.</p>}
         </CardContent>
       </Card>
+
+      {!preview.live && missed.length > 0 && (
+        <Card className="border-amber-300">
+          <CardHeader>
+            <CardTitle>Sales never shared with investors ({missed.length})</CardTitle>
+            <CardDescription>
+              These delivered, paid sales were of units investors funded, but the old system never shared them (till sales were
+              never shared, and nothing was shared when sold at or below cost). Recording them gives each investor the capital
+              of the units sold plus their share of the profit, as it should have been at the time.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[...missedByInvestor].map(([num, t]) => (
+                <div key={num} className="rounded-lg border p-3 text-sm">
+                  <div className="font-medium">{num} {t.name}</div>
+                  <div>{t.units} unit(s) sold</div>
+                  <div>Capital back: {formatCurrency(t.capital)}</div>
+                  <div>Profit share: {formatCurrency(t.profit)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Order</TableHead><TableHead>Product</TableHead><TableHead>Investor</TableHead><TableHead className="text-right">Units</TableHead><TableHead className="text-right">Paid</TableHead><TableHead className="text-right">Cost</TableHead><TableHead className="text-right">Profit</TableHead><TableHead className="text-right">Investor share</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {missed.flatMap((sale) =>
+                    sale.shares.map((sh: any) => (
+                      <TableRow key={sale.orderItemId + sh.allocationId}>
+                        <TableCell className="whitespace-nowrap">{String(sale.orderDate).slice(0, 10)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{sale.orderNumber}{sale.pos && <Badge variant="outline" className="ml-1">till</Badge>}</TableCell>
+                        <TableCell>{sale.productName}</TableCell>
+                        <TableCell>{sh.investorNumber}</TableCell>
+                        <TableCell className="text-right">{sh.units}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(sh.revenue)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(sh.cost)}</TableCell>
+                        <TableCell className={`text-right ${sh.profit < 0 ? "text-destructive" : ""}`}>{formatCurrency(sh.profit)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(sh.investorShare)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {superAdmin && <Button onClick={recordMissed} disabled={running}>{running ? "Recording…" : `Record these ${missed.length} sale(s)`}</Button>}
+          </CardContent>
+        </Card>
+      )}
 
       {(problems.length > 0 || over.length > 0 || overMachines.length > 0) && (
         <Card>

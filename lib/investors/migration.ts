@@ -8,6 +8,7 @@ import { investorLedgerLive, markInvestorLedgerLive } from './live'
 import { MILLI } from './lots'
 import { syncCompanyHolding } from './machines'
 import { mirrorInvestor } from './mirror'
+import { findMissedSales } from './missed-sales'
 
 /**
  * Moving today's investor balances into the ledger, once.
@@ -140,6 +141,8 @@ export async function previewMigration(client: Tx | typeof db = db) {
 
   return {
     live: await investorLedgerLive(client),
+    // Sales on the old system that were never shared: they must be recorded before moving
+    missedSales: await findMissedSales(client),
     investors: investorChecks,
     products: productChecks,
     machines: machineChecks,
@@ -161,6 +164,9 @@ export async function runMigration(admin: { id: string; email?: string | null })
     async (tx) => {
       if (await investorLedgerLive(tx)) throw new MigrationError('Investor balances were already moved into the ledger')
       const preview = await previewMigration(tx)
+      if (preview.missedSales.length > 0) {
+        throw new MigrationError(`${preview.missedSales.length} sale(s) were never shared with investors. Record them first, then move.`)
+      }
       const opening = Accounts.openingBalances()
       const adjustments: string[] = []
       const moveToFree = new Map<string, Xaf>()
