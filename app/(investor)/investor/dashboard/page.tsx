@@ -192,5 +192,23 @@ export default async function InvestorDashboardPage() {
     })),
   }
 
-  return <InvestorDashboardClient investor={serializedInvestor} />
+  return (
+    <>
+      {investor.status === 'suspended' && (
+        <div className="container mx-auto px-4 pt-6">
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+            <p className="font-semibold">
+              Your account is suspended{investor.suspendedAt ? ` since ${investor.suspendedAt.toLocaleDateString()}` : ''}
+            </p>
+            {investor.suspendedReason && <p className="mt-1">Reason: {investor.suspendedReason}</p>}
+            <p className="mt-1">
+              Deposits, withdrawals and new investments are paused. Your investments keep earning, and you can still ask to
+              leave an investment. Contact SuberCraftex to resolve it.
+            </p>
+          </div>
+        </div>
+      )}
+      <InvestorDashboardClient investor={serializedInvestor} />
+    </>
+  )
 }

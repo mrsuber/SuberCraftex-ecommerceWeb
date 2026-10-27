@@ -1,4 +1,5 @@
 import { OrderItem, ProductLot } from '@prisma/client'
+import { suspendedMessage } from './suspended-message'
 import { AccountRef, Accounts, balanceOf, credit, debit, post, Posting, Tx } from '@/lib/ledger'
 import { splitByWeights, toDecimal, toXaf, Xaf } from '@/lib/money'
 import { getSetting } from '@/lib/settings'
@@ -71,7 +72,7 @@ export async function fundedUnitsMilli(tx: Tx, productId: string, variantId: str
 async function requireActiveInvestor(tx: Tx, investorId: string) {
   const investor = await tx.investor.findUnique({ where: { id: investorId } })
   if (!investor) throw new InvestorEngineError('Investor not found')
-  if (investor.status !== 'active') throw new InvestorEngineError('This investor account is not active')
+  if (investor.status !== 'active') throw new InvestorEngineError(suspendedMessage(investor!) ?? 'This investor account is not active')
   return investor
 }
 
@@ -439,6 +440,40 @@ export async function returnOrderSales(tx: Tx, orderId: string, actorId: string 
   for (const sale of sales) {
     const claimed = await tx.lotSale.updateMany({ where: { id: sale.id, status: { not: 'returned' } }, data: { status: 'returned', returnedAt: new Date() } })
     if (claimed.count !== 1) continue
+
+    // The investor has left this lot (collected or bought back): the returned unit stays with
+    // SuberCraftex, at cost. The investor keeps the capital; only the sale's profit is undone,
+    // and a loss they carried on it is given back.
+    const before = await tx.productLot.findUniqueOrThrow({ where: { id: sale.lotId } })
+    if (before.status === 'collected' || before.status === 'bought_back') {
+      const settle: Posting[] = []
+      if (sale.investorShare > 0n) {
+        settle.push(
+          debit(sale.status === 'pending' ? Accounts.investorProfitPending(sale.investorId) : Accounts.investorProfit(sale.investorId), sale.investorShare),
+          credit(Accounts.investorProfitShare(), sale.investorShare)
+        )
+      } else if (sale.investorShare < 0n) {
+        settle.push(debit(Accounts.investorLossShare(), -sale.investorShare), credit(Accounts.investorFree(sale.investorId), -sale.investorShare))
+      }
+      if (settle.length) {
+        await post(tx, {
+          type: 'lot_sale_returned_after_exit',
+          reference: `lot_sale_returned:${sale.id}`,
+          description: 'Customer returned an item after you left this lot: the sale is undone and SuberCraftex keeps the unit at cost',
+          createdById: actorId,
+          postings: settle,
+        })
+      }
+      await mirrorInvestor(tx, sale.investorId, {
+        type: 'refund',
+        amount: sale.investorShare > 0n ? sale.investorShare : 0n,
+        orderId,
+        description: 'Item returned after you left this lot: its profit was undone; SuberCraftex keeps the unit and you keep your capital',
+        createdBy: actorId,
+      })
+      continue
+    }
+
     await tx.productLot.update({ where: { id: sale.lotId }, data: { unitsMilli: { increment: sale.unitsMilli }, status: 'active', closedAt: null } })
 
     const free = await balanceOf(tx, Accounts.investorFree(sale.investorId))
@@ -493,29 +528,74 @@ export async function returnOrderSales(tx: Tx, orderId: string, actorId: string 
 
 // ------------------------------------------------------------------ leaving a lot
 
+/** What closing (part of) a lot did, for the exit record and the investor's statement. */
+export interface LotCloseResult {
+  collectedUnits: number
+  boughtBackMilli: bigint
+  capitalCollected: Xaf
+  capitalBoughtBack: Xaf
+  lotStillActive: boolean
+}
+
+async function shelfStock(tx: Tx, productId: string, variantId: string | null) {
+  return variantId
+    ? (await tx.productVariant.findUniqueOrThrow({ where: { id: variantId }, select: { inventoryCount: true } })).inventoryCount
+    : (await tx.product.findUniqueOrThrow({ where: { id: productId }, select: { inventoryCount: true } })).inventoryCount
+}
+
 /**
- * End a lot early. buy_back: SuberCraftex buys the remaining units at cost (capital back,
- * no profit). collect: the investor takes the goods (stock goes down). stock_loss: goods
- * lost or damaged in SuberCraftex's care; SuberCraftex repays the capital in full.
+ * End a lot, or part of it. buy_back: SuberCraftex buys the units at cost (capital back to
+ * free capital, no profit). collect: the investor takes the goods away (stock goes down);
+ * only whole units can leave, and when the whole lot is collected any part-unit left by
+ * pooled sales is bought back at cost. stock_loss: goods lost or damaged in SuberCraftex's
+ * care; SuberCraftex repays the capital in full.
+ *
+ * Units can only be collected while they are on the shelf: units held by orders not yet
+ * delivered are not taken from a customer.
  */
-export async function closeLot(tx: Tx, lotId: string, how: 'buy_back' | 'collect' | 'stock_loss', actorId: string, note?: string) {
+export async function closeLot(
+  tx: Tx,
+  lotId: string,
+  how: 'buy_back' | 'collect' | 'stock_loss',
+  actorId: string,
+  note?: string,
+  options: { unitsMilli?: bigint | null; reference?: string } = {}
+): Promise<LotCloseResult> {
   await tx.$queryRaw`SELECT id FROM product_lots WHERE id = ${lotId} FOR UPDATE`
   const lot = await tx.productLot.findUniqueOrThrow({ where: { id: lotId } })
   if (lot.status !== 'active' || lot.unitsMilli === 0n) throw new InvestorEngineError('This lot has nothing left to close')
-  const capital = await balanceOf(tx, Accounts.investorLot(lot.id))
-  const wholeUnits = Number(lot.unitsMilli / MILLI)
+  const requested = options.unitsMilli ?? lot.unitsMilli
+  if (requested <= 0n || requested > lot.unitsMilli) {
+    throw new InvestorEngineError(`This lot has ${Number(lot.unitsMilli) / 1000} unit(s) left`)
+  }
+  const whole = requested === lot.unitsMilli
+  if (how !== 'buy_back' && !whole && requested % MILLI !== 0n) throw new InvestorEngineError('Only whole units can leave the shop')
   const product = await tx.product.findUniqueOrThrow({ where: { id: lot.productId } })
+  const capital = await balanceOf(tx, Accounts.investorLot(lot.id))
+  // The capital that goes with these units (all of it when the lot closes)
+  const shareOf = (units: bigint) => (units === lot.unitsMilli ? capital : (capital * units) / lot.unitsMilli)
 
-  if (how === 'collect' || how === 'stock_loss') {
-    if (lot.unitsMilli % MILLI !== 0n) throw new InvestorEngineError('Only whole units can leave the shop; sell or buy back the fraction')
-    const updated = await tx.product.update({ where: { id: lot.productId }, data: { inventoryCount: { decrement: wholeUnits } } })
-    if (lot.variantId) await tx.productVariant.update({ where: { id: lot.variantId }, data: { inventoryCount: { decrement: wholeUnits } } })
+  // Goods that physically leave: whole units only; a part-unit is bought back instead
+  const leavingUnits = how === 'buy_back' ? 0n : requested / MILLI
+  const boughtBackMilli = how === 'buy_back' ? requested : requested - leavingUnits * MILLI
+  if (leavingUnits > 0n) {
+    const shelf = await shelfStock(tx, lot.productId, lot.variantId)
+    if (BigInt(shelf) < leavingUnits) {
+      throw new InvestorEngineError(
+        `Only ${Math.max(0, shelf)} unit(s) of ${product.name} are on the shelf now; the rest are held by orders not yet delivered. Collect fewer, or wait for those orders.`
+      )
+    }
+    const n = Number(leavingUnits)
+    const updated = lot.variantId
+      ? await tx.productVariant.update({ where: { id: lot.variantId }, data: { inventoryCount: { decrement: n } } })
+      : await tx.product.update({ where: { id: lot.productId }, data: { inventoryCount: { decrement: n } } })
+    if (lot.variantId) await tx.product.update({ where: { id: lot.productId }, data: { inventoryCount: { decrement: n } } })
     await tx.inventoryLog.create({
       data: {
         productId: lot.productId,
         variantId: lot.variantId,
         action: how === 'collect' ? 'adjustment' : 'damaged',
-        quantityChange: -wholeUnits,
+        quantityChange: -n,
         quantityAfter: updated.inventoryCount,
         userId: actorId,
         notes: how === 'collect' ? `Collected by the investor (lot ${lotLabel(lot)})` : `Lost or damaged: ${note ?? ''}`,
@@ -523,47 +603,62 @@ export async function closeLot(tx: Tx, lotId: string, how: 'buy_back' | 'collect
     })
   }
 
-  const postings: Posting[] =
-    how === 'collect'
-      ? [debit(Accounts.investorLot(lot.id), capital), credit(investorGoods(), capital)]
-      : how === 'buy_back'
-        ? [debit(Accounts.investorLot(lot.id), capital), credit(Accounts.investorFree(lot.investorId), capital)]
-        : [
-            debit(Accounts.investorLot(lot.id), capital),
-            credit(Accounts.investorFree(lot.investorId), capital),
-            debit(Accounts.stockLoss(), capital),
-            credit(investorGoods(), capital),
-          ]
+  const leavingCapital = leavingUnits > 0n ? shareOf(leavingUnits * MILLI) : 0n
+  const capitalTaken = shareOf(requested)
+  const boughtBackCapital = capitalTaken - leavingCapital
+  const units = (m: bigint) => Number(m) / 1000
+
+  const postings: Posting[] = [debit(Accounts.investorLot(lot.id), capitalTaken)]
+  if (how === 'collect') {
+    if (leavingCapital > 0n) postings.push(credit(investorGoods(), leavingCapital))
+    if (boughtBackCapital > 0n) postings.push(credit(Accounts.investorFree(lot.investorId), boughtBackCapital))
+  } else if (how === 'buy_back') {
+    postings.push(credit(Accounts.investorFree(lot.investorId), capitalTaken))
+  } else {
+    postings.push(credit(Accounts.investorFree(lot.investorId), capitalTaken))
+    postings.push(debit(Accounts.stockLoss(), capitalTaken), credit(investorGoods(), capitalTaken))
+  }
+  const parts = [
+    leavingUnits > 0n ? `${how === 'collect' ? 'collected' : 'lost'} ${units(leavingUnits * MILLI)} x ${product.name}` : null,
+    boughtBackMilli > 0n ? `SuberCraftex bought back ${units(boughtBackMilli)} x ${product.name} at cost` : null,
+  ].filter(Boolean)
   await post(tx, {
     type: `lot_${how}`,
-    reference: `lot_close:${lot.id}`,
+    reference: options.reference ?? `lot_close:${lot.id}`,
     description:
-      how === 'collect'
-        ? `Investor collected ${wholeUnits} x ${product.name}`
-        : how === 'buy_back'
-          ? `SuberCraftex bought back ${Number(lot.unitsMilli) / 1000} x ${product.name} at cost`
-          : `SuberCraftex repaid ${Number(lot.unitsMilli) / 1000} x ${product.name} lost in its care`,
+      how === 'stock_loss'
+        ? `SuberCraftex repaid ${units(requested)} x ${product.name} lost in its care`
+        : `Investor ${parts.join('; ')}`,
     createdById: actorId,
-    metadata: { lotId: lot.id, note },
+    metadata: { lotId: lot.id, note, unitsMilli: requested },
     postings,
   })
+
+  const left = lot.unitsMilli - requested
   await tx.productLot.update({
     where: { id: lot.id },
-    data: { unitsMilli: 0n, status: how === 'collect' ? 'collected' : 'bought_back', closedAt: new Date() },
+    data: left > 0n ? { unitsMilli: left } : { unitsMilli: 0n, status: how === 'collect' ? 'collected' : 'bought_back', closedAt: new Date() },
   })
   if (lot.allocationId) {
-    await tx.investorProductAllocation.update({ where: { id: lot.allocationId }, data: { quantityRemaining: 0 } })
+    await tx.investorProductAllocation.update({ where: { id: lot.allocationId }, data: { quantityRemaining: Number(left / MILLI) } })
   }
   await mirrorInvestor(tx, lot.investorId, {
     type: how === 'collect' ? 'withdrawal_product' : 'refund',
-    amount: capital,
+    amount: capitalTaken,
     productId: lot.productId,
     description:
       how === 'collect'
-        ? `You collected ${wholeUnits} x ${product.name}`
+        ? `You ${parts.join('; ')}`
         : how === 'buy_back'
-          ? `SuberCraftex bought back your ${product.name}: ${capital} FCFA capital to free capital`
-          : `${product.name} lost or damaged in our care: ${capital} FCFA capital repaid in full`,
+          ? `SuberCraftex bought back ${units(requested)} x ${product.name}: ${capitalTaken} FCFA capital to free capital`
+          : `${product.name} lost or damaged in our care: ${capitalTaken} FCFA capital repaid in full`,
     createdBy: actorId,
   })
+  return {
+    collectedUnits: how === 'collect' ? Number(leavingUnits) : 0,
+    boughtBackMilli,
+    capitalCollected: how === 'collect' ? leavingCapital : 0n,
+    capitalBoughtBack: how === 'stock_loss' ? capitalTaken : boughtBackCapital,
+    lotStillActive: left > 0n,
+  }
 }

@@ -328,9 +328,20 @@ function Exits() {
   const complete = async (exit: any) => {
     let body: Record<string, unknown>;
     if (exit.kind === "product") {
-      const option = prompt("How does the investor leave this lot? Type buy_back (SuberCraftex buys at cost) or collect (they take the goods).");
+      const asked = exit.requestedOption ?? "collect";
+      const option = prompt(
+        `The investor asked to ${asked === "collect" ? "COLLECT the goods" : "be paid at cost (BUY_BACK)"}${exit.unitsMilli ? ` for ${Number(exit.unitsMilli) / 1000} unit(s)` : " for the whole lot"}. Type collect or buy_back.`,
+        asked
+      );
       if (!option) return;
-      body = { option };
+      const note =
+        option !== asked
+          ? prompt("This is not what the investor asked for. Say why (they will see it):")
+          : option === "collect"
+            ? prompt("Handover note (who collected, ID checked, condition):", "")
+            : "";
+      if (option !== asked && !note) return;
+      body = { option, note };
     } else {
       const option = prompt("Who buys the share? Type co_owner, company or sell.");
       if (!option) return;
@@ -361,7 +372,21 @@ function Exits() {
               <TableRow key={e.id}>
                 <TableCell>{new Date(e.requestedAt).toLocaleDateString()}</TableCell>
                 <TableCell>{e.investor?.fullName}<div className="text-xs text-muted-foreground">{e.investor?.investorNumber}</div></TableCell>
-                <TableCell className="capitalize">{e.kind}</TableCell>
+                <TableCell>
+                  <span className="capitalize">{e.kind}</span>
+                  {e.kind === "product" && (
+                    <div className="text-xs text-muted-foreground">
+                      {e.status === "completed"
+                        ? `${e.collectedUnits ? `${e.collectedUnits} collected` : ""}${e.boughtBackMilli && Number(e.boughtBackMilli) > 0 ? ` ${Number(e.boughtBackMilli) / 1000} bought back` : ""}`
+                        : `wants ${e.requestedOption === "buy_back" ? "buy back" : "to collect"} · ${e.unitsMilli ? `${Number(e.unitsMilli) / 1000} unit(s)` : "whole lot"}`}
+                    </div>
+                  )}
+                  {e.handedOverAt && (
+                    <div className="text-xs">
+                      {e.investorConfirmedAt ? "✓ receipt confirmed" : e.investorDisputeNote ? <span className="text-destructive">disputed: {e.investorDisputeNote}</span> : "waiting for the investor to confirm"}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">{formatCurrency(e.valuation ?? 0)}</TableCell>
                 <TableCell>{new Date(e.noticeEndsAt).toLocaleDateString()}</TableCell>
                 <TableCell><Badge variant={e.status === "completed" ? "default" : "secondary"}>{e.status}</Badge></TableCell>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { suspendedMessage } from '@/lib/investors/suspended-message'
 import { db } from '@/lib/db'
 import { investorLedgerLive } from '@/lib/investors/live'
 import { requestWithdrawal } from '@/lib/investors/funds'
@@ -102,14 +103,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (investor.status !== 'active') {
+    const body = await request.json()
+    // A suspended investor can still ask to leave an investment, but not take money out
+    const leaving = body.type === 'product' || body.type === 'equipment_share'
+    if (investor.status !== 'active' && !(investor.status === 'suspended' && leaving)) {
       return NextResponse.json(
-        { error: 'Investor account is not active' },
+        { error: suspendedMessage(investor) ?? 'Investor account is not active' },
         { status: 400 }
       )
     }
 
-    const body = await request.json()
     const {
       type,
       amount,
@@ -268,6 +271,9 @@ export async function POST(request: NextRequest) {
           lotId: lot?.id,
           holdingId: holding?.id,
           notes: requestReason || investorNotes || null,
+          // The app's product withdrawal asks for units to take away
+          option: type === 'product' ? (body.exitOption === 'buy_back' ? 'buy_back' : 'collect') : null,
+          units: type === 'product' && quantity ? Number(quantity) : null,
         })
         return NextResponse.json(
           { id: exit.id, type, status: exit.status, valuation: Number(exit.valuation ?? 0), notice_ends_at: exit.noticeEndsAt.toISOString() },

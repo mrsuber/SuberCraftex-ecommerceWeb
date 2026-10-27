@@ -1615,10 +1615,14 @@ model Investor {
   agreementAcceptedAt DateTime? @map("agreement_accepted_at")
 
   // Status
-  status    InvestorStatus @default(pending_verification)
-  notes     String? // Admin notes about investor
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
+  status          InvestorStatus @default(pending_verification)
+  notes           String? // Admin notes about investor
+  /// Why the account is suspended, shown to the investor
+  suspendedReason String?        @map("suspended_reason")
+  suspendedAt     DateTime?      @map("suspended_at")
+  suspendedById   String?        @map("suspended_by_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   // Relations
   user                 User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3463,23 +3467,34 @@ model InvestorAgreementAcceptance {
 
 // An investor leaving a product lot or a machine share
 model InvestorExit {
-  id              String    @id @default(uuid())
-  investorId      String    @map("investor_id")
-  kind            String // product or machine
-  lotId           String?   @map("lot_id")
-  holdingId       String?   @map("holding_id")
-  status          String    @default("requested") // requested, offered, agreed, completed, cancelled
-  option          String? // product: buy_back, sell, collect. machine: co_owner, company, sell
-  noticeEndsAt    DateTime  @map("notice_ends_at")
-  valuation       BigInt? // what the share is worth (book value + reserve, or appraisal)
-  valuationMethod String?   @map("valuation_method") // book_value or appraisal
-  price           BigInt? // agreed price
-  buyerInvestorId String?   @map("buyer_investor_id")
-  instalments     Int       @default(1)
-  notes           String?
-  requestedAt     DateTime  @default(now()) @map("requested_at")
-  completedAt     DateTime? @map("completed_at")
-  handledById     String?   @map("handled_by_id")
+  id                  String    @id @default(uuid())
+  investorId          String    @map("investor_id")
+  kind                String // product or machine
+  lotId               String?   @map("lot_id")
+  holdingId           String?   @map("holding_id")
+  status              String    @default("requested") // requested, offered, agreed, completed, cancelled
+  option              String? // product: buy_back, sell, collect. machine: co_owner, company, sell
+  noticeEndsAt        DateTime  @map("notice_ends_at")
+  valuation           BigInt? // what the share is worth (book value + reserve, or appraisal)
+  valuationMethod     String?   @map("valuation_method") // book_value or appraisal
+  price               BigInt? // agreed price
+  buyerInvestorId     String?   @map("buyer_investor_id")
+  instalments         Int       @default(1)
+  notes               String?
+  /// What the investor asked for (product: collect or buy_back) and how much (milli-units; empty = all)
+  requestedOption     String?   @map("requested_option")
+  unitsMilli          BigInt?   @map("units_milli")
+  requestedAt         DateTime  @default(now()) @map("requested_at")
+  completedAt         DateTime? @map("completed_at")
+  handledById         String?   @map("handled_by_id")
+  /// Goods collected: whole units handed over, by whom, and the investor's confirmation
+  collectedUnits      Int?      @map("collected_units")
+  boughtBackMilli     BigInt?   @map("bought_back_milli")
+  handedOverAt        DateTime? @map("handed_over_at")
+  handedOverById      String?   @map("handed_over_by_id")
+  handoverNote        String?   @map("handover_note")
+  investorConfirmedAt DateTime? @map("investor_confirmed_at")
+  investorDisputeNote String?   @map("investor_dispute_note")
 
   @@index([investorId])
   @@index([status])

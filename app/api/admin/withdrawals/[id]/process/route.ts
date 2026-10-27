@@ -67,6 +67,19 @@ export async function POST(
       )
     }
 
+    // Goods can only be handed over while they are on the shelf (not held by customer orders)
+    if (action !== 'reject' && withdrawal.type === 'product' && withdrawal.productId && withdrawal.quantity) {
+      const shelf = withdrawal.variantId
+        ? (await db.productVariant.findUnique({ where: { id: withdrawal.variantId }, select: { inventoryCount: true } }))?.inventoryCount ?? 0
+        : (await db.product.findUnique({ where: { id: withdrawal.productId }, select: { inventoryCount: true } }))?.inventoryCount ?? 0
+      if (shelf < withdrawal.quantity) {
+        return NextResponse.json(
+          { error: `Only ${Math.max(0, shelf)} unit(s) are on the shelf; the rest are held by orders not yet delivered. The investor can ask for fewer units, or wait.` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Process based on action
     const result = await db.$transaction(async (tx) => {
       if (action === 'reject') {

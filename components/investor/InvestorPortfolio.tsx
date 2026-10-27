@@ -16,7 +16,7 @@ import { formatCurrency } from "@/lib/currency";
 import { MobileMoneyPay } from "@/components/payments/MobileMoneyPay";
 
 interface Portfolio {
-  investor: { id: string; investorNumber: string; fullName: string };
+  investor: { id: string; investorNumber: string; fullName: string; status: string; suspendedReason: string | null; suspendedAt: string | null };
   balances: { free: number; profitAvailable: number; profitPending: number; exitDue: number; inProducts: number; inMachines: number; reserves: number };
   lots: any[];
   proposals: any[];
@@ -40,6 +40,7 @@ export function InvestorPortfolio() {
   const [statement, setStatement] = useState<Entry[]>([]);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [leaving, setLeaving] = useState<any>(null);
 
   const load = useCallback(async () => {
     const [p, s] = await Promise.all([fetch("/api/investors/me/portfolio").then((r) => r.json()), fetch("/api/investors/me/statement").then((r) => r.json())]);
@@ -56,10 +57,21 @@ export function InvestorPortfolio() {
 
   const leave = async (body: Record<string, unknown>, label: string) => {
     if (!confirm(`Ask to leave ${label}? A notice period applies, and SuberCraftex will contact you with the options.`)) return;
-    const res = await fetch("/api/investors/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch("/api/investors/exits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const out = await res.json();
     if (!res.ok) return toast.error(out.error || "Could not send");
-    toast.success(`Request sent. Valued at ${formatCurrency(out.valuation)}; notice ends ${new Date(out.notice_ends_at).toLocaleDateString()}.`);
+    toast.success(`Request sent. Valued at ${formatCurrency(out.valuation)}; notice ends ${new Date(out.noticeEndsAt).toLocaleDateString()}.`);
+    setLeaving(null);
+    load();
+  };
+
+  const handover = async (id: string, received: boolean) => {
+    const note = received ? null : prompt("What is wrong? (units missing, damaged…)");
+    if (!received && !note) return;
+    const res = await fetch(`/api/investors/exits/${id}/handover`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ received, note }) });
+    const out = await res.json();
+    if (!res.ok) return toast.error(out.error || "Could not send");
+    toast.success(received ? "Thank you: receipt confirmed" : "Sent to SuberCraftex");
     load();
   };
 
@@ -100,10 +112,10 @@ export function InvestorPortfolio() {
           <p className="text-muted-foreground">Investor {data.investor.investorNumber}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setDepositOpen(true)} disabled={!data.agreement.acceptedCurrent}>
+          <Button onClick={() => setDepositOpen(true)} disabled={!data.agreement.acceptedCurrent || data.investor.status === "suspended"}>
             <ArrowDownToLine className="mr-2 h-4 w-4" /> Deposit
           </Button>
-          <Button variant="outline" onClick={() => setWithdrawOpen(true)}>
+          <Button variant="outline" onClick={() => setWithdrawOpen(true)} disabled={data.investor.status === "suspended"}>
             <ArrowUpFromLine className="mr-2 h-4 w-4" /> Withdraw
           </Button>
           <Button variant="outline" asChild>
@@ -111,6 +123,16 @@ export function InvestorPortfolio() {
           </Button>
         </div>
       </div>
+
+      {data.investor.status === "suspended" && (
+        <div className="rounded-lg border border-destructive bg-destructive/5 p-4 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-destructive"><ShieldAlert className="h-5 w-5" /> Your account is suspended{data.investor.suspendedAt ? ` since ${new Date(data.investor.suspendedAt).toLocaleDateString()}` : ""}</div>
+          {data.investor.suspendedReason && <p className="mt-1">Reason: {data.investor.suspendedReason}</p>}
+          <p className="mt-1 text-muted-foreground">
+            Deposits, withdrawals and new investments are paused. Your investments keep earning, and you can still raise a dispute or ask to leave an investment. Contact SuberCraftex to resolve it.
+          </p>
+        </div>
+      )}
 
       {!data.agreement.acceptedCurrent && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
@@ -187,7 +209,7 @@ export function InvestorPortfolio() {
                       <TableCell className="text-right">{formatCurrency(l.unitCost)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(l.capital)}</TableCell>
                       <TableCell className={`text-right ${l.profitEarned < 0 ? "text-red-600" : ""}`}>{formatCurrency(l.profitEarned)}</TableCell>
-                      <TableCell>{l.status === "active" && <Button size="sm" variant="ghost" onClick={() => leave({ type: "product", productId: l.productId }, l.productName)}>Leave</Button>}</TableCell>
+                      <TableCell>{l.status === "active" && <Button size="sm" variant="ghost" onClick={() => setLeaving({ lot: l, option: "collect", units: "", notes: "" })}>Leave</Button>}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -202,7 +224,7 @@ export function InvestorPortfolio() {
               <CardHeader>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <CardTitle>{m.name} <span className="text-base font-normal text-muted-foreground">· {m.percent.toFixed(2)}% yours</span></CardTitle>
-                  {m.status === "active" ? <Button size="sm" variant="ghost" onClick={() => leave({ type: "equipment_share", equipmentId: m.equipmentId }, m.name)}>Leave</Button> : <Badge variant="secondary">{m.status}</Badge>}
+                  {m.status === "active" ? <Button size="sm" variant="ghost" onClick={() => leave({ holdingId: m.id }, m.name)}>Leave</Button> : <Badge variant="secondary">{m.status}</Badge>}
                 </div>
                 <CardDescription>
                   You paid {formatCurrency(m.costBasis)}. Now: {formatCurrency(m.capital)} in the machine + {formatCurrency(m.reserve)} in its replacement reserve
@@ -288,16 +310,67 @@ export function InvestorPortfolio() {
           <Card>
             <CardContent className="pt-6 space-y-3">
               {data.exits.map((e) => (
-                <div key={e.id} className="rounded-lg border p-3 text-sm">
-                  <div className="font-medium capitalize">{e.kind} · {e.status}</div>
+                <div key={e.id} className="rounded-lg border p-3 text-sm space-y-1">
+                  <div className="font-medium">{e.productName ?? e.machineName ?? (e.kind === "product" ? "Product lot" : "Machine share")} · <span className="capitalize">{e.status}</span></div>
+                  {e.kind === "product" && e.status !== "completed" && (
+                    <div>You asked to {e.requestedOption === "buy_back" ? "be paid at cost" : "collect the goods"}{e.units ? ` for ${e.units} unit(s)` : " for the whole lot"}.</div>
+                  )}
                   <div>Valued at {formatCurrency(e.valuation ?? 0)} ({e.valuationMethod?.replace("_", " ")}); notice ends {new Date(e.noticeEndsAt).toLocaleDateString()}.</div>
-                  {e.price !== null && <div>Agreed: {formatCurrency(e.price)}{e.instalments > 1 ? ` in ${e.instalments} instalments` : ""}</div>}
+                  {e.status === "completed" && e.kind === "product" && (
+                    <div>
+                      {e.collectedUnits ? `You collected ${e.collectedUnits} unit(s)` : ""}
+                      {e.collectedUnits && e.boughtBackUnits ? "; " : ""}
+                      {e.boughtBackUnits ? `SuberCraftex bought back ${e.boughtBackUnits} unit(s) at cost (paid into your free capital)` : ""}.
+                    </div>
+                  )}
+                  {e.price !== null && e.kind !== "product" && <div>Agreed: {formatCurrency(e.price)}{e.instalments > 1 ? ` in ${e.instalments} instalments` : ""}</div>}
+                  {e.handedOverAt && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span>Handed over on {new Date(e.handedOverAt).toLocaleDateString()}{e.handoverNote ? ` (${e.handoverNote})` : ""}.</span>
+                      {e.investorConfirmedAt && <Badge variant="outline">you confirmed receipt</Badge>}
+                      {e.investorDisputeNote && <Badge variant="destructive">you reported a problem</Badge>}
+                      {!e.investorConfirmedAt && !e.investorDisputeNote && (
+                        <>
+                          <Button size="sm" onClick={() => handover(e.id, true)}>I received them</Button>
+                          <Button size="sm" variant="outline" onClick={() => handover(e.id, false)}>Something is wrong</Button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!leaving} onOpenChange={(o) => !o && setLeaving(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave {leaving?.lot.productName}</DialogTitle>
+            <DialogDescription>
+              {leaving && `${leaving.lot.unitsLeft} unit(s) left in this lot, worth ${formatCurrency(leaving.lot.capital)} at cost.`} A notice period applies. Units sold meanwhile are shared as usual.
+            </DialogDescription>
+          </DialogHeader>
+          {leaving && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm"><input type="radio" checked={leaving.option === "collect"} onChange={() => setLeaving((x: any) => ({ ...x, option: "collect" }))} /> Collect the goods (whole units; any part-unit is paid to you at cost)</label>
+                <label className="flex items-start gap-2 text-sm"><input type="radio" checked={leaving.option === "buy_back"} onChange={() => setLeaving((x: any) => ({ ...x, option: "buy_back" }))} /> SuberCraftex keeps them and pays me their cost into my free capital</label>
+              </div>
+              <div className="space-y-1">
+                <Label>Units (leave empty for the whole lot)</Label>
+                <Input type="number" min={1} max={Math.floor(leaving.lot.unitsLeft)} value={leaving.units} onChange={(e) => setLeaving((x: any) => ({ ...x, units: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Note (optional)</Label>
+                <Input value={leaving.notes} onChange={(e) => setLeaving((x: any) => ({ ...x, notes: e.target.value }))} />
+              </div>
+              <Button className="w-full" onClick={() => leave({ lotId: leaving.lot.id, option: leaving.option, units: leaving.units || null, notes: leaving.notes }, leaving.lot.productName)}>Send request</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={depositOpen} onOpenChange={setDepositOpen}>
         <DialogContent>

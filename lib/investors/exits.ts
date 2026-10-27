@@ -3,7 +3,7 @@ import { audit } from '@/lib/audit'
 import { Accounts, AccountRef, balanceOf } from '@/lib/ledger'
 import { Xaf } from '@/lib/money'
 import { getSetting } from '@/lib/settings'
-import { closeLot, InvestorEngineError } from './lots'
+import { closeLot, InvestorEngineError, MILLI } from './lots'
 import { companyBuysHolding, holdingValue, sellMachine, transferHoldingToInvestor } from './machines'
 
 /**
@@ -11,14 +11,33 @@ import { companyBuysHolding, holdingValue, sellMachine, transferHoldingToInvesto
  * notice, a valuation everyone can see, then one of the agreed ways out.
  */
 
-export async function requestExit(input: { investorId: string; kind: 'product' | 'machine'; lotId?: string; holdingId?: string; notes?: string | null }) {
+export async function requestExit(input: {
+  investorId: string
+  kind: 'product' | 'machine'
+  lotId?: string
+  holdingId?: string
+  notes?: string | null
+  /** Product lots: take the goods (collect) or be paid at cost (buy_back) */
+  option?: 'collect' | 'buy_back' | null
+  /** Product lots: whole units to leave with; empty = the whole lot */
+  units?: number | null
+}) {
   const noticeDays = await getSetting('investors.exitNoticeDays')
   const noticeEndsAt = new Date(Date.now() + noticeDays * 86_400_000)
   let valuation: Xaf
+  let unitsMilli: bigint | null = null
   if (input.kind === 'product') {
     const lot = input.lotId ? await db.productLot.findUnique({ where: { id: input.lotId } }) : null
     if (!lot || lot.investorId !== input.investorId || lot.status !== 'active') throw new InvestorEngineError('Product lot not found')
-    valuation = await balanceOf(db, Accounts.investorLot(lot.id))
+    if (input.option && !['collect', 'buy_back'].includes(input.option)) throw new InvestorEngineError('Choose to collect the goods or to be paid at cost')
+    if (input.units != null) {
+      if (!Number.isInteger(input.units) || input.units < 1) throw new InvestorEngineError('Give a whole number of units')
+      unitsMilli = BigInt(input.units) * MILLI
+      if (unitsMilli > lot.unitsMilli) throw new InvestorEngineError(`This lot has ${Number(lot.unitsMilli) / 1000} unit(s) left`)
+      if (unitsMilli === lot.unitsMilli) unitsMilli = null
+    }
+    const capital = await balanceOf(db, Accounts.investorLot(lot.id))
+    valuation = unitsMilli ? (capital * unitsMilli) / lot.unitsMilli : capital
   } else {
     const holding = input.holdingId ? await db.equipmentHolding.findUnique({ where: { id: input.holdingId } }) : null
     if (!holding || holding.investorId !== input.investorId || holding.status !== 'active') throw new InvestorEngineError('Machine share not found')
@@ -44,6 +63,8 @@ export async function requestExit(input: { investorId: string; kind: 'product' |
       valuation,
       valuationMethod: 'book_value',
       notes: input.notes ?? null,
+      requestedOption: input.kind === 'product' ? input.option ?? null : null,
+      unitsMilli,
     },
   })
   await db.notification.create({
@@ -51,7 +72,7 @@ export async function requestExit(input: { investorId: string; kind: 'product' |
       type: 'withdrawal_request',
       priority: 'high',
       title: 'An investor asked to leave an investment',
-      message: `${input.kind === 'product' ? 'Product lot' : 'Machine share'} valued at ${valuation} FCFA. Notice ends ${noticeEndsAt.toISOString().slice(0, 10)}.`,
+      message: `${input.kind === 'product' ? `Product lot${unitsMilli ? ` (${Number(unitsMilli) / 1000} units)` : ''}${input.option ? `, wants to ${input.option === 'collect' ? 'collect the goods' : 'be paid at cost'}` : ''}` : 'Machine share'} valued at ${valuation} FCFA. Notice ends ${noticeEndsAt.toISOString().slice(0, 10)}.`,
       referenceId: exit.id,
       referenceType: 'investor_exit',
       actionUrl: `/dashboard/investors/${input.investorId}`,
@@ -61,8 +82,8 @@ export async function requestExit(input: { investorId: string; kind: 'product' |
 }
 
 export type ExitOption =
-  | { option: 'buy_back' }
-  | { option: 'collect' }
+  | { option: 'buy_back'; note?: string | null }
+  | { option: 'collect'; note?: string | null }
   | { option: 'co_owner'; buyerInvestorId: string; price: Xaf }
   | { option: 'company'; price: Xaf; instalments: number }
   | { option: 'sell'; proceeds: Xaf; into: 'camsol' | 'safe' | 'bank' }
@@ -79,8 +100,31 @@ export async function completeExit(exitId: string, choice: ExitOption, admin: { 
   await db.$transaction(async (tx) => {
     if (exit.kind === 'product') {
       if (choice.option !== 'buy_back' && choice.option !== 'collect') throw new InvestorEngineError('Choose buy back or collect for a product lot (or let it sell)')
-      await closeLot(tx, exit.lotId!, choice.option, admin.id, 'Investor left the lot')
-      await tx.investorExit.update({ where: { id: exit.id }, data: { status: 'completed', option: choice.option, completedAt: new Date(), handledById: admin.id } })
+      // Doing something other than what the investor asked needs a written reason
+      if (exit.requestedOption && exit.requestedOption !== choice.option && !choice.note?.trim()) {
+        throw new InvestorEngineError(`The investor asked to ${exit.requestedOption === 'collect' ? 'collect the goods' : 'be paid at cost'}: say why it is done differently`)
+      }
+      // Units sold during the notice period are no longer there to leave with
+      const lot = await tx.productLot.findUniqueOrThrow({ where: { id: exit.lotId! } })
+      const result = await closeLot(tx, lot.id, choice.option, admin.id, choice.note?.trim() || 'Investor left the lot', {
+        unitsMilli: exit.unitsMilli && exit.unitsMilli < lot.unitsMilli ? exit.unitsMilli : null,
+        reference: `lot_close:${exit.lotId}:${exit.id}`,
+      })
+      await tx.investorExit.update({
+        where: { id: exit.id },
+        data: {
+          status: 'completed',
+          option: choice.option,
+          completedAt: new Date(),
+          handledById: admin.id,
+          price: result.capitalCollected + result.capitalBoughtBack,
+          collectedUnits: result.collectedUnits,
+          boughtBackMilli: result.boughtBackMilli,
+          ...(result.collectedUnits > 0
+            ? { handedOverAt: new Date(), handedOverById: admin.id, handoverNote: choice.note?.trim() || null }
+            : {}),
+        },
+      })
       return
     }
     const holding = await tx.equipmentHolding.findUniqueOrThrow({ where: { id: exit.holdingId! } })
@@ -117,4 +161,67 @@ export async function cancelExit(exitId: string, by: { id: string; email?: strin
   const exit = await db.investorExit.update({ where: { id: exitId }, data: { status: 'cancelled', handledById: by.id } })
   await audit({ actor: by, action: 'investor.exit_cancelled', targetType: 'investor_exit', targetId: exit.id })
   return exit
+}
+
+/**
+ * An admin closes (part of) a lot directly: goods collected, bought back, or lost. It is
+ * kept as a completed exit so the investor sees it and confirms receiving collected goods.
+ */
+export async function closeLotNow(input: { lotId: string; how: 'buy_back' | 'collect' | 'stock_loss'; units?: number | null; note?: string | null; admin: { id: string; email?: string | null } }) {
+  const lot = await db.productLot.findUnique({ where: { id: input.lotId } })
+  if (!lot) throw new InvestorEngineError('Lot not found')
+  let unitsMilli: bigint | null = null
+  if (input.units != null) {
+    if (!Number.isInteger(input.units) || input.units < 1) throw new InvestorEngineError('Give a whole number of units')
+    unitsMilli = BigInt(input.units) * MILLI
+  }
+  const exit = await db.$transaction(async (tx) => {
+    const created = await tx.investorExit.create({
+      data: { investorId: lot.investorId, kind: 'product', lotId: lot.id, status: 'requested', option: input.how, noticeEndsAt: new Date(), unitsMilli, notes: input.note ?? null, valuationMethod: 'book_value' },
+    })
+    const result = await closeLot(tx, lot.id, input.how, input.admin.id, input.note ?? undefined, { unitsMilli, reference: `lot_close:${lot.id}:${created.id}` })
+    return tx.investorExit.update({
+      where: { id: created.id },
+      data: {
+        status: 'completed',
+        completedAt: new Date(),
+        handledById: input.admin.id,
+        valuation: result.capitalCollected + result.capitalBoughtBack,
+        price: result.capitalCollected + result.capitalBoughtBack,
+        collectedUnits: result.collectedUnits,
+        boughtBackMilli: result.boughtBackMilli,
+        ...(input.how === 'collect' && result.collectedUnits > 0
+          ? { handedOverAt: new Date(), handedOverById: input.admin.id, handoverNote: input.note ?? null }
+          : {}),
+      },
+    })
+  })
+  await audit({ actor: input.admin, action: `lot.${input.how}`, targetType: 'lot', targetId: lot.id, details: { units: input.units ?? 'all', note: input.note, exitId: exit.id } })
+  return exit
+}
+
+/** The investor confirms they received the goods handed over, or says what is wrong. */
+export async function confirmHandover(input: { exitId: string; investorId: string; received: boolean; note?: string | null }) {
+  const exit = await db.investorExit.findUnique({ where: { id: input.exitId } })
+  if (!exit || exit.investorId !== input.investorId || !exit.handedOverAt) throw new InvestorEngineError('Handover not found')
+  if (exit.investorConfirmedAt || exit.investorDisputeNote) throw new InvestorEngineError('You already answered for this handover')
+  if (!input.received && !input.note?.trim()) throw new InvestorEngineError('Say what is wrong with the handover')
+  const updated = await db.investorExit.update({
+    where: { id: exit.id },
+    data: input.received ? { investorConfirmedAt: new Date() } : { investorDisputeNote: input.note!.trim().slice(0, 1000) },
+  })
+  if (!input.received) {
+    await db.notification.create({
+      data: {
+        type: 'system',
+        priority: 'high',
+        title: 'Investor disputes a goods handover',
+        message: `Handover of ${exit.collectedUnits} unit(s): ${input.note!.trim().slice(0, 300)}`,
+        referenceId: exit.id,
+        referenceType: 'investor_exit',
+        actionUrl: `/dashboard/investors/${exit.investorId}`,
+      },
+    })
+  }
+  return updated
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { suspendedMessage } from '@/lib/investors/suspended-message'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth/session'
 
@@ -81,6 +82,11 @@ export async function POST(request: NextRequest) {
         { error: 'Investor profile not found' },
         { status: 404 }
       )
+    }
+
+    // No money in while the account is suspended
+    if (suspendedMessage(investor)) {
+      return NextResponse.json({ error: suspendedMessage(investor) }, { status: 403 })
     }
 
     // Check if agreement is accepted

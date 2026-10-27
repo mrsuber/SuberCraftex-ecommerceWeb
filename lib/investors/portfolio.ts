@@ -102,6 +102,8 @@ export async function investorPortfolio(investorId: string) {
       investorNumber: investor.investorNumber,
       fullName: investor.fullName,
       status: investor.status,
+      suspendedReason: investor.status === 'suspended' ? investor.suspendedReason : null,
+      suspendedAt: investor.status === 'suspended' ? investor.suspendedAt : null,
       kycStatus: investor.kycStatus,
       verified: investor.isVerified,
     },
@@ -117,7 +119,17 @@ export async function investorPortfolio(investorId: string) {
     lots: lotRows.filter((l) => l.status !== 'proposed'),
     proposals: lotRows.filter((l) => l.status === 'proposed'),
     machines: machineRows,
-    exits: exits.map((e) => ({ ...e, valuation: e.valuation !== null ? n(e.valuation) : null, price: e.price !== null ? n(e.price) : null })),
+    exits: exits.map((e) => ({
+      ...e,
+      valuation: e.valuation !== null ? n(e.valuation) : null,
+      price: e.price !== null ? n(e.price) : null,
+      units: e.unitsMilli !== null ? Number(e.unitsMilli) / 1000 : null,
+      unitsMilli: undefined,
+      boughtBackUnits: e.boughtBackMilli !== null ? Number(e.boughtBackMilli) / 1000 : null,
+      boughtBackMilli: undefined,
+      productName: e.lotId ? lotRows.find((l) => l.id === e.lotId)?.productName ?? null : null,
+      machineName: e.holdingId ? machineRows.find((m) => m.id === e.holdingId)?.name ?? null : null,
+    })),
     agreement: { version: agreement.version, acceptedCurrent: acceptedVersion !== null },
   }
 }

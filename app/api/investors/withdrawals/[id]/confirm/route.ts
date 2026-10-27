@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { takeGoodsOffShelf } from '@/lib/investors/legacy-goods'
+import { InvestorEngineError } from '@/lib/investors/lots'
 import { db } from '@/lib/db'
 import { investorLedgerLive } from '@/lib/investors/live'
 import { debitManualWithdrawal } from '@/lib/investors/funds'
@@ -170,6 +172,15 @@ export async function POST(
             throw new Error('Product allocation not found')
           }
 
+          // The goods leave the shop: take them out of stock so they are not sold again
+          await takeGoodsOffShelf(tx, {
+            productId: withdrawal.productId!,
+            variantId: withdrawal.variantId,
+            quantity: withdrawal.quantity!,
+            userId: user.id,
+            note: `Collected by the investor (withdrawal ${withdrawal.requestNumber})`,
+          })
+
           const withdrawnValue = new Decimal(allocation.purchasePrice).mul(withdrawal.quantity!)
 
           await tx.investorProductAllocation.update({
@@ -312,7 +323,7 @@ export async function POST(
       })
     }
   } catch (error) {
-    if (error instanceof WithdrawalConfirmError) {
+    if (error instanceof WithdrawalConfirmError || error instanceof InvestorEngineError) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
     console.error('Error processing withdrawal confirmation:', error)

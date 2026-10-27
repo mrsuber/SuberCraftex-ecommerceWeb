@@ -144,6 +144,23 @@ export async function rejectPayout(payoutId: string, admin: { id: string; email?
   return payout
 }
 
+/**
+ * Stop a payout that has not left yet (waiting for approval, or approved but not sent):
+ * the money goes back to the wallet. Returns false when it was already sent.
+ */
+export async function stopPayoutBeforeSending(payoutId: string, admin: { id: string; email?: string | null }, reason: string): Promise<boolean> {
+  await ensureHandlers()
+  const stopped = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM payouts WHERE id = ${payoutId} FOR UPDATE`
+    const current = await tx.payout.findUniqueOrThrow({ where: { id: payoutId } })
+    if (current.status !== 'awaiting_approval' && current.status !== 'pending') return false
+    await returnMoney(tx, current, 'rejected', reason, admin.id)
+    return true
+  })
+  if (stopped) await audit({ actor: admin, action: 'payout.stopped', targetType: 'payout', targetId: payoutId, details: { reason } })
+  return stopped
+}
+
 /** Send an approved payout to PayWithCAMSOL. Safe to repeat: the payout id is the Idempotency-Key. */
 export async function sendPayout(payoutId: string): Promise<Payout> {
   await ensureHandlers()

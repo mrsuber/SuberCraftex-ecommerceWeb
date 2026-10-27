@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client'
+import { suspendedMessage } from './suspended-message'
 import { db } from '@/lib/db'
 import { Tx } from '@/lib/ledger'
 import { getSettings } from '@/lib/settings'
@@ -59,7 +60,7 @@ export async function requireReadyToInvest(client: Client, investorId: string): 
   if (investor.kycStatus !== 'approved' || !investor.isVerified) {
     throw new InvestorEngineError('Your identity must be verified before you can invest')
   }
-  if (investor.status !== 'active') throw new InvestorEngineError('This investor account is not active')
+  if (investor.status !== 'active') throw new InvestorEngineError(suspendedMessage(investor!) ?? 'This investor account is not active')
   const version = await acceptedCurrentVersion(client, investorId)
   if (!version) throw new InvestorEngineError('Please read and accept the current investor agreement first')
   return version

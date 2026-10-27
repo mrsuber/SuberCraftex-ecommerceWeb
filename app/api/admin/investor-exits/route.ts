@@ -13,6 +13,8 @@ export async function GET() {
       ...e,
       valuation: e.valuation !== null ? Number(e.valuation) : null,
       price: e.price !== null ? Number(e.price) : null,
+      unitsMilli: e.unitsMilli !== null ? Number(e.unitsMilli) : null,
+      boughtBackMilli: e.boughtBackMilli !== null ? Number(e.boughtBackMilli) : null,
       investor: investors.find((i) => i.id === e.investorId) ?? null,
     }))
   )

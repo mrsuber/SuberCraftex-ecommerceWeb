@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     switch (b.option) {
       case 'buy_back':
       case 'collect':
-        choice = { option: b.option }
+        choice = { option: b.option, note: b.note ? String(b.note).slice(0, 1000) : null }
         break
       case 'co_owner':
         choice = { option: 'co_owner', buyerInvestorId: String(b.buyerInvestorId), price: parseXaf(b.price, 'price') }

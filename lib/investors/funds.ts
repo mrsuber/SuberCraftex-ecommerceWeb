@@ -1,4 +1,5 @@
 import { PaymentCollection, Payout } from '@prisma/client'
+import { suspendedMessage } from './suspended-message'
 import { randomBytes } from 'crypto'
 import { db } from '@/lib/db'
 import { Accounts, credit, Tx } from '@/lib/ledger'
@@ -67,7 +68,7 @@ export async function requestWithdrawal(input: {
     throw new MoneyInputError(`Withdrawals start at ${MIN_MOBILE_MONEY_AMOUNT} FCFA (the Mobile Money minimum)`)
   }
   const investor = await db.investor.findUniqueOrThrow({ where: { id: input.investorId } })
-  if (investor.status !== 'active') throw new InvestorEngineError('Investor account is not active')
+  if (investor.status !== 'active') throw new InvestorEngineError(suspendedMessage(investor) ?? 'Investor account is not active')
   const { max, quote } = await withdrawalQuote(input.investorId, input.from, input.amount)
   if (!quote || quote.fromWallet > (await withdrawalQuote(input.investorId, input.from, null)).balance) {
     throw new InvestorEngineError(

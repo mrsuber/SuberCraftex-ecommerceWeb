@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { reactivateInvestor, suspendInvestor } from '@/lib/investors/suspension'
+import { InvestorEngineError } from '@/lib/investors/lots'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth/session'
 
@@ -93,11 +95,30 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { status, notes, isVerified, kycAction, kycRejectionReason } = body
+    const { status, notes, isVerified, kycAction, kycRejectionReason, suspendReason, reactivateNote } = body
+
+    // Suspending and reactivating have their own rules: a written reason, payouts stopped,
+    // the investor told. They are not mixed with other changes.
+    if (status === 'suspended' || (status === 'active' && investor.status === 'suspended')) {
+      try {
+        if (status === 'suspended') {
+          const out = await suspendInvestor({ investorId: id, reason: String(suspendReason ?? ''), admin: user })
+          return NextResponse.json({ ...(await db.investor.findUnique({ where: { id } })), ...out })
+        }
+        await reactivateInvestor({ investorId: id, note: reactivateNote ? String(reactivateNote) : null, admin: user })
+        return NextResponse.json(await db.investor.findUnique({ where: { id } }))
+      } catch (error) {
+        if (error instanceof InvestorEngineError) return NextResponse.json({ error: error.message }, { status: 400 })
+        throw error
+      }
+    }
 
     const updateData: any = {}
 
     if (status) {
+      if (!['pending_verification', 'active', 'exited'].includes(status)) {
+        return NextResponse.json({ error: 'Unknown status' }, { status: 400 })
+      }
       updateData.status = status
     }
 
@@ -111,7 +132,8 @@ export async function PATCH(
       updateData.isVerified = true
       updateData.verifiedAt = new Date()
       updateData.verifiedBy = user.id
-      updateData.status = 'active'
+      // Approving documents never lifts a suspension; only reactivating does
+      if (investor.status !== 'suspended') updateData.status = 'active'
       updateData.kycRejectionReason = null
       console.log(`✅ Admin ${user.email} approved KYC for investor ${investor.investorNumber}`)
     } else if (kycAction === 'reject') {
@@ -123,7 +145,8 @@ export async function PATCH(
       updateData.isVerified = true
       updateData.verifiedAt = new Date()
       updateData.verifiedBy = user.id
-      updateData.status = 'active'
+      // Approving documents never lifts a suspension; only reactivating does
+      if (investor.status !== 'suspended') updateData.status = 'active'
       updateData.kycStatus = 'approved'
     }
 

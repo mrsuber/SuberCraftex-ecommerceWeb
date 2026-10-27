@@ -554,8 +554,17 @@ export default function InvestorDetailClient({
     const newStatus = investor.status === 'suspended' ? 'active' : 'suspended'
     const action = newStatus === 'suspended' ? 'suspend' : 'reactivate'
 
-    if (!confirm(`Are you sure you want to ${action} this investor?`)) {
-      return
+    let extra: Record<string, string> = {}
+    if (newStatus === 'suspended') {
+      const reason = prompt(
+        'Why is this investor suspended? They will see this reason and get it by email.\n\nDeposits, withdrawals and new investments stop; withdrawals not yet sent go back to their balance. Their investments keep earning.'
+      )
+      if (!reason || reason.trim().length < 5) return
+      extra = { suspendReason: reason.trim() }
+    } else {
+      const note = prompt('Reactivate this investor? Optional note for them:', '')
+      if (note === null) return
+      extra = { reactivateNote: note }
     }
 
     setLoading(true)
@@ -565,7 +574,7 @@ export default function InvestorDetailClient({
       const response = await fetch(`/api/admin/investors/${investor.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...extra }),
       })
 
       const data = await response.json()
@@ -960,6 +969,13 @@ export default function InvestorDetailClient({
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
+        </div>
+      )}
+
+      {investor.status === 'suspended' && (
+        <div className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          Suspended{investor.suspendedAt ? ` on ${new Date(investor.suspendedAt).toLocaleDateString()}` : ''}: {investor.suspendedReason || 'no reason recorded'}.
+          Deposits, withdrawals and new investments are paused; their investments keep earning.
         </div>
       )}
 

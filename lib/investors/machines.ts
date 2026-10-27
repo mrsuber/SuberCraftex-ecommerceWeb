@@ -1,4 +1,5 @@
 import { Equipment, EquipmentHolding, Prisma } from '@prisma/client'
+import { suspendedMessage } from './suspended-message'
 import { AccountRef, Accounts, balanceOf, credit, debit, post, Posting, Tx } from '@/lib/ledger'
 import { splitByWeights, toDecimal, toXaf, Xaf } from '@/lib/money'
 import { getSetting } from '@/lib/settings'
@@ -49,7 +50,7 @@ export async function syncCompanyHolding(tx: Tx, equipment: Equipment) {
 /** The team puts an investor's free capital into a machine share at its price. */
 export async function buyIntoMachine(tx: Tx, input: { investorId: string; equipmentId: string; amount: Xaf; actorId: string; agreementVersion?: number | null }) {
   const investor = await tx.investor.findUnique({ where: { id: input.investorId } })
-  if (!investor || investor.status !== 'active') throw new InvestorEngineError('This investor account is not active')
+  if (!investor || investor.status !== 'active') throw new InvestorEngineError(suspendedMessage(investor!) ?? 'This investor account is not active')
   const equipment = await tx.equipment.findUnique({ where: { id: input.equipmentId } })
   if (!equipment) throw new InvestorEngineError('Machine not found')
   const price = toXaf(equipment.purchasePrice)

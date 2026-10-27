@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { audit } from '@/lib/audit'
 import { isSuperAdmin } from '@/lib/auth/session'
 import { adminOrResponse } from '@/lib/http/admin'
 import { businessError } from '@/lib/http/errors'
-import { closeLot } from '@/lib/investors/lots'
+import { closeLotNow } from '@/lib/investors/exits'
 
-// POST /api/admin/lots/[id]/close - { how: buy_back | collect | stock_loss, note }
+// POST /api/admin/lots/[id]/close - { how: buy_back | collect | stock_loss, units?, note }: all of the lot, or some whole units
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { user, response } = await adminOrResponse()
   if (response) return response
@@ -16,9 +14,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (body.how === 'stock_loss' && !isSuperAdmin(user)) return NextResponse.json({ error: 'Only a super admin can record goods lost in our care' }, { status: 403 })
   if (body.how === 'stock_loss' && !String(body.note ?? '').trim()) return NextResponse.json({ error: 'Say what happened to the goods' }, { status: 400 })
   try {
-    await db.$transaction((tx) => closeLot(tx, id, body.how, user.id, body.note))
-    await audit({ actor: user, action: `lot.${body.how}`, targetType: 'lot', targetId: id, details: { note: body.note } })
-    return NextResponse.json({ closed: true })
+    const units = body.units === undefined || body.units === null || body.units === '' ? null : Number(body.units)
+    const exit = await closeLotNow({ lotId: id, how: body.how, units, note: body.note ? String(body.note).slice(0, 1000) : null, admin: user })
+    return NextResponse.json({ closed: true, exitId: exit.id, collectedUnits: exit.collectedUnits, boughtBackUnits: Number(exit.boughtBackMilli ?? 0n) / 1000 })
   } catch (error) {
     return businessError(error)
   }

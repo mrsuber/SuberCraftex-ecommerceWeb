@@ -35,6 +35,10 @@ export async function POST(
       )
     }
 
+    if (investor.status === 'suspended') {
+      return NextResponse.json({ error: `This investor is suspended (${investor.suspendedReason ?? 'no reason recorded'}): their money cannot be invested until they are reactivated` }, { status: 409 })
+    }
+
     const body = await request.json()
     const {
       productId,

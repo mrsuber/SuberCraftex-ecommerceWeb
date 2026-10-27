@@ -38,11 +38,13 @@ export function InvestorLedgerPanel({ investorId, products }: { investorId: stri
     }
   };
 
-  const closeLot = (lotId: string) => {
-    const how = prompt("How does this lot end? buy_back (SuberCraftex buys the rest at cost), collect (investor takes the goods) or stock_loss (lost in our care, super admin)");
+  const closeLot = (lotId: string, unitsLeft: number) => {
+    const how = prompt("buy_back (SuberCraftex buys at cost), collect (investor takes the goods) or stock_loss (lost in our care, super admin)");
     if (!how) return;
-    const note = prompt("Note (required for stock_loss)") ?? "";
-    run(() => send(`/api/admin/lots/${lotId}/close`, { how, note }), "Lot closed");
+    const units = prompt(`How many whole units? Leave empty for all ${unitsLeft}.`, "");
+    if (units === null) return;
+    const note = prompt(how === "collect" ? "Handover note (who collected, ID checked, condition)" : "Note (required for stock_loss)") ?? "";
+    run(() => send(`/api/admin/lots/${lotId}/close`, { how, units: units.trim() || null, note }), how === "collect" ? "Handed over: the investor will be asked to confirm" : "Done");
   };
 
   const product = products.find((p) => p.id === inKind.productId);
@@ -85,7 +87,7 @@ export function InvestorLedgerPanel({ investorId, products }: { investorId: stri
                   <TableCell className="text-right">{l.unitsLeft} / {l.unitsStart}</TableCell>
                   <TableCell className="text-right">{formatCurrency(l.capital)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(l.profitEarned)}</TableCell>
-                  <TableCell>{l.status === "active" && <Button size="sm" variant="outline" onClick={() => closeLot(l.id)}>Close</Button>}</TableCell>
+                  <TableCell>{l.status === "active" && <Button size="sm" variant="outline" onClick={() => closeLot(l.id, l.unitsLeft)}>Close</Button>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
