@@ -38,7 +38,14 @@ function shopToday() {
   return new Date(Date.now() + 3_600_000).toISOString().slice(0, 10);
 }
 
-export function NewJobForm({ services }: { services: JobServiceOption[] }) {
+export interface JobStaffOption {
+  id: string;
+  name: string;
+  role: string;
+}
+
+/** `staff` is given to admins, who choose who does the job; other staff get the job themselves */
+export function NewJobForm({ services, staff }: { services: JobServiceOption[]; staff?: JobStaffOption[] }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -54,6 +61,7 @@ export function NewJobForm({ services }: { services: JobServiceOption[] }) {
     price: "",
     customerNotes: "",
     adminNotes: "",
+    assignedToId: "",
   });
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
   const service = services.find((s) => s.id === form.serviceId);
@@ -69,7 +77,12 @@ export function NewJobForm({ services }: { services: JobServiceOption[] }) {
       const res = await fetch("/api/admin/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, price: form.price.trim() || undefined, scheduledTime: form.scheduledTime || undefined }),
+        body: JSON.stringify({
+          ...form,
+          price: form.price.trim() || undefined,
+          scheduledTime: form.scheduledTime || undefined,
+          assignedToId: form.assignedToId || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to record the job");
@@ -129,6 +142,25 @@ export function NewJobForm({ services }: { services: JobServiceOption[] }) {
               </Select>
             </div>
           </div>
+
+          {staff && (
+            <div className="space-y-1 md:max-w-sm">
+              <Label>Who does it</Label>
+              <Select value={form.assignedToId || "none"} onValueChange={(v) => set("assignedToId")(v === "none" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not assigned yet</SelectItem>
+                  {staff.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} · {p.role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Stage</Label>

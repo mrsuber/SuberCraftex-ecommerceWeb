@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { db } from '@/lib/db'
 import { ServicesTable } from '@/components/dashboard/ServicesTable'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Clock, Plus } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
@@ -99,12 +99,20 @@ export default async function ServicesPage() {
             Manage your service offerings and bookings
           </p>
         </div>
+        <div className="flex gap-2">
+        <Button asChild variant="outline">
+          <Link href="/dashboard/services/hours">
+            <Clock className="mr-2 h-4 w-4" />
+            Working hours
+          </Link>
+        </Button>
         <Button asChild>
           <Link href="/dashboard/services/new">
             <Plus className="mr-2 h-4 w-4" />
             Add Service
           </Link>
         </Button>
+        </div>
       </div>
 
       {/* Stats */}

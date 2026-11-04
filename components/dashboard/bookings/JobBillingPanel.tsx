@@ -114,13 +114,29 @@ export interface JobBillingPanelProps {
   serviceType: string;
   customerPhone: string | null;
   isAdmin: boolean;
+  viewerId: string;
+  viewerRole: string;
+  assignedTo: { id: string; name: string } | null;
+  /** People an admin can give the job to */
+  staff?: { id: string; name: string; role: string }[];
 }
 
 /**
  * Everything staff do once a job is agreed: move the work along, write and issue the
  * invoice, and take the money (cash at the shop or a Mobile Money prompt to the customer).
  */
-export function JobBillingPanel({ bookingId, bookingNumber, status, serviceType, customerPhone, isAdmin }: JobBillingPanelProps) {
+export function JobBillingPanel({
+  bookingId,
+  bookingNumber,
+  status,
+  serviceType,
+  customerPhone,
+  isAdmin,
+  viewerId,
+  viewerRole,
+  assignedTo,
+  staff,
+}: JobBillingPanelProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,6 +250,19 @@ export function JobBillingPanel({ bookingId, bookingNumber, status, serviceType,
       router.refresh();
     });
 
+  const assign = (assigneeId: string | null) =>
+    run("assign", async () => {
+      const data = await call(`/api/bookings/${bookingId}/assign`, { method: "POST", body: JSON.stringify({ assigneeId }) });
+      toast.success(data.assignedTo ? `Job given to ${data.assignedTo.name}` : "Job is unassigned");
+      if (data.clashes?.length) {
+        toast.warning(
+          `${data.assignedTo?.name} already has ${data.clashes.map((c: { time: string; service: string }) => `${c.service} at ${c.time}`).join(", ")} that day — check the times.`,
+          { duration: 10000 },
+        );
+      }
+      router.refresh();
+    });
+
   const saveDraft = () =>
     run("save", async () => {
       await call(`/api/bookings/${bookingId}/invoice`, {
@@ -337,6 +366,39 @@ export function JobBillingPanel({ bookingId, bookingNumber, status, serviceType,
         {/* ------------------------------------------------ 1. the work */}
         <section className="space-y-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">1 · The work</h3>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Who does it:</span>
+            {isAdmin && staff ? (
+              <select
+                aria-label="Who does this job"
+                className="h-9 rounded-md border bg-white px-2 text-sm dark:bg-neutral-900"
+                value={assignedTo?.id ?? ""}
+                disabled={!!busy}
+                onChange={(e) => assign(e.target.value || null)}
+              >
+                <option value="">Not assigned</option>
+                {staff.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {p.role}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <>
+                <span className="font-medium">{assignedTo ? (assignedTo.id === viewerId ? "You" : assignedTo.name) : "Nobody yet"}</span>
+                {!assignedTo && ["technician", "tailor"].includes(viewerRole) && !finished && (
+                  <Button size="sm" variant="outline" disabled={!!busy} onClick={() => assign(viewerId)}>
+                    Take this job
+                  </Button>
+                )}
+                {assignedTo?.id === viewerId && !finished && (
+                  <Button size="sm" variant="ghost" disabled={!!busy} onClick={() => assign(null)}>
+                    Hand back
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             {canWork && status !== "in_progress" && (
               <Button size="sm" variant="outline" disabled={!!busy} onClick={() => moveTo("in_progress")}>

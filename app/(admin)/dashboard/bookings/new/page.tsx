@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { toXaf } from '@/lib/money'
 import { STAFF_ROLES } from '@/lib/services/booking-workflow'
+import { assignableStaff } from '@/lib/services/job-assignment'
 import { NewJobForm } from '@/components/dashboard/bookings/NewJobForm'
 
 export const metadata: Metadata = { title: 'Record a job | Admin Dashboard' }
@@ -19,6 +20,8 @@ export default async function NewJobPage() {
     orderBy: [{ category: { name: 'asc' } }, { name: 'asc' }],
   })
 
+  const staff = user.role === 'admin' ? await assignableStaff() : null
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
@@ -29,6 +32,7 @@ export default async function NewJobPage() {
         </p>
       </div>
       <NewJobForm
+        staff={staff?.map((p) => ({ id: p.id, name: p.fullName ?? p.email, role: p.role })) ?? undefined}
         services={services.map((s) => ({
           id: s.id,
           name: s.name,

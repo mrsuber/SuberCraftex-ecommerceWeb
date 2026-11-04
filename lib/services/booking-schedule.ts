@@ -1,5 +1,7 @@
 import { BookingStatus, Prisma, Service } from '@prisma/client'
 import { db } from '@/lib/db'
+import { getSetting } from '@/lib/settings'
+import { WeekHours } from './week-hours'
 
 /**
  * When a service can be booked.
@@ -12,9 +14,6 @@ import { db } from '@/lib/db'
 
 export const SHOP_OFFSET_HOURS = 1
 const HOUR = 3_600_000
-
-/** Hours used for a service that has no weekly schedule set: Monday to Saturday, 08:00 to 17:00 */
-export const DEFAULT_OPENING = { days: [1, 2, 3, 4, 5, 6], start: '08:00', end: '17:00' }
 
 /** Slots start every 30 minutes */
 const SLOT_STEP = 30
@@ -95,27 +94,40 @@ interface Window {
   end: number
 }
 
-/** Opening hours of a service on a day, or null when it is closed (no schedule, or blocked out). */
-async function openingOn(client: Client, service: Service, date: Date): Promise<Window | null> {
-  const weekday = date.getUTCDay()
-  const rows = await client.serviceAvailability.findMany({ where: { serviceId: service.id } })
-  let window: Window | null = null
-  if (rows.length === 0) {
-    if (DEFAULT_OPENING.days.includes(weekday)) window = { start: toMinutes(DEFAULT_OPENING.start), end: toMinutes(DEFAULT_OPENING.end) }
-  } else {
-    const row = rows.find((r) => r.isActive && r.dayOfWeek === weekday)
-    if (row) window = { start: toMinutes(row.startTime), end: toMinutes(row.endTime) }
-  }
-  if (!window) return null
-  const dayEnd = new Date(date.getTime() + 24 * HOUR)
-  const blocked = await client.serviceBlockout.count({
+/**
+ * The week a service is open: its own schedule when it has one (rows in
+ * service_availability, several per day for split shifts), otherwise the shop's hours.
+ */
+export async function weekFor(client: Client, serviceId: string): Promise<{ week: WeekHours; own: boolean }> {
+  const rows = await client.serviceAvailability.findMany({ where: { serviceId }, orderBy: { startTime: 'asc' } })
+  if (rows.length === 0) return { week: await getSetting('services.defaultHours'), own: false }
+  const week: WeekHours = Array.from({ length: 7 }, () => [])
+  for (const r of rows) if (r.isActive && r.dayOfWeek >= 0 && r.dayOfWeek <= 6) week[r.dayOfWeek].push({ start: r.startTime, end: r.endTime })
+  return { week, own: true }
+}
+
+/** Does a closure cover this shop day? Yearly closures (public holidays) ignore the year. */
+export function closureCovers(c: { startDate: Date; endDate: Date; isRecurring: boolean }, date: Date): boolean {
+  if (!c.isRecurring) return c.startDate.getTime() <= date.getTime() && date.getTime() <= c.endDate.getTime()
+  const md = (d: Date) => d.getUTCMonth() * 100 + d.getUTCDate()
+  const day = md(date)
+  const from = md(c.startDate)
+  const to = md(c.endDate)
+  return from <= to ? day >= from && day <= to : day >= from || day <= to // e.g. 24 Dec – 2 Jan
+}
+
+/** Opening windows of a service on a shop day; empty when closed (no hours, or a closure). */
+async function openingOn(client: Client, service: Service, date: Date): Promise<Window[]> {
+  const { week } = await weekFor(client, service.id)
+  const windows = (week[date.getUTCDay()] ?? []).map((w) => ({ start: toMinutes(w.start), end: toMinutes(w.end) }))
+  if (windows.length === 0) return []
+  const closures = await client.serviceBlockout.findMany({
     where: {
       OR: [{ serviceId: service.id }, { serviceId: null }],
-      startDate: { lt: dayEnd },
-      endDate: { gte: date },
+      AND: [{ OR: [{ isRecurring: true }, { startDate: { lte: date }, endDate: { gte: date } }] }],
     },
   })
-  return blocked > 0 ? null : window
+  return closures.some((c) => closureCovers(c, date)) ? [] : windows
 }
 
 async function takenOn(client: Client, serviceId: string, date: Date, excludeBookingId?: string) {
@@ -147,21 +159,26 @@ export async function availableSlots(client: Client, service: Service, date: Dat
   const now = query.now ?? new Date()
   const today = shopToday(now)
   if (date < today) return []
-  const window = await openingOn(client, service, date)
-  if (!window) return []
+  // Customers book at most maxAdvanceDays ahead
+  if ((date.getTime() - today.getTime()) / (24 * HOUR) > (service.maxAdvanceDays ?? 60)) return []
+  const windows = await openingOn(client, service, date)
+  if (windows.length === 0) return []
   const taken = await takenOn(client, service.id, date, query.excludeBookingId)
   if (service.maxBookingsPerDay && taken.count >= service.maxBookingsPerDay) return []
 
   const length = serviceMinutes(service)
   const buffer = service.bufferTime || 0
-  // Today, only times at least 30 minutes away can still be booked
-  const earliest = date.getTime() === today.getTime() ? shopMinutesNow(now) + 30 : 0
+  // Not sooner than the service's notice from now (it may reach into the next days)
+  const noticeEnds = new Date(now.getTime() + (service.minNoticeMinutes ?? 30) * 60_000)
   const slots: string[] = []
-  for (let start = window.start; start + length <= window.end; start += SLOT_STEP) {
-    if (start < earliest) continue
-    const end = start + length
-    const clash = taken.timed.some((b) => start < b.end + buffer && end + buffer > b.start)
-    if (!clash) slots.push(fromMinutes(start))
+  for (const window of windows) {
+    for (let start = window.start; start + length <= window.end; start += SLOT_STEP) {
+      const startsAt = new Date(date.getTime() + (start - SHOP_OFFSET_HOURS * 60) * 60_000)
+      if (startsAt < noticeEnds) continue
+      const end = start + length
+      const clash = taken.timed.some((b) => start < b.end + buffer && end + buffer > b.start)
+      if (!clash) slots.push(fromMinutes(start))
+    }
   }
   return slots
 }

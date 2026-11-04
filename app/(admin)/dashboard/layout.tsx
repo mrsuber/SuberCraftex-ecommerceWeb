@@ -20,7 +20,7 @@ export default async function AdminLayout({
       <AdminHeader />
       <div className="flex">
         <AdminSidebar userRole={user.role} />
-        <main className="flex-1 p-8">
+        <main className="min-w-0 flex-1 p-4 pb-20 lg:p-8">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>

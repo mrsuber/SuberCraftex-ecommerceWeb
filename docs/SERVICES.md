@@ -41,12 +41,26 @@ what each step stores, and the rules behind it.
   ISO timestamp (`2026-11-04T23:00:00Z` for 5 November in Douala), which shifted the booking
   to the previous day and made "today" look like the past. Full timestamps are still accepted
   (for older app versions) and read at shop time.
-- **Opening hours:** a service's weekly schedule (`service_availability`), or, when none is
-  set, Monday–Saturday 08:00–17:00. No admin screen creates schedules yet, so every service
-  uses the default today. Blockouts (holidays) close a day.
-- Slots start every 30 minutes, must end by closing time, keep the service's **buffer time**
-  clear on both sides of other jobs, respect **max bookings per day**, and today's slots start
-  at least 30 minutes from now.
+- **Opening hours** are set in Dashboard → Services → **Working hours**
+  (`/dashboard/services/hours`):
+  - **Shop hours** (setting `services.defaultHours`) apply to every service without hours
+    of its own. A day can have several periods, so a lunch break is two periods
+    (08:00–12:00, 14:00–17:30). Out of the box: Monday–Saturday 08:00–17:00.
+  - **A service's own hours** (`/dashboard/services/[id]/hours`, rows in
+    `service_availability`, several per day allowed), e.g. on-site visits only in the morning.
+    Switching back to "use the shop's hours" deletes them.
+  - **Closures**: dated (stock-taking, a technician on leave) or **yearly** (public
+    holidays; a yearly closure may run across New Year). Shop-wide or for one service.
+    One click adds Cameroon's fixed public holidays (1 Jan, 11 Feb, 1 May, 20 May,
+    15 Aug, 25 Dec). Movable holidays (Good Friday, Ascension, the two Eids) change every
+    year: add them as dated closures.
+  - **Booking rules** per service: time between jobs (buffer), most bookings a day,
+    minimum notice (default 30 minutes) and how far ahead (default 60 days).
+  - The screen previews the next 14 days exactly as customers will see them.
+  - The customer's calendar greys out every day with no free slot.
+- Slots start every 30 minutes from the start of each period, must end by the end of that
+  period, keep the service's **buffer time** clear on both sides of other jobs, respect
+  **max bookings per day**, the **minimum notice** and the **booking horizon**.
 - These states hold a slot: booked, confirmed, quote approved, awaiting payment, part paid,
   in progress.
 - The slot is re-checked **inside the transaction that saves the booking, with the service
@@ -67,6 +81,16 @@ what each step stores, and the rules behind it.
 Payment does **not** gate the work: a trusted customer may pay after. What is owed is
 followed on the invoice and its balance. (A part-payment taken after the job used to move a
 completed booking back to "Part paid"; payments never move a job backwards now.)
+
+### Who does the job
+- Each job can be **assigned** to a technician, tailor or admin (`assignedToId`). Admins
+  assign from the job page or when recording the job; a technician or tailor can **take**
+  an unassigned job or hand back their own, never take someone else's.
+- The person gets an email with the time, address, phone and request, and the job appears
+  under **My jobs** (`/dashboard/jobs`) and on their calendar. Assigning someone who already
+  has an overlapping job that day shows a warning.
+- **Jobs** (`/dashboard/jobs`) lists today, the next 7 days, open/overdue work, jobs done but
+  not invoiced, and invoices not fully paid. Admins can filter by person or "not assigned".
 
 ## 4. The invoice — `lib/services/service-invoices.ts`
 
@@ -129,12 +153,34 @@ From the **Job & billing** panel on the job page:
 | POST | `/api/bookings/[id]/invoice/void` | admin — `{ reason }` |
 | POST | `/api/bookings/[id]/payments` | staff — cash `{ amount? }` |
 | POST | `/api/payments/mobile-money` | owner or staff — `{ purpose: "booking", id, phone }` |
+| POST | `/api/bookings/[id]/assign` | admin (anyone); technician/tailor (take a free job, hand back theirs) — `{ assigneeId }` |
+| GET/PUT | `/api/admin/service-hours` | admin — shop hours `{ week }` |
+| GET/PUT | `/api/admin/services/[id]/hours` | admin — `{ mode: "shop" \| "custom", week?, rules? }` |
+| POST | `/api/admin/service-closures` | admin — `{ serviceId?, from, to?, reason?, yearly? }` |
+| DELETE | `/api/admin/service-closures/[id]` | admin |
+| POST | `/api/admin/service-closures/holidays` | admin — add Cameroon's fixed public holidays |
 
-Tests: `tests/services.test.ts`.
+Tests: `tests/services.test.ts`, `tests/service-hours.test.ts`, `tests/overview.test.ts`.
+
+## Admin overview (`/dashboard`)
+Every figure is read from the books or the bookings, never estimated:
+- **Income this month** from the ledger's income accounts, compared with the *same days*
+  of last month (a half month is never compared with a whole one); a 14-day chart and a
+  table by source (products, services, device repairs, delivery, apprentice fees, other).
+- **Owed by customers**: issued invoices not fully paid, with how late they are.
+- **Money held**: safe, bank, PayWithCAMSOL, shop Mobile Money, cash drawers, drivers.
+- **Today's jobs** and **Needs attention**: online bookings to confirm, quotes to prepare,
+  jobs today with nobody assigned, jobs done but not invoiced, overdue visits, late
+  invoices, orders to prepare or awaiting payment, low stock (each product's own
+  threshold), investor deposits, withdrawals and payouts waiting.
+- **System health (super admins)**: company NIU/RCCM on invoices, email sending, Mobile
+  Money keys (live/test/simulated) and webhook signing, the site address used in links,
+  scheduled tasks, books balancing, booking hours and holidays, and having more than one
+  super admin. Problems that block the business are shown at the top.
+- Cashiers, technicians, tailors and drivers are sent to their own pages and do not see
+  the business figures.
 
 ## Not done yet (worth doing next)
-- An admin screen for each service's weekly hours and blockouts (today: default hours).
-- Assigning a job to a named technician, and showing staff their own jobs.
 - VAT on invoices: catalogue prices include VAT (`tax.vatPercent`); if the business is
   VAT-registered, the invoice should show the VAT split — confirm with the accountant.
 - Electronics repairs (`/services/repair`, `RepairRequest`) still have their own separate

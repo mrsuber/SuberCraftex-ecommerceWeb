@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getCurrentUser } from '@/lib/session'
 import { JobBillingPanel } from '@/components/dashboard/bookings/JobBillingPanel'
+import { assignableStaff } from '@/lib/services/job-assignment'
 
 interface BookingPageProps {
   params: Promise<{ id: string }>
@@ -88,6 +89,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
           fullName: true,
         },
       },
+      assignedTo: { select: { id: true, fullName: true, email: true } },
       measurement: true,
       quote: {
         include: {
@@ -133,6 +135,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
     notFound()
   }
   const viewer = await getCurrentUser()
+  const staff = viewer?.role === 'admin' ? await assignableStaff() : null
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -156,6 +159,10 @@ export default async function BookingPage({ params }: BookingPageProps) {
         serviceType={booking.serviceType}
         customerPhone={booking.customerPhone}
         isAdmin={viewer?.role === 'admin'}
+        viewerId={viewer?.id ?? ''}
+        viewerRole={viewer?.role ?? ''}
+        assignedTo={booking.assignedTo ? { id: booking.assignedTo.id, name: booking.assignedTo.fullName ?? booking.assignedTo.email } : null}
+        staff={staff?.map((p) => ({ id: p.id, name: p.fullName ?? p.email, role: p.role }))}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

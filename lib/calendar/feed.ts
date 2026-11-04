@@ -128,7 +128,12 @@ export async function calendarFeed(viewer: Viewer, from: Date, to: Date): Promis
     where: {
       scheduledDate: { gte: new Date(from.getTime() - 24 * hour), lt: to },
       status: { notIn: ['cancelled', 'quote_rejected'] as any },
-      ...(viewer.role === 'admin' || viewer.role === 'tailor' || viewer.role === 'cashier' ? {} : { userId: viewer.id }),
+      // Shop staff see every booking; a technician sees the jobs assigned to them; customers their own
+      ...(viewer.role === 'admin' || viewer.role === 'tailor' || viewer.role === 'cashier'
+        ? {}
+        : viewer.role === 'technician'
+          ? { OR: [{ assignedToId: viewer.id }, { userId: viewer.id }] }
+          : { userId: viewer.id }),
     },
     include: { service: { select: { name: true } } },
     take: 1000,

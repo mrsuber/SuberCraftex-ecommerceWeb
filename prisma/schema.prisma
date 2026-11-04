@@ -67,7 +67,8 @@ model User {
   passwordResets     PasswordReset[]
   purchaseOrders     PurchaseOrder[]
   goodsReceipts      GoodsReceipt[]
-  serviceBookings    ServiceBooking[]
+  serviceBookings    ServiceBooking[]        @relation("BookingCustomer")
+  assignedBookings   ServiceBooking[]        @relation("BookingAssignee")
   cartItemServices   CartItemService[]
   bookingReviews     BookingReview[]
   feedback           Feedback[]
@@ -930,6 +931,9 @@ model Service {
   customDuration    Int?            @map("custom_duration") // in minutes if custom
   bufferTime        Int             @default(0) @map("buffer_time") // Minutes between bookings
   maxBookingsPerDay Int?            @map("max_bookings_per_day")
+  // Booking window: how soon (minutes from now) and how far ahead (days) customers may book
+  minNoticeMinutes  Int             @default(30) @map("min_notice_minutes")
+  maxAdvanceDays    Int             @default(60) @map("max_advance_days")
 
   // Service Type Flags (NEW)
   supportsOnsite           Boolean @default(true) @map("supports_onsite")
@@ -1022,17 +1026,21 @@ model ServiceBooking {
   duration      Int // Duration in minutes
 
   // Customer Information
-  customerName  String  @map("customer_name")
+  customerName   String  @map("customer_name")
   // Walk-in and phone customers often have no email address
-  customerEmail String? @map("customer_email")
-  customerPhone String? @map("customer_phone")
-  customerNotes String? @map("customer_notes")
+  customerEmail  String? @map("customer_email")
+  customerPhone  String? @map("customer_phone")
+  customerNotes  String? @map("customer_notes")
   // Where the work happens, for on-site jobs (or where to collect the item)
   serviceAddress String? @map("service_address")
 
   // Who made the booking: the customer online, or staff for a phone or walk-in customer
   source      String  @default("online") // online, staff
   createdById String? @map("created_by_id")
+
+  // The staff member doing the job (technician, tailor or admin)
+  assignedToId String?   @map("assigned_to_id")
+  assignedAt   DateTime? @map("assigned_at")
 
   // Enhanced Requirements (NEW)
   requirementPhotos         String[] @default([]) @map("requirement_photos")
@@ -1058,9 +1066,10 @@ model ServiceBooking {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  service Service @relation(fields: [serviceId], references: [id])
-  user    User?   @relation(fields: [userId], references: [id])
-  order   Order?  @relation(fields: [orderId], references: [id])
+  service    Service @relation(fields: [serviceId], references: [id])
+  user       User?   @relation("BookingCustomer", fields: [userId], references: [id])
+  assignedTo User?   @relation("BookingAssignee", fields: [assignedToId], references: [id])
+  order      Order?  @relation(fields: [orderId], references: [id])
 
   // NEW Relations
   quote               Quote?
@@ -1082,6 +1091,7 @@ model ServiceBooking {
   @@index([serviceType])
   @@index([scheduledDate])
   @@index([bookingNumber])
+  @@index([assignedToId])
   @@map("service_bookings")
 }
 

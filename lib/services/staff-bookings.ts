@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { audit } from '@/lib/audit'
 import { toDecimal, toXaf } from '@/lib/money'
 import { addMinutes, parseShopDate, serviceMinutes, toMinutes } from './booking-schedule'
+import { WORK_ROLES } from './booking-workflow'
 
 /**
  * Staff record a job for a customer who called, walked in, or was served on the spot.
@@ -33,6 +34,8 @@ export interface StaffBookingInput {
   status?: BookingStatus
   customerNotes?: string | null
   adminNotes?: string | null
+  /** Who does the job; technicians and tailors recording a job get it themselves by default */
+  assignedToId?: string | null
 }
 
 function bookingNumber() {
@@ -41,7 +44,7 @@ function bookingNumber() {
 
 const clean = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : '') || null
 
-export async function createStaffBooking(input: StaffBookingInput, actor: { id: string; email?: string | null }) {
+export async function createStaffBooking(input: StaffBookingInput, actor: { id: string; email?: string | null; role?: string }) {
   const service = await db.service.findUnique({ where: { id: String(input.serviceId ?? '') } })
   if (!service) throw new StaffBookingError('Choose a service')
 
@@ -77,6 +80,14 @@ export async function createStaffBooking(input: StaffBookingInput, actor: { id: 
     price = BigInt(text)
   }
 
+  // Who does it: an admin picks anyone who does jobs; other staff record jobs for themselves
+  let assignedToId: string | null = clean(input.assignedToId, 64)
+  if (actor.role && actor.role !== 'admin') assignedToId = WORK_ROLES.includes(actor.role) ? actor.id : null
+  if (assignedToId) {
+    const who = await db.user.findUnique({ where: { id: assignedToId }, select: { role: true, isSuspended: true } })
+    if (!who || !WORK_ROLES.includes(who.role) || who.isSuspended) throw new StaffBookingError('Jobs can only go to an active technician, tailor or admin')
+  }
+
   // A customer who already has an account sees the job, the invoice and can pay online
   const account = customerEmail ? await db.user.findUnique({ where: { email: customerEmail }, select: { id: true } }) : null
 
@@ -101,6 +112,8 @@ export async function createStaffBooking(input: StaffBookingInput, actor: { id: 
       serviceAddress: clean(input.serviceAddress, 500),
       source: 'staff',
       createdById: actor.id,
+      assignedToId,
+      assignedAt: assignedToId ? new Date() : null,
       price: toDecimal(price),
       completedAt: status === 'completed' ? new Date() : null,
     },

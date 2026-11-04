@@ -1,4 +1,5 @@
 import { SETTING_DEFAULTS, SettingKey, SettingTypes } from '@/lib/settings'
+import { validateWeek } from '@/lib/services/week-hours'
 
 /**
  * Which settings admins may change from the dashboard, who may change them, and what values
@@ -113,6 +114,17 @@ export const SETTING_RULES: { [K in SettingKey]: Rule<K> } = {
   'payroll.maxRecoveryPercent': { superAdmin: true, label: 'Most of a salary taken back each month (%)', validate: percent('Recovery limit') },
   'apprentices.reminderDays': { superAdmin: false, label: 'Days overdue before a fee reminder', validate: int('Reminder days', 0, 60) },
   'apprentices.pauseAfterDays': { superAdmin: false, label: 'Days overdue before new work pauses', validate: int('Pause days', 1, 180) },
+  'services.defaultHours': {
+    superAdmin: false,
+    label: 'Shop opening hours for bookings',
+    validate: (value) => {
+      try {
+        return validateWeek(value)
+      } catch (e) {
+        throw new SettingValueError(e instanceof Error ? e.message : 'Invalid hours')
+      }
+    },
+  },
   'company.profile': {
     superAdmin: false,
     label: 'Company details on invoices',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -42,6 +42,18 @@ export function OnsiteBookingForm({
     date.setHours(0, 0, 0, 0)
     return date
   }, [])
+
+  // Days with at least one free slot in the next two months (shop hours, closures, rules,
+  // bookings already taken). Until it loads, only past days are greyed out.
+  const [openDays, setOpenDays] = useState<Set<string> | null>(null)
+  useEffect(() => {
+    const end = new Date(today)
+    end.setDate(end.getDate() + 61)
+    fetch(`/api/services/${service.id}/availability?startDate=${format(today, 'yyyy-MM-dd')}&endDate=${format(end, 'yyyy-MM-dd')}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setOpenDays(new Set(Object.keys(data.availability ?? {}))))
+      .catch(() => undefined)
+  }, [service.id, today])
 
   // Generate time slots (9 AM - 5 PM in 30-minute increments)
   const generateTimeSlots = () => {
@@ -126,10 +138,7 @@ export function OnsiteBookingForm({
                 mode="single"
                 selected={selectedDate}
                 onSelect={handleDateSelect}
-                disabled={(date) =>
-                  date < today ||
-                  date.getDay() === 0 // Disable Sundays
-                }
+                disabled={(date) => date < today || (openDays !== null && !openDays.has(format(date, 'yyyy-MM-dd')))}
                 className="rounded-md"
               />
             </div>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { jobBoard, JobJson } from "@/lib/services/job-lists";
+import { JobList } from "@/components/dashboard/jobs/JobList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,8 +36,21 @@ export default async function TechnicianDashboardPage() {
     where: { userId: user.id },
   });
 
+  // Service jobs given to this person (furniture, locks, installations…)
+  const jobs = await jobBoard({ assignedToId: user.id });
+
   if (!technician) {
-    redirect("/dashboard");
+    // No device-repair profile yet: show the service jobs only (never bounce back to
+    // /dashboard, which sends technicians here)
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Welcome{user.fullName ? `, ${user.fullName}` : ""}</h1>
+          <p className="text-muted-foreground">Your jobs for today and the coming week.</p>
+        </div>
+        <MyJobsCard today={jobs.today} upcoming={jobs.upcoming.length} toInvoice={jobs.toInvoice.length} />
+      </div>
+    );
   }
 
   // Get all repairs assigned to this technician
@@ -108,6 +123,8 @@ export default async function TechnicianDashboardPage() {
           Here&apos;s your repair overview for today
         </p>
       </div>
+
+      <MyJobsCard today={jobs.today} upcoming={jobs.upcoming.length} toInvoice={jobs.toInvoice.length} />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -282,5 +299,26 @@ export default async function TechnicianDashboardPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function MyJobsCard({ today, upcoming, toInvoice }: { today: JobJson[]; upcoming: number; toInvoice: number }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0">
+        <div>
+          <CardTitle>My service jobs today ({today.length})</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {upcoming} in the next 7 days{toInvoice ? ` · ${toInvoice} done, waiting for the invoice` : ""}
+          </p>
+        </div>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/dashboard/jobs">My jobs</Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <JobList jobs={today} empty="No jobs for you today." showDate={false} />
+      </CardContent>
+    </Card>
   );
 }
