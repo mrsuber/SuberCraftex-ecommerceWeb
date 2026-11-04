@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db'
+import { getCurrentUser } from '@/lib/session'
 import { EnhancedServiceBookingForm } from '@/components/services/EnhancedServiceBookingForm'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -52,6 +53,10 @@ export default async function ServicePage({ params }: ServicePageProps) {
   if (!service || !service.isActive) {
     notFound()
   }
+
+  // The booking form books for the signed-in customer, with their real details
+  const user = await getCurrentUser()
+  const customer = user ? { name: user.fullName ?? '', email: user.email, phone: user.phone ?? '' } : null
 
   // Serialize for client component
   const serializedService = {
@@ -238,7 +243,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
 
         {/* Right Column - Booking Form */}
         <div className="lg:sticky lg:top-4 lg:self-start">
-          <EnhancedServiceBookingForm service={serializedService as any} />
+          <EnhancedServiceBookingForm service={serializedService as any} customer={customer} />
         </div>
       </div>
     </div>

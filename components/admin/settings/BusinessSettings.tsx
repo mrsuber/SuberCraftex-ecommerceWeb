@@ -305,3 +305,89 @@ export function AccountantSettings() {
     </Card>
   );
 }
+
+const EMPTY_PROFILE = { name: "SuberCraftex", address: "", phone: "", email: "", taxId: "", registration: "", invoiceFooter: "" };
+
+/** The company as it appears at the top and bottom of every invoice */
+export function CompanyProfileSettings() {
+  const [value, setValue] = useState(EMPTY_PROFILE);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/settings/business")
+      .then((r) => r.json())
+      .then((data) => {
+        const found = data.settings?.find((s: Setting) => s.key === "company.profile");
+        if (found) setValue({ ...EMPTY_PROFILE, ...found.value });
+        setLoaded(true);
+      });
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/settings/business", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values: { "company.profile": value } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save");
+      toast.success("Company details saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const input = (key: keyof typeof value, label: string, type = "text", placeholder = "") => (
+    <div className="space-y-1">
+      <Label htmlFor={`co-${key}`}>{label}</Label>
+      <Input id={`co-${key}`} type={type} placeholder={placeholder} value={value[key]} onChange={(e) => setValue((v) => ({ ...v, [key]: e.target.value }))} />
+    </div>
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Company details on invoices</CardTitle>
+        <CardDescription>
+          Printed at the top of every service invoice. In Cameroon an invoice should show the
+          taxpayer number (NIU) and trade register number (RCCM) — ask your accountant.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!loaded ? (
+          <p className="text-muted-foreground">Loading…</p>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              {input("name", "Company name")}
+              {input("phone", "Phone", "tel", "+237 6XX XXX XXX")}
+              {input("email", "Email", "email")}
+              {input("address", "Address", "text", "Street, neighbourhood, city")}
+              {input("taxId", "Taxpayer number (NIU)")}
+              {input("registration", "Trade register (RCCM)")}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="co-footer">Invoice footer</Label>
+              <Textarea
+                id="co-footer"
+                placeholder="e.g. Mobile Money: 6XX XXX XXX (SuberCraftex). Work guaranteed 30 days."
+                value={value.invoiceFooter}
+                onChange={(e) => setValue((v) => ({ ...v, invoiceFooter: e.target.value }))}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={save} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

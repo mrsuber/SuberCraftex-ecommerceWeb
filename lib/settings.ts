@@ -77,6 +77,18 @@ export interface SettingTypes {
   'apprentices.pauseAfterDays': number
   /** The company's accountant, filled in by an admin */
   'company.accountant': { name: string; firm: string; email: string; phone: string; notes: string }
+  /** The company as printed on invoices: legal name, address, contacts, NIU (taxpayer number), RCCM */
+  'company.profile': CompanyProfile
+}
+
+export interface CompanyProfile {
+  name: string
+  address: string
+  phone: string
+  email: string
+  taxId: string
+  registration: string
+  invoiceFooter: string
 }
 
 export const SETTING_DEFAULTS: SettingTypes = {
@@ -120,6 +132,7 @@ export const SETTING_DEFAULTS: SettingTypes = {
   'apprentices.reminderDays': 7,
   'apprentices.pauseAfterDays': 30,
   'company.accountant': { name: '', firm: '', email: '', phone: '', notes: '' },
+  'company.profile': { name: 'SuberCraftex', address: '', phone: '', email: '', taxId: '', registration: '', invoiceFooter: '' },
 }
 
 export type SettingKey = keyof SettingTypes

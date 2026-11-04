@@ -17,11 +17,15 @@ export const sendEmail = async ({
   html,
   text,
 }: {
-  to: string;
+  /** Customers recorded by staff may have no email: then nothing is sent */
+  to: string | null | undefined;
   subject: string;
   html: string;
   text?: string;
 }) => {
+  if (!to) {
+    return { success: false, messageId: 'no-recipient' };
+  }
   // Tests and local setups without SMTP set EMAIL_DISABLED=1: nothing is sent
   if (process.env.EMAIL_DISABLED === '1') {
     return { success: true, messageId: 'disabled' };

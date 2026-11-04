@@ -4,11 +4,13 @@ import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Calendar, Clock, User, Mail, Phone, Tag, FileText, Ruler, CalendarPlus, Palette } from 'lucide-react'
+import { Calendar, Clock, User, Mail, Phone, Tag, FileText, Ruler, CalendarPlus, Palette, MapPin } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatCurrency } from '@/lib/currency'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getCurrentUser } from '@/lib/session'
+import { JobBillingPanel } from '@/components/dashboard/bookings/JobBillingPanel'
 
 interface BookingPageProps {
   params: Promise<{ id: string }>
@@ -65,6 +67,8 @@ export async function generateMetadata({ params }: BookingPageProps): Promise<Me
     description: 'View booking details',
   }
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function BookingPage({ params }: BookingPageProps) {
   const { id } = await params
@@ -128,6 +132,7 @@ export default async function BookingPage({ params }: BookingPageProps) {
   if (!booking) {
     notFound()
   }
+  const viewer = await getCurrentUser()
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -143,6 +148,15 @@ export default async function BookingPage({ params }: BookingPageProps) {
           {STATUS_LABELS[booking.status]}
         </Badge>
       </div>
+
+      <JobBillingPanel
+        bookingId={booking.id}
+        bookingNumber={booking.bookingNumber}
+        status={booking.status}
+        serviceType={booking.serviceType}
+        customerPhone={booking.customerPhone}
+        isAdmin={viewer?.role === 'admin'}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Service Information */}
@@ -236,17 +250,33 @@ export default async function BookingPage({ params }: BookingPageProps) {
               <div className="font-semibold">{booking.customerName}</div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-sm text-muted-foreground">Email</div>
-                <Link
-                  href={`mailto:${booking.customerEmail}`}
-                  className="font-medium hover:underline"
-                >
-                  {booking.customerEmail}
-                </Link>
+            {booking.customerEmail && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Email</div>
+                  <Link
+                    href={`mailto:${booking.customerEmail}`}
+                    className="font-medium hover:underline"
+                  >
+                    {booking.customerEmail}
+                  </Link>
+                </div>
               </div>
+            )}
+
+            {booking.serviceAddress && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Where</div>
+                  <div className="font-medium">{booking.serviceAddress}</div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground">
+              {booking.source === 'staff' ? 'Recorded by staff (phone or walk-in)' : 'Booked online'}
             </div>
 
             {booking.customerPhone && (

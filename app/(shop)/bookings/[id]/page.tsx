@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { BookingDetailClient } from './BookingDetailClient'
+import { toXaf } from '@/lib/money'
+import { invoiceSummary } from '@/lib/services/service-invoices'
 
 interface BookingPageProps {
   params: Promise<{ id: string }>
@@ -289,5 +291,11 @@ export default async function BookingPage({ params }: BookingPageProps) {
     })),
   }
 
-  return <BookingDetailClient booking={serializedBooking} currentUser={user} />
+  // The issued invoice, if any, with what is still due on it
+  const issued = await db.serviceInvoice.findFirst({ where: { bookingId: booking.id, status: 'issued' } })
+  const invoice = issued
+    ? { id: issued.id, number: issued.number, total: Number(toXaf(issued.total)), balance: Number((await invoiceSummary(db, issued)).balance) }
+    : null
+
+  return <BookingDetailClient booking={serializedBooking} currentUser={user} invoice={invoice} />
 }

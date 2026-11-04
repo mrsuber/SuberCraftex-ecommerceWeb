@@ -113,6 +113,26 @@ export const SETTING_RULES: { [K in SettingKey]: Rule<K> } = {
   'payroll.maxRecoveryPercent': { superAdmin: true, label: 'Most of a salary taken back each month (%)', validate: percent('Recovery limit') },
   'apprentices.reminderDays': { superAdmin: false, label: 'Days overdue before a fee reminder', validate: int('Reminder days', 0, 60) },
   'apprentices.pauseAfterDays': { superAdmin: false, label: 'Days overdue before new work pauses', validate: int('Pause days', 1, 180) },
+  'company.profile': {
+    superAdmin: false,
+    label: 'Company details on invoices',
+    validate: (value) => {
+      const v = (value ?? {}) as Record<string, unknown>
+      const email = text(v.email, 200)
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new SettingValueError('Company email is not valid')
+      const name = text(v.name, 200)
+      if (!name) throw new SettingValueError('The company name is needed on invoices')
+      return {
+        name,
+        address: text(v.address, 500),
+        phone: text(v.phone, 100),
+        email,
+        taxId: text(v.taxId, 100),
+        registration: text(v.registration, 100),
+        invoiceFooter: text(v.invoiceFooter, 1000),
+      }
+    },
+  },
   'company.accountant': {
     superAdmin: false,
     label: 'Accountant',

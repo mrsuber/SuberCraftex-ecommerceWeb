@@ -6,6 +6,10 @@ import { getBookingRescheduleTemplate } from '@/lib/email/templates/booking-resc
 import { getBookingCancellationTemplate } from '@/lib/email/templates/booking-cancellation'
 import { createBookingCalendarEvent } from '@/lib/email/calendar-invite'
 import { format } from 'date-fns'
+import { BookingStatus, Prisma } from '@prisma/client'
+import { audit } from '@/lib/audit'
+import { addMinutes, assertSlotFree, parseShopDate, ScheduleError, serviceMinutes, shopToday } from '@/lib/services/booking-schedule'
+import { checkTransition, WORK_ROLES, WorkflowError } from '@/lib/services/booking-workflow'
 
 // Transform booking to snake_case for mobile app compatibility
 function transformBookingToSnakeCase(booking: any) {
@@ -26,6 +30,8 @@ function transformBookingToSnakeCase(booking: any) {
     customer_email: booking.customerEmail,
     customer_phone: booking.customerPhone,
     customer_notes: booking.customerNotes,
+    service_address: booking.serviceAddress,
+    source: booking.source,
     requirement_photos: booking.requirementPhotos,
     desired_outcome: booking.desiredOutcome,
     admin_notes: booking.adminNotes,
@@ -174,24 +180,6 @@ function transformBookingToSnakeCase(booking: any) {
   }
 }
 
-// Duration mapping in minutes
-const DURATION_MINUTES: Record<string, number> = {
-  half_hour: 30,
-  one_hour: 60,
-  two_hours: 120,
-  half_day: 240,
-  full_day: 480,
-}
-
-function calculateEndTime(startTime: string, durationMinutes: number): string {
-  const [hour, minute] = startTime.split(':').map(Number)
-  const startMinutes = hour * 60 + minute
-  const endMinutes = startMinutes + durationMinutes
-  const endHour = Math.floor(endMinutes / 60)
-  const endMinute = endMinutes % 60
-  return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
-}
-
 async function sendRescheduleEmail(booking: any, oldDate: Date, oldTime: string) {
   try {
     const calendarInvite = createBookingCalendarEvent({
@@ -337,7 +325,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/bookings/[id] - Update booking (reschedule or update status)
+// PATCH /api/bookings/[id] - Reschedule, or move the job along (see lib/services/booking-workflow)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -347,174 +335,103 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    // Fetch existing booking
     const existingBooking = await db.serviceBooking.findUnique({
       where: { id },
       include: { service: true },
     })
-
     if (!existingBooking) {
-      return NextResponse.json(
-        { error: 'Booking not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
     }
 
-    // Check permissions
-    const isOwner = auth.user?.id === existingBooking.userId
-    const isAdmin = auth.user?.role === 'admin'
-
-    if (!isOwner && !isAdmin) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
+    const role = auth.user?.role ?? ''
+    const isOwner = !!auth.user && auth.user.id === existingBooking.userId
+    const isStaff = WORK_ROLES.includes(role)
+    if (!isOwner && !isStaff) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Handle reschedule
+    // ---------------------------------------------------------------- reschedule
     if (body.scheduledDate || body.scheduledTime) {
-      const newDate = body.scheduledDate
-        ? new Date(body.scheduledDate)
-        : existingBooking.scheduledDate
-      const newTime = body.scheduledTime || existingBooking.scheduledTime
-
-      // Validate new date is not in the past
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      if (newDate && newDate < today) {
-        return NextResponse.json(
-          { error: 'Cannot reschedule to a past date' },
-          { status: 400 }
-        )
+      const newDate = body.scheduledDate ? parseShopDate(body.scheduledDate) : existingBooking.scheduledDate
+      const newTime: string | null = body.scheduledTime || existingBooking.scheduledTime
+      if (!newDate || !newTime) {
+        return NextResponse.json({ error: 'Give both a valid date and a time' }, { status: 400 })
+      }
+      if (!isStaff && newDate < shopToday()) {
+        return NextResponse.json({ error: 'Cannot reschedule to a past date' }, { status: 400 })
+      }
+      if (!isStaff && !['pending', 'confirmed', 'rescheduled', 'quote_approved', 'awaiting_payment'].includes(existingBooking.status)) {
+        return NextResponse.json({ error: 'This booking can no longer be moved online. Please call us.' }, { status: 400 })
       }
 
-      // Use transaction to check availability and update
       const updatedBooking = await db.$transaction(async (tx) => {
-        // Check for conflicts (excluding current booking)
-        const conflict = await tx.serviceBooking.findFirst({
-          where: {
-            serviceId: existingBooking.serviceId,
-            scheduledDate: newDate,
-            scheduledTime: newTime,
-            status: {
-              in: ['pending', 'confirmed', 'in_progress'],
-            },
-            id: {
-              not: id,
-            },
-          },
-        })
-
-        if (conflict) {
-          throw new Error('This time slot is no longer available')
+        // Staff may place a job anywhere (they agreed it with the customer); customers need a free slot
+        if (!isStaff) {
+          await assertSlotFree(tx, existingBooking.service, newDate, newTime, { excludeBookingId: id })
         }
-
-        // Calculate new end time
-        const durationMinutes =
-          existingBooking.service.duration === 'custom'
-            ? existingBooking.service.customDuration || 60
-            : DURATION_MINUTES[existingBooking.service.duration] || 60
-
-        const endTime = calculateEndTime(newTime, durationMinutes)
-
-        // Update booking
-        return await tx.serviceBooking.update({
+        return tx.serviceBooking.update({
           where: { id },
           data: {
             scheduledDate: newDate,
             scheduledTime: newTime,
-            endTime,
-            rescheduledFrom: existingBooking.id,
-            status: body.status || existingBooking.status,
-            ...(body.adminNotes && { adminNotes: body.adminNotes }),
+            endTime: addMinutes(newTime, existingBooking.duration || serviceMinutes(existingBooking.service)),
+            ...(isStaff && body.adminNotes !== undefined ? { adminNotes: body.adminNotes } : {}),
           },
-          include: {
-            service: {
-              include: {
-                category: true,
-              },
-            },
-          },
+          include: { service: { include: { category: true } } },
         })
       })
 
-      // Send reschedule email (non-blocking)
       if (existingBooking.scheduledDate && existingBooking.scheduledTime) {
-        sendRescheduleEmail(
-          updatedBooking,
-          existingBooking.scheduledDate,
-          existingBooking.scheduledTime
-        ).catch((error) => {
+        sendRescheduleEmail(updatedBooking, existingBooking.scheduledDate, existingBooking.scheduledTime).catch((error) => {
           console.error('Failed to send reschedule email:', error)
         })
       }
-
       return NextResponse.json(transformBookingToSnakeCase(updatedBooking))
     }
 
-    // Handle status update (admin only for most statuses)
-    if (body.status) {
-      if (!isAdmin && !['cancelled'].includes(body.status)) {
-        return NextResponse.json(
-          { error: 'Only admins can update booking status' },
-          { status: 403 }
-        )
-      }
+    // ---------------------------------------------------------------- status / notes
+    if (body.status || (isStaff && body.adminNotes !== undefined)) {
+      const to = (body.status || existingBooking.status) as BookingStatus
+      checkTransition(role, isOwner, existingBooking.status, to)
 
-      const updateData: any = {
-        status: body.status,
-      }
-
-      if (body.status === 'cancelled') {
+      const updateData: Prisma.ServiceBookingUpdateInput = { status: to }
+      if (to === 'cancelled' && existingBooking.status !== 'cancelled') {
         updateData.cancelledAt = new Date()
         updateData.cancellationReason = body.cancellationReason || null
       }
-
-      if (body.status === 'completed') {
-        updateData.completedAt = new Date()
-      }
-
-      if (body.adminNotes !== undefined) {
-        updateData.adminNotes = body.adminNotes
-      }
+      if (to === 'completed' && existingBooking.status !== 'completed') updateData.completedAt = new Date()
+      if (existingBooking.status === 'completed' && to !== 'completed') updateData.completedAt = null
+      if (isStaff && body.adminNotes !== undefined) updateData.adminNotes = body.adminNotes
 
       const updatedBooking = await db.serviceBooking.update({
         where: { id },
         data: updateData,
-        include: {
-          service: {
-            include: {
-              category: true,
-            },
-          },
-        },
+        include: { service: { include: { category: true } } },
       })
+      if (auth.user && to !== existingBooking.status) {
+        await audit({
+          actor: auth.user,
+          action: 'booking.status',
+          targetType: 'booking',
+          targetId: id,
+          details: { from: existingBooking.status, to },
+        })
+      }
 
-      // Send cancellation email if status changed to cancelled
-      if (body.status === 'cancelled') {
+      if (to === 'cancelled' && existingBooking.status !== 'cancelled') {
         sendCancellationEmail(updatedBooking).catch((error) => {
           console.error('Failed to send cancellation email:', error)
         })
       }
-
       return NextResponse.json(transformBookingToSnakeCase(updatedBooking))
     }
 
-    return NextResponse.json(
-      { error: 'No valid update fields provided' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'No valid update fields provided' }, { status: 400 })
   } catch (error: any) {
+    if (error instanceof WorkflowError) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error instanceof ScheduleError) return NextResponse.json({ error: error.message }, { status: 409 })
     console.error('Error updating booking:', error)
-
-    if (error.message === 'This time slot is no longer available') {
-      return NextResponse.json({ error: error.message }, { status: 409 })
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update booking' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 })
   }
 }
 
@@ -560,12 +477,15 @@ export async function DELETE(
       )
     }
 
-    // Cannot cancel already cancelled or completed bookings
+    // Same rules as a status change: customers only before work starts, nothing once finished
     if (['cancelled', 'completed'].includes(booking.status)) {
-      return NextResponse.json(
-        { error: `Cannot cancel ${booking.status} booking` },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: `Cannot cancel ${booking.status} booking` }, { status: 400 })
+    }
+    try {
+      checkTransition(auth.user?.role ?? '', isOwner, booking.status, 'cancelled')
+    } catch (e) {
+      if (e instanceof WorkflowError) return NextResponse.json({ error: e.message }, { status: 400 })
+      throw e
     }
 
     // Use transaction to cancel booking and restore materials

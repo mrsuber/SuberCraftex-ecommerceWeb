@@ -139,7 +139,7 @@ export async function PATCH(
         const { html, text } = getFittingRescheduledTemplate({
           bookingNumber: fitting.booking.bookingNumber,
           customerName: fitting.booking.customerName,
-          customerEmail: fitting.booking.customerEmail,
+          customerEmail: fitting.booking.customerEmail ?? '',
           serviceName: fitting.booking.service.name,
           fittingNumber: fitting.fittingNumber,
           oldScheduledDate: oldFormattedDate,

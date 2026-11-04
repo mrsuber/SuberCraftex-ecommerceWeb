@@ -74,7 +74,7 @@ export default async function SendQuotePage({ params }: SendQuotePageProps) {
         bookingId={booking.id}
         bookingNumber={booking.bookingNumber}
         customerName={booking.customerName}
-        customerEmail={booking.customerEmail}
+        customerEmail={booking.customerEmail ?? 'no email on file (share the quote by phone)'}
         serviceName={booking.service.name}
         quote={{
           id: booking.quote.id,

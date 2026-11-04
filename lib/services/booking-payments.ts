@@ -2,6 +2,7 @@ import { BookingStatus, PaymentType } from '@prisma/client'
 import { db } from '@/lib/db'
 import { AccountRef, Accounts, credit, debit, post, Tx } from '@/lib/ledger'
 import { toDecimal, toXaf, Xaf } from '@/lib/money'
+import { markInvoicePaidIfSettled } from './service-invoices'
 
 export class BookingPaymentError extends Error {}
 
@@ -22,17 +23,20 @@ export interface BookingBalance {
 export async function bookingBalance(client: Client, bookingId: string): Promise<BookingBalance> {
   const booking = await client.serviceBooking.findUniqueOrThrow({
     where: { id: bookingId },
-    include: { quote: true, payments: true },
+    include: { quote: true, payments: true, invoices: { where: { status: 'issued' }, select: { id: true } } },
   })
   const total = toXaf(booking.finalPrice ?? booking.price)
   const completed = booking.payments.filter((p) => p.status === 'completed')
   const paid = completed.reduce((sum, p) => sum + (p.paymentType === 'refund' ? -toXaf(p.amount) : toXaf(p.amount)), 0n)
   const remaining = total > paid ? total - paid : 0n
-  if (remaining === 0n || ['cancelled', 'quote_pending', 'quote_sent', 'quote_rejected'].includes(booking.status)) {
+  // An issued invoice fixes the price, even if the job was agreed in person while a quote was open
+  const invoiced = booking.invoices.length > 0
+  const priceOpen = !invoiced && ['quote_pending', 'quote_sent', 'quote_rejected'].includes(booking.status)
+  if (remaining === 0n || booking.status === 'cancelled' || priceOpen) {
     return { total, paid, remaining, next: null }
   }
   const down = booking.quote ? toXaf(booking.quote.downPaymentAmount) : 0n
-  if (booking.quote && paid === 0n && down > 0n && down < remaining) {
+  if (!invoiced && booking.quote && paid === 0n && down > 0n && down < remaining) {
     return { total, paid, remaining, next: { type: 'down_payment', amount: down } }
   }
   return { total, paid, remaining, next: { type: 'final_payment', amount: remaining } }
@@ -41,7 +45,9 @@ export async function bookingBalance(client: Client, bookingId: string): Promise
 function statusAfter(type: PaymentType, current: BookingStatus, fullyPaid: boolean): BookingStatus {
   if (fullyPaid && ['pending', 'awaiting_payment', 'payment_partial', 'quote_approved'].includes(current)) return 'confirmed'
   if (type === 'down_payment' && ['pending', 'awaiting_payment', 'quote_approved'].includes(current)) return 'confirmed'
-  if (type === 'partial_payment') return 'payment_partial'
+  // Paying in parts before the work: the booking shows it. Once work has started or
+  // finished, a payment never moves the job backwards.
+  if (type === 'partial_payment' && ['pending', 'awaiting_payment', 'quote_approved'].includes(current)) return 'payment_partial'
   return current
 }
 
@@ -91,6 +97,7 @@ export async function recordBookingPayment(tx: Tx, input: RecordBookingPayment) 
   if (next !== booking.status) {
     await tx.serviceBooking.update({ where: { id: booking.id }, data: { status: next } })
   }
+  await markInvoicePaidIfSettled(tx, booking.id)
   return payment
 }
 

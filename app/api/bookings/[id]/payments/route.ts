@@ -41,7 +41,7 @@ export async function GET(
     }
 
     // Check authorization (admin or booking owner)
-    if (user.role !== 'admin' && booking.userId !== user.id) {
+    if (!['admin', 'tailor', 'technician', 'cashier'].includes(user.role) && booking.userId !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -84,7 +84,7 @@ export async function POST(
   try {
     const { id } = await params
     const user = await getCurrentUser()
-    if (!user || !['admin', 'tailor', 'cashier'].includes(user.role)) {
+    if (!user || !['admin', 'tailor', 'technician', 'cashier'].includes(user.role)) {
       return NextResponse.json({ error: 'Only SuberCraftex staff can record a cash payment' }, { status: 403 })
     }
     const body = await request.json().catch(() => ({}))
