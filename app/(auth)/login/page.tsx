@@ -66,10 +66,14 @@ export default function LoginPage() {
       // Admin, cashier, driver, tailor go to admin dashboard
       // Everyone else (customers, investors) go to account page - they can shop normally
       // Use window.location for hard redirect to ensure cookie is properly read
-      if (data.user.role === 'admin' || data.user.role === 'cashier' || data.user.role === 'driver' || data.user.role === 'tailor') {
-        window.location.href = "/dashboard";
+      // A page that sent the visitor here (e.g. a service they were booking) gets them back.
+      // Only paths on this site are followed, never another address.
+      const next = new URLSearchParams(window.location.search).get("next");
+      const safeNext = next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : null;
+      if (['admin', 'cashier', 'driver', 'tailor', 'technician'].includes(data.user.role)) {
+        window.location.href = safeNext ?? "/dashboard";
       } else {
-        window.location.href = "/account";
+        window.location.href = safeNext ?? "/account";
       }
     } catch (error) {
       console.error("Login error:", error);

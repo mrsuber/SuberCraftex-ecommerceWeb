@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       const { html, text } = getFittingAppointmentTemplate({
         bookingNumber: booking.bookingNumber,
         customerName: booking.customerName,
-        customerEmail: booking.customerEmail,
+        customerEmail: booking.customerEmail ?? '',
         serviceName: booking.service.name,
         fittingNumber,
         scheduledDate: formattedDate,

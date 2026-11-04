@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { STANDARD_WEEK, WeekHours } from '@/lib/services/week-hours'
 
 /**
  * Typed business settings stored as JSON in app_settings. Every setting has a default,
@@ -77,6 +78,20 @@ export interface SettingTypes {
   'apprentices.pauseAfterDays': number
   /** The company's accountant, filled in by an admin */
   'company.accountant': { name: string; firm: string; email: string; phone: string; notes: string }
+  /** Opening hours for bookings, used by every service without hours of its own */
+  'services.defaultHours': WeekHours
+  /** The company as printed on invoices: legal name, address, contacts, NIU (taxpayer number), RCCM */
+  'company.profile': CompanyProfile
+}
+
+export interface CompanyProfile {
+  name: string
+  address: string
+  phone: string
+  email: string
+  taxId: string
+  registration: string
+  invoiceFooter: string
 }
 
 export const SETTING_DEFAULTS: SettingTypes = {
@@ -120,6 +135,8 @@ export const SETTING_DEFAULTS: SettingTypes = {
   'apprentices.reminderDays': 7,
   'apprentices.pauseAfterDays': 30,
   'company.accountant': { name: '', firm: '', email: '', phone: '', notes: '' },
+  'services.defaultHours': STANDARD_WEEK,
+  'company.profile': { name: 'SuberCraftex', address: '', phone: '', email: '', taxId: '', registration: '', invoiceFooter: '' },
 }
 
 export type SettingKey = keyof SettingTypes
@@ -132,6 +149,9 @@ function parse<K extends SettingKey>(key: K, raw: string | undefined): SettingTy
   if (raw === undefined) return fallback
   try {
     const value = JSON.parse(raw)
+    // Lists (payroll deductions, weekly hours) are stored whole: never merged into the default,
+    // which would turn them into {"0": …, "1": …}
+    if (Array.isArray(fallback)) return (Array.isArray(value) ? value : fallback) as SettingTypes[K]
     if (typeof fallback === 'object' && fallback !== null) {
       return { ...(fallback as object), ...(value as object) } as SettingTypes[K]
     }

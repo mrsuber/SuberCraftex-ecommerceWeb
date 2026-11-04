@@ -1,11 +1,16 @@
 import { Metadata } from 'next'
 import { db } from '@/lib/db'
 import { BookingsTable } from '@/components/dashboard/BookingsTable'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Bookings Management | Admin Dashboard',
   description: 'Manage service bookings',
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function BookingsPage() {
   const bookings = await db.serviceBooking.findMany({
@@ -106,7 +111,7 @@ export default async function BookingsPage() {
     cancelled: bookings.filter((b) => b.status === 'cancelled').length,
     revenue: bookings
       .filter((b) => b.status === 'completed')
-      .reduce((sum, b) => sum + Number(b.price), 0),
+      .reduce((sum, b) => sum + Number(b.finalPrice ?? b.price), 0),
   }
 
   return (
@@ -119,6 +124,11 @@ export default async function BookingsPage() {
             Manage service bookings and appointments
           </p>
         </div>
+        <Button asChild>
+          <Link href="/dashboard/bookings/new">
+            <Plus className="mr-2 h-4 w-4" /> Record a job
+          </Link>
+        </Button>
       </div>
 
       {/* Stats */}

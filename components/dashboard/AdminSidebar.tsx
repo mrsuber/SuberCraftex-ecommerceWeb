@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -22,7 +23,6 @@ import {
   CreditCard,
   Scissors,
   Ruler,
-  ClipboardCheck,
   UserPlus,
   TrendingUp,
   Clock,
@@ -35,241 +35,125 @@ import {
   CalendarDays,
   Banknote,
   Receipt,
+  ClipboardList,
+  CalendarClock,
+  Landmark,
+  Menu,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const adminNavigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+}
+interface NavSection {
+  title?: string;
+  items: NavItem[];
+}
+
+/** The admin menu, grouped the way the business runs */
+const adminNavigation: NavSection[] = [
   {
-    name: "Overview",
-    href: "/dashboard",
-    icon: LayoutDashboard,
+    items: [
+      { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Jobs", href: "/dashboard/jobs", icon: ClipboardList },
+      { name: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
+      { name: "Staff schedule", href: "/dashboard/schedule", icon: CalendarDays },
+    ],
   },
   {
-    name: "Point of Sale",
-    href: "/dashboard/pos",
-    icon: CreditCard,
+    title: "Services",
+    items: [
+      { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+      { name: "Services", href: "/dashboard/services", icon: Wrench },
+      { name: "Working hours", href: "/dashboard/services/hours", icon: CalendarClock },
+      { name: "Service categories", href: "/dashboard/service-categories", icon: Tags },
+      { name: "Materials", href: "/dashboard/materials", icon: Boxes },
+      { name: "Upcoming services", href: "/dashboard/upcoming-services", icon: Clock },
+      { name: "Device repairs", href: "/dashboard/repair-requests", icon: Smartphone },
+      { name: "Technicians", href: "/dashboard/technicians", icon: HardDrive },
+    ],
   },
   {
-    name: "Products",
-    href: "/dashboard/products",
-    icon: Package,
+    title: "Shop",
+    items: [
+      { name: "Point of Sale", href: "/dashboard/pos", icon: CreditCard },
+      { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
+      { name: "Products", href: "/dashboard/products", icon: Package },
+      { name: "Categories", href: "/dashboard/categories", icon: FolderTree },
+      { name: "Customers", href: "/dashboard/customers", icon: Users },
+      { name: "Reviews", href: "/dashboard/reviews", icon: Star },
+      { name: "Shipping", href: "/dashboard/shipping", icon: Truck },
+    ],
   },
   {
-    name: "Categories",
-    href: "/dashboard/categories",
-    icon: FolderTree,
+    title: "Money",
+    items: [
+      { name: "Finance", href: "/dashboard/finance", icon: Landmark },
+      { name: "Payroll", href: "/dashboard/payroll", icon: Banknote },
+      { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+      { name: "Suppliers", href: "/dashboard/suppliers", icon: Building2 },
+      { name: "Purchase orders", href: "/dashboard/purchase-orders", icon: FileText },
+    ],
   },
   {
-    name: "Services",
-    href: "/dashboard/services",
-    icon: Wrench,
+    title: "Investors",
+    items: [
+      { name: "Investors", href: "/dashboard/investors", icon: TrendingUp },
+      { name: "Investor engine", href: "/dashboard/investor-engine", icon: HardDrive },
+      { name: "Pending deposits", href: "/dashboard/pending-deposits", icon: Wallet },
+      { name: "Investor feedback", href: "/dashboard/feedback", icon: MessageSquare },
+    ],
   },
   {
-    name: "Service Categories",
-    href: "/dashboard/service-categories",
-    icon: Tags,
+    title: "Training",
+    items: [
+      { name: "Apprentices", href: "/dashboard/apprentices", icon: GraduationCap },
+      { name: "Apprentice fees", href: "/dashboard/apprentice-fees", icon: Receipt },
+    ],
   },
   {
-    name: "Materials",
-    href: "/dashboard/materials",
-    icon: Boxes,
+    title: "Website",
+    items: [
+      { name: "Hero banners", href: "/dashboard/hero-banners", icon: Image },
+      { name: "Blog posts", href: "/dashboard/blog", icon: Newspaper },
+    ],
   },
+  { title: "System", items: [{ name: "Settings", href: "/dashboard/settings", icon: Settings }] },
+];
+
+const driverNavigation: NavSection[] = [{ items: [{ name: "Orders", href: "/dashboard/orders", icon: ShoppingCart }] }];
+
+const cashierNavigation: NavSection[] = [{ items: [{ name: "Point of Sale", href: "/dashboard/pos", icon: CreditCard }] }];
+
+const tailorNavigation: NavSection[] = [
   {
-    name: "Bookings",
-    href: "/dashboard/bookings",
-    icon: Calendar,
-  },
-  {
-    name: "Hero Banners",
-    href: "/dashboard/hero-banners",
-    icon: Image,
-  },
-  {
-    name: "Upcoming Services",
-    href: "/dashboard/upcoming-services",
-    icon: Clock,
-  },
-  {
-    name: "Blog Posts",
-    href: "/dashboard/blog",
-    icon: Newspaper,
-  },
-  {
-    name: "Orders",
-    href: "/dashboard/orders",
-    icon: ShoppingCart,
-  },
-  {
-    name: "Reviews",
-    href: "/dashboard/reviews",
-    icon: Star,
-  },
-  {
-    name: "Customers",
-    href: "/dashboard/customers",
-    icon: Users,
-  },
-  {
-    name: "Finance",
-    href: "/dashboard/finance",
-    icon: CreditCard,
-  },
-  {
-    name: "Payroll",
-    href: "/dashboard/payroll",
-    icon: Banknote,
-  },
-  {
-    name: "Investors",
-    href: "/dashboard/investors",
-    icon: TrendingUp,
-  },
-  {
-    name: "Investor engine",
-    href: "/dashboard/investor-engine",
-    icon: HardDrive,
-  },
-  {
-    name: "Pending Deposits",
-    href: "/dashboard/pending-deposits",
-    icon: Wallet,
-  },
-  {
-    name: "Investor Feedback",
-    href: "/dashboard/feedback",
-    icon: MessageSquare,
-  },
-  {
-    name: "Apprentices",
-    href: "/dashboard/apprentices",
-    icon: GraduationCap,
-  },
-  {
-    name: "Apprentice fees",
-    href: "/dashboard/apprentice-fees",
-    icon: Receipt,
-  },
-  {
-    name: "Schedule",
-    href: "/dashboard/schedule",
-    icon: CalendarDays,
-  },
-  {
-    name: "Calendar",
-    href: "/dashboard/calendar",
-    icon: CalendarDays,
-  },
-  {
-    name: "Technicians",
-    href: "/dashboard/technicians",
-    icon: HardDrive,
-  },
-  {
-    name: "Repair Requests",
-    href: "/dashboard/repair-requests",
-    icon: Smartphone,
-  },
-  {
-    name: "Suppliers",
-    href: "/dashboard/suppliers",
-    icon: Building2,
-  },
-  {
-    name: "Purchase Orders",
-    href: "/dashboard/purchase-orders",
-    icon: FileText,
-  },
-  {
-    name: "Analytics",
-    href: "/dashboard/analytics",
-    icon: BarChart3,
-  },
-  {
-    name: "Shipping",
-    href: "/dashboard/shipping",
-    icon: Truck,
-  },
-  {
-    name: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
+    items: [
+      { name: "Overview", href: "/dashboard/tailor", icon: LayoutDashboard },
+      { name: "My jobs", href: "/dashboard/jobs", icon: ClipboardList },
+      { name: "Walk-in order", href: "/dashboard/tailor/walk-in", icon: UserPlus },
+      { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+      { name: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
+      { name: "Measurements", href: "/dashboard/tailor/measurements", icon: Ruler },
+      { name: "Fittings", href: "/dashboard/tailor/fittings", icon: Scissors },
+      { name: "Materials", href: "/dashboard/materials", icon: Boxes },
+    ],
   },
 ];
 
-const driverNavigation = [
+const technicianNavigation: NavSection[] = [
   {
-    name: "Orders",
-    href: "/dashboard/orders",
-    icon: ShoppingCart,
-  },
-];
-
-const cashierNavigation = [
-  {
-    name: "Point of Sale",
-    href: "/dashboard/pos",
-    icon: CreditCard,
-  },
-];
-
-const tailorNavigation = [
-  {
-    name: "Overview",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Walk-In Order",
-    href: "/dashboard/tailor/walk-in",
-    icon: UserPlus,
-  },
-  {
-    name: "Bookings",
-    href: "/dashboard/bookings",
-    icon: Calendar,
-  },
-  {
-    name: "Calendar",
-    href: "/dashboard/calendar",
-    icon: CalendarDays,
-  },
-  {
-    name: "Measurements",
-    href: "/dashboard/tailor/measurements",
-    icon: Ruler,
-  },
-  {
-    name: "Fittings",
-    href: "/dashboard/tailor/fittings",
-    icon: Scissors,
-  },
-  {
-    name: "Materials",
-    href: "/dashboard/materials",
-    icon: Boxes,
-  },
-];
-
-const technicianNavigation = [
-  {
-    name: "Overview",
-    href: "/dashboard/technician",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "My Repairs",
-    href: "/dashboard/technician/repairs",
-    icon: Smartphone,
-  },
-  {
-    name: "My Apprentices",
-    href: "/dashboard/technician/apprentices",
-    icon: GraduationCap,
-  },
-  {
-    name: "Calendar",
-    href: "/dashboard/calendar",
-    icon: CalendarDays,
+    items: [
+      { name: "Overview", href: "/dashboard/technician", icon: LayoutDashboard },
+      { name: "My jobs", href: "/dashboard/jobs", icon: ClipboardList },
+      { name: "Record a job", href: "/dashboard/bookings/new", icon: UserPlus },
+      { name: "My device repairs", href: "/dashboard/technician/repairs", icon: Smartphone },
+      { name: "My apprentices", href: "/dashboard/technician/apprentices", icon: GraduationCap },
+      { name: "Calendar", href: "/dashboard/calendar", icon: CalendarDays },
+    ],
   },
 ];
 
@@ -277,54 +161,109 @@ interface AdminSidebarProps {
   userRole: string;
 }
 
+/** The menu entry the current page belongs to: the longest matching link, so only one is lit */
+function activeHref(sections: NavSection[], pathname: string | null) {
+  if (!pathname) return null;
+  let best: string | null = null;
+  for (const s of sections)
+    for (const item of s.items) {
+      const match = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
+      if (match && (!best || item.href.length > best.length)) best = item.href;
+    }
+  return best;
+}
+
 export function AdminSidebar({ userRole }: AdminSidebarProps) {
   const pathname = usePathname();
-  const navigation =
-    userRole === 'driver' ? driverNavigation :
-    userRole === 'cashier' ? cashierNavigation :
-    userRole === 'tailor' ? tailorNavigation :
-    userRole === 'technician' ? technicianNavigation :
+  const [open, setOpen] = useState(false);
+  const sections =
+    userRole === "driver" ? driverNavigation :
+    userRole === "cashier" ? cashierNavigation :
+    userRole === "tailor" ? tailorNavigation :
+    userRole === "technician" ? technicianNavigation :
     adminNavigation;
   const dashboardTitle =
-    userRole === 'driver' ? 'Driver Dashboard' :
-    userRole === 'cashier' ? 'Cashier Dashboard' :
-    userRole === 'tailor' ? 'Tailor Dashboard' :
-    userRole === 'technician' ? 'Technician Dashboard' :
-    'Admin Dashboard';
+    userRole === "driver" ? "Driver Dashboard" :
+    userRole === "cashier" ? "Cashier Dashboard" :
+    userRole === "tailor" ? "Tailor Dashboard" :
+    userRole === "technician" ? "Technician Dashboard" :
+    "Admin Dashboard";
+  const active = activeHref(sections, pathname);
+
+  // Close the phone menu after moving to another page
+  useEffect(() => setOpen(false), [pathname]);
+
+  const nav = (
+    <nav className="space-y-4 px-3 pb-8" aria-label="Dashboard">
+      {sections.map((section, i) => (
+        <div key={section.title ?? i} className="space-y-1">
+          {section.title && <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">{section.title}</p>}
+          {section.items.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.href === active;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  );
+
+  const brand = (
+    <div className="p-6 pb-4">
+      <Link href="/dashboard" className="flex items-center space-x-2">
+        <span className="text-2xl font-bold text-[#B8924F]">SuberCraftex</span>
+      </Link>
+      <p className="mt-1 text-xs text-muted-foreground">{dashboardTitle}</p>
+    </div>
+  );
 
   return (
-    <aside className="w-64 bg-background border-r min-h-screen sticky top-0">
-      <div className="p-6">
-        <Link href="/dashboard" className="flex items-center space-x-2">
-          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            SuberCraftex
-          </span>
-        </Link>
-        <p className="text-xs text-muted-foreground mt-1">{dashboardTitle}</p>
-      </div>
+    <>
+      {/* Wide screens: a fixed column */}
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r bg-white lg:block dark:bg-neutral-950">
+        {brand}
+        {nav}
+      </aside>
 
-      <nav className="px-3 space-y-1">
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
+      {/* Phones and tablets: a menu button and a drawer */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="fixed bottom-4 left-4 z-40 flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white shadow-lg lg:hidden"
+        aria-label="Open the menu"
+      >
+        <Menu className="h-4 w-4" /> Menu
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto bg-white shadow-xl dark:bg-neutral-950">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute right-3 top-3 rounded-md p-2 hover:bg-muted"
+              aria-label="Close the menu"
             >
-              <Icon className="h-5 w-5" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+              <X className="h-5 w-5" />
+            </button>
+            {brand}
+            {nav}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

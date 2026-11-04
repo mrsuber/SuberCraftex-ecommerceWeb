@@ -41,6 +41,8 @@ import { formatCurrency } from '@/lib/currency'
 import type { ServiceBooking } from '@/types'
 
 interface BookingDetailClientProps {
+  /** The issued invoice for this booking, if there is one */
+  invoice?: { id: string; number: string | null; total: number; balance: number } | null
   booking: any // Serialized booking data
   currentUser: any
 }
@@ -56,7 +58,7 @@ const collectionMethodLabels = {
   customer_brings: 'You bring to shop',
 }
 
-export function BookingDetailClient({ booking, currentUser }: BookingDetailClientProps) {
+export function BookingDetailClient({ booking, currentUser, invoice = null }: BookingDetailClientProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -569,6 +571,36 @@ export function BookingDetailClient({ booking, currentUser }: BookingDetailClien
               )}
             </CardContent>
           </Card>
+
+          {/* Invoice */}
+          {invoice && (
+            <Card className="border-primary/40">
+              <CardHeader>
+                <CardTitle className="text-lg">Invoice {invoice.number}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Total</span>
+                  <span className="font-semibold">{formatCurrency(invoice.total)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Balance due</span>
+                  <span className="font-semibold">{formatCurrency(invoice.balance)}</span>
+                </div>
+                {invoice.balance === 0 && <Badge className="bg-green-600">Paid — thank you</Badge>}
+                <div className="flex flex-col gap-2">
+                  {invoice.balance > 0 && (
+                    <Button asChild>
+                      <Link href={`/bookings/${booking.id}/payment`}>Pay by Mobile Money</Link>
+                    </Button>
+                  )}
+                  <Button asChild variant="outline">
+                    <Link href={`/invoices/${invoice.id}`}>View / print invoice</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Payments */}
           {booking.payments && booking.payments.length > 0 && (

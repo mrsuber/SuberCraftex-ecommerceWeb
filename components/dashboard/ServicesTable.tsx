@@ -216,6 +216,12 @@ export function ServicesTable({ initialServices, categories }: ServicesTableProp
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/services/${service.id}/hours`}>
+                            <Clock className="mr-2 h-4 w-4" />
+                            Working hours
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
                           <Link href={`/dashboard/services/${service.id}/design`}>
                             <Palette className="mr-2 h-4 w-4" />
                             Design Options

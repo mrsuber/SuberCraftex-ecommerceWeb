@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileMoneySettings } from "@/components/admin/MobileMoneySettings";
 import { PaymentKeysSettings } from "@/components/admin/settings/PaymentKeysSettings";
-import { AccountantSettings, BusinessSettings } from "@/components/admin/settings/BusinessSettings";
+import { AccountantSettings, BusinessSettings, CompanyProfileSettings } from "@/components/admin/settings/BusinessSettings";
 import { isSuperAdmin, requireAdmin } from "@/lib/auth/session";
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,7 @@ export default async function SettingsPage() {
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="rules">Money rules</TabsTrigger>
           <TabsTrigger value="delivery">Delivery</TabsTrigger>
-          <TabsTrigger value="accountant">Accountant</TabsTrigger>
+          <TabsTrigger value="accountant">Company &amp; accountant</TabsTrigger>
           <TabsTrigger value="manual">Manual Mobile Money</TabsTrigger>
         </TabsList>
 
@@ -47,6 +47,7 @@ export default async function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="accountant" className="space-y-6">
+          <CompanyProfileSettings />
           <AccountantSettings />
         </TabsContent>
 
