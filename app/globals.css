@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* `dark:` styles follow the site's theme (the "dark" class next-themes puts on <html>),
+   not the computer's setting. Tailwind v4 ignores darkMode in tailwind.config.ts; without
+   this line a computer in dark mode got dark panels with light-theme text. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --background: 100% 0 0; /* white */
